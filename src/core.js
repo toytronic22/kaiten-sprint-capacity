@@ -126,7 +126,7 @@ function buildReport({ cards, settings, snapshot = null, config = SPRINT_CAPACIT
     notCounted: { points: 0, cards: [] },
     bugs: { cards: [], points: 0 },
     board: { cards: [], points: 0 },
-    done: { cards: [], points: 0, percent: null },
+    done: { cards: [], points: 0, count: 0, of: 0, percent: null },
     problems: [],
   };
   let hasDevField = false;
@@ -142,6 +142,8 @@ function buildReport({ cards, settings, snapshot = null, config = SPRINT_CAPACIT
     const parts = splitEstimate(estimate);
     const total = (parts.dev || 0) + (parts.qa || 0);
     const item = { id: card.id, title: card.title || '', platform, estimate, parts };
+    report.done.of += 1;
+    if (card.state === config.doneState) report.done.count += 1;
     if (isBug(card, config)) {
       report.bugs.cards.push(item);
       report.bugs.points += total;
@@ -176,7 +178,7 @@ function buildReport({ cards, settings, snapshot = null, config = SPRINT_CAPACIT
     const added = base === null ? null : round1(total - base);
     return { direction, base, added, total, capacity, over: capacity !== null && total > capacity };
   });
-  report.done.percent = percentOf(report.done.cards.length, report.board.cards.length);
+  report.done.percent = percentOf(report.done.count, report.done.of);
   report.notCounted.points = round1(report.notCounted.points);
   report.bugs.points = round1(report.bugs.points);
   report.board.points = round1(report.board.points);

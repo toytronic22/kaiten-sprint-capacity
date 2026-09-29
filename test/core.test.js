@@ -59,17 +59,17 @@ test('Done входит в нагрузку и считается отдельн
   assert.equal(report.done.percent, 50);
 });
 
-test('процент Done — по картам, до целого: карта без оценки тоже карта, без карт процента нет', () => {
+test('процент Done — по картам с багами, до целого: карта без оценки тоже карта, без карт процента нет', () => {
   // Arrange
   const third = [card(1, { size: 5, platforms: [BACK] }), card(2, { platforms: [BACK] }), card(3, { size: 1, platforms: [BACK], state: DONE })];
   const twoThirds = [card(1, { size: 5, platforms: [BACK] }), card(2, { platforms: [BACK], state: DONE }), card(3, { size: 1, platforms: [BACK], state: DONE })];
-  const onlyBugs = [card(1, { size: 2, platforms: [BACK], state: DONE, type: WEB_BUG })];
+  const bugs = [card(1, { size: 2, platforms: [BACK], state: DONE, type: WEB_BUG }), card(2, { type: WEB_BUG })];
 
   // Act
-  const percents = [third, twoThirds, onlyBugs, []].map((cards) => core.buildReport({ cards, settings: core.defaultSettings() }).done.percent);
+  const percents = [third, twoThirds, bugs, []].map((cards) => core.buildReport({ cards, settings: core.defaultSettings() }).done.percent);
 
   // Assert
-  assert.deepEqual(percents, [33, 67, null, null]);
+  assert.deepEqual(percents, [33, 67, 50, null]);
 });
 
 test('пришла новая карта — процент Done уменьшается', () => {
@@ -96,7 +96,7 @@ test('карта в Done проверяется, как любая другая'
   assert.deepEqual(report.warnings.map((warning) => warning.issue), ['noPlatform', 'needQaWithoutQa']);
 });
 
-test('баг в Done не попадает ни в Done, ни в процент', () => {
+test('баг в Done: в проценте считается картой, в SP Done — нет', () => {
   // Arrange
   const cards = [
     card(1, { size: 4, sp: 2, platforms: [BACK], state: DONE, type: WEB_BUG }),
@@ -110,7 +110,7 @@ test('баг в Done не попадает ни в Done, ни в процент'
   // Assert
   assert.deepEqual(totals(report), [2, 0, 4]);
   assert.deepEqual(report.done.cards.map((item) => item.id), [2]);
-  assert.equal(report.done.percent, 50);
+  assert.deepEqual([report.done.points, report.done.count, report.done.of, report.done.percent], [3, 2, 3, 67]);
   assert.deepEqual(report.bugs.cards.map((item) => item.id), [1]);
 });
 
@@ -284,18 +284,19 @@ test('начало планирования: осталось — всё, что
 test('спринт закрыли в конце планирования: карты, бывшие в Done, не считаются, пока не уйдут в архив', () => {
   // Arrange
   const old = card(4, { size: 9, sp: 5, platforms: [BACK], state: DONE });
+  const oldBug = card(6, { state: DONE, type: WEB_BUG });
   const tail = card(1, { size: 6, sp: 3, platforms: [BACK] });
-  const snapshot = core.takeSnapshot({ cards: [old, tail], settings: core.defaultSettings(), now: 0 });
+  const snapshot = core.takeSnapshot({ cards: [old, oldBug, tail], settings: core.defaultSettings(), now: 0 });
   const planned = card(5, { size: 3, platforms: [FRONT] });
 
   // Act
-  const beforeClose = core.buildReport({ cards: [old, tail, planned], settings: core.defaultSettings(), snapshot });
+  const beforeClose = core.buildReport({ cards: [old, oldBug, tail, planned], settings: core.defaultSettings(), snapshot });
   const afterClose = core.buildReport({ cards: [tail, planned], settings: core.defaultSettings(), snapshot });
 
   // Assert
   for (const report of [beforeClose, afterClose]) {
     assert.deepEqual(report.rows.map(core.formatRow), ['Бэк: 3 + 0 = 3 из —', 'Фронт: 0 + 3 = 3 из —', 'QA: 3 + 0 = 3 из —']);
-    assert.deepEqual([report.done.points, report.board.points, report.done.percent], [0, 9, 0]);
+    assert.deepEqual([report.done.points, report.board.points, report.done.of, report.done.percent], [0, 9, 2, 0]);
   }
 });
 

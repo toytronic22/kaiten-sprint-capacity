@@ -207,7 +207,7 @@ function sprintCapacityMount(config) {
     const rows = report.rows.map(renderRow).join('');
     const legend = snapshot ? '<div class="legend">осталось + прибавилось = сейчас / можно</div>' : '';
     const percent = report.done.percent === null ? '—' : `${report.done.percent}%`;
-    const done = `<div class="done"><span>Done</span><b>${percent}</b><span class="of">${report.done.cards.length} из ${report.board.cards.length} ${plural(report.board.cards.length, ['карты', 'карт', 'карт'])} · ${formatNumber(report.done.points)} SP</span></div>`;
+    const done = `<div class="done"><span>Done</span><b>${percent}</b><span class="of">${report.done.count} из ${report.done.of} ${plural(report.done.of, ['карты', 'карт', 'карт'])} · ${formatNumber(report.done.points)} SP</span></div>`;
     const since = snapshot ? `<span>с ${snapshotTime(snapshot.takenAt)}</span>` : '';
     const plan = `<div class="plan"><button type="button" data-act="start-planning"${snapshot ? ' class="again"' : ''}>Начать планирование</button>${since}</div>`;
     box.innerHTML = rows + legend + done + plan;
