@@ -42,6 +42,19 @@ button { font: inherit; color: inherit; background: none; border: 0; border-radi
 @keyframes goose-jaw { from { transform: rotate(0); } to { transform: rotate(22deg); } }
 @keyframes goose-say { from { opacity: 0; transform: scale(.3); } to { opacity: 1; transform: scale(1); } }
 @keyframes goose-shake { from { transform: rotate(-4deg); } to { transform: rotate(4deg) scale(1.06); } }
+.geese { animation: geese-shake .4s linear var(--hit) both; }
+.goose.crash { left: var(--x); top: var(--y); bottom: auto; z-index: 30; animation: crash-fly .9s cubic-bezier(.6, 0, .9, .4) calc(var(--hit) - .9s) both, crash-hide .01s linear var(--hit) forwards; }
+.splat { position: absolute; z-index: 40; left: var(--x); top: var(--y); width: calc(var(--w) * 3.4); aspect-ratio: 1; container-type: inline-size; animation: splat-hit .3s cubic-bezier(.2, 1.7, .4, 1) var(--hit) both, splat-slide 2.5s cubic-bezier(.5, 0, .8, .6) calc(var(--hit) + .5s) forwards; }
+.splat svg { display: block; width: 100%; overflow: visible; }
+.splat .drip { transform-box: fill-box; transform-origin: 50% 0; animation: drip 2.2s ease-in calc(var(--hit) + .2s) both; }
+.splat .feather { position: absolute; left: 50%; top: 45%; width: 7%; height: 2.6%; background: #fff; border-radius: 50%; box-shadow: 0 0 0 1px #c5ccd7; animation: feather-fly 1.4s cubic-bezier(.2, .8, .4, 1) var(--hit) both; }
+@keyframes crash-fly { from { opacity: 0; transform: translate(-50%, -50%) scale(.1); } 15% { opacity: 1; } to { opacity: 1; transform: translate(-50%, -50%) scale(3.4) rotate(-10deg); } }
+@keyframes crash-hide { to { opacity: 0; visibility: hidden; } }
+@keyframes splat-hit { from { opacity: 0; transform: translate(-50%, -50%) scale(.3); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+@keyframes splat-slide { from { transform: translate(-50%, -50%); } 75% { opacity: 1; } to { opacity: 0; transform: translate(-50%, -22%) rotate(3deg); } }
+@keyframes drip { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes feather-fly { from { opacity: 1; transform: translate(-50%, -50%); } to { opacity: 0; transform: translate(calc(-50% + var(--fx)), calc(-50% + var(--fy))) rotate(var(--fr)); } }
+@keyframes geese-shake { 0%, 100% { transform: none; } 20% { transform: translate(-6px, 4px); } 40% { transform: translate(5px, -5px); } 60% { transform: translate(-4px, -2px); } 80% { transform: translate(3px, 3px); } }
 .error { margin: 10px 14px 0; padding: 8px 10px; background: #4a2428; color: #ffb4b8; border-radius: 8px; font-size: 12px; }
 .summary { padding: 12px 14px 14px; }
 .summary.stale { opacity: .55; }
@@ -140,6 +153,19 @@ const GOOSE_SVG = `<svg viewBox="0 0 130 118" aria-hidden="true">
 <ellipse cx="97" cy="37" rx="5" ry="3.2" fill="#ff9aac" opacity=".75"/>
 <circle cx="102" cy="24" r="4.6" fill="#1b1c20"/><circle cx="103.6" cy="22.4" r="1.7" fill="#fff"/><circle cx="100.6" cy="26" r=".8" fill="#fff"/>
 </svg>`;
+
+const SPLAT_GOOSE = `<g stroke="#2b2d33" stroke-width="3" stroke-linejoin="round">
+<path d="M62 104 Q36 92 24 110 Q44 120 62 116 Z" fill="#fff"/><path d="M138 104 Q164 92 176 110 Q156 120 138 116 Z" fill="#fff"/>
+<path d="M76 134 L62 152 H80 Z" fill="#f28b24"/><path d="M124 134 L138 152 H120 Z" fill="#f28b24"/>
+<path d="M100 92 V64" fill="none" stroke-width="22" stroke-linecap="round"/><circle cx="100" cy="52" r="20" fill="#2b2d33"/>
+<ellipse cx="100" cy="112" rx="42" ry="28" fill="#fff"/>
+<path d="M100 92 V64" fill="none" stroke="#fff" stroke-width="16" stroke-linecap="round"/><circle cx="100" cy="52" r="17" fill="#fff" stroke="none"/>
+<ellipse cx="100" cy="61" rx="12" ry="5" fill="#ffa93a" stroke-width="2"/>
+<path d="M89 43 l8 8 m0 -8 l-8 8 M103 43 l8 8 m0 -8 l-8 8" fill="none" stroke="#1b1c20" stroke-width="2.6" stroke-linecap="round"/>
+</g>
+<g fill="#ff9aac" opacity=".75"><ellipse cx="87" cy="57" rx="4" ry="2.5"/><ellipse cx="113" cy="57" rx="4" ry="2.5"/></g>`;
+
+const SPLAT_CRACKS = `<path d="M100 100 L62 34 L54 6 M62 34 L40 30 M100 100 L168 62 L198 56 M168 62 L180 40 M100 100 L150 168 L158 198 M100 100 L32 148 L2 156 M32 148 L28 176 M100 100 L128 18 M100 100 L18 86" fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round" opacity=".5"/>`;
 
 const ISSUE_LABELS = {
   noPlatform: 'Нет {back} или {front} — не считаю',
@@ -384,6 +410,28 @@ function sprintCapacityMount(config) {
   let chaosBefore = false;
   let chaosTimer = null;
   let chaosWords = null;
+  const crashGoose = (random) => {
+    const place = `--x:${random(28, 60).toFixed(1)}%;--y:${random(56, 68).toFixed(1)}%`;
+    const points = Array.from({ length: 22 }, (_, index) => {
+      const angle = (index / 22) * Math.PI * 2;
+      const radius = index % 2 ? random(50, 64) : random(74, 100);
+      return [100 + Math.cos(angle) * radius, 100 + Math.sin(angle) * radius * 0.9];
+    });
+    const middle = (a, b) => `${((a[0] + b[0]) / 2).toFixed(1)} ${((a[1] + b[1]) / 2).toFixed(1)}`;
+    const blob = `M${middle(points[0], points[1])} ` + points.map((_, index) => {
+      const next = points[(index + 1) % points.length];
+      return `Q${next[0].toFixed(1)} ${next[1].toFixed(1)} ${middle(next, points[(index + 2) % points.length])}`;
+    }).join(' ') + 'Z';
+    const drops = Array.from({ length: 8 }, () => {
+      const angle = random(0, Math.PI * 2);
+      const distance = random(104, 128);
+      return `<circle cx="${(100 + Math.cos(angle) * distance).toFixed(1)}" cy="${(100 + Math.sin(angle) * distance).toFixed(1)}" r="${random(2.5, 7).toFixed(1)}"/>`;
+    }).join('');
+    const drips = [random(70, 84), random(92, 108), random(116, 130)].map((x) => `<rect class="drip" x="${x.toFixed(1)}" y="156" width="${random(6, 9).toFixed(1)}" height="${random(40, 80).toFixed(0)}" rx="3.5"/>`).join('');
+    const feathers = Array.from({ length: 6 }, () => `<i class="feather" style="--fx:${random(-60, 60).toFixed(0)}cqw;--fy:${random(-55, 20).toFixed(0)}cqw;--fr:${random(-300, 300).toFixed(0)}deg"></i>`).join('');
+    return `<div class="goose crash" style="${place};--step:.13s"><div class="bob">${GOOSE_SVG}</div></div>`
+      + `<div class="splat" style="${place}"><svg viewBox="0 0 200 200" aria-hidden="true"><g fill="#a80d22">${drops}${drips}<path d="${blob}"/></g><path d="${blob}" fill="#dc2338" transform="translate(100 100) scale(.66) translate(-100 -100)"/><g transform="translate(100 100) scale(.82) translate(-100 -100)">${SPLAT_GOOSE}</g>${SPLAT_CRACKS}</svg>${feathers}</div>`;
+  };
   const releaseGeese = (names) => {
     if ($('.geese')) return;
     const count = 7;
@@ -393,12 +441,13 @@ function sprintCapacityMount(config) {
     const random = (from, to) => from + Math.random() * (to - from);
     const flock = document.createElement('div');
     flock.className = 'geese';
+    flock.style.setProperty('--hit', '1.9s');
     flock.innerHTML = `<div class="boom" style="--boom-end:${lifetime - 0.45}s"><span>${escapeHtml(words[0])}</span></div>` + Array.from({ length: count }, (_, index) => {
       const size = random(0.75, 1.2);
       const style = `--delay:${random(0, 1.2).toFixed(2)}s;--speed:${random(2.4, 3.5).toFixed(2)}s;--size:${size.toFixed(2)};--step:${random(0.16, 0.24).toFixed(2)}s;--wave:${random(0.5, 0.9).toFixed(2)}s;--phase:${random(-1, 0).toFixed(2)}s;--amp:${random(1.5, 5).toFixed(1)}vh;--lean:${random(-6, 6).toFixed(1)}deg;bottom:${random(3, 48).toFixed(1)}%;z-index:${Math.round(size * 10)}`;
       const say = shouters.has(index) ? '<span class="say">Беспредел!</span>' : '';
       return `<div class="goose" style="${style}"><div class="wave"><div class="bob">${GOOSE_SVG}</div>${say}</div></div>`;
-    }).join('');
+    }).join('') + crashGoose(random);
     shadow.appendChild(flock);
     const label = flock.querySelector('.boom span');
     let word = 0;
