@@ -354,6 +354,25 @@ test('беспредел: сейчас вдвое больше возможно�
   assert.deepEqual(actual, [true, true, false, false, false]);
 });
 
+test('беспредел: трещит тот, у кого вдвое больше, на мобилке Mobile', () => {
+  // Arrange
+  const rows = [
+    { direction: 'back', total: 30, capacity: 10 },
+    { direction: 'front', total: 8, capacity: 4 },
+    { direction: 'qa', total: 15, capacity: 10 },
+  ];
+
+  // Act
+  const coreNames = core.chaosNames(rows, core.boardConfig(CORE_BOARD));
+  const mobileNames = core.chaosNames(rows, core.boardConfig(MOBILE_BOARD));
+  const qaOnly = core.chaosNames([{ direction: 'back', total: 5, capacity: 10 }, { direction: 'qa', total: 20, capacity: 10 }], core.boardConfig(CORE_BOARD));
+
+  // Assert
+  assert.deepEqual(coreNames, ['Backend', 'Frontend']);
+  assert.deepEqual(mobileNames, ['Backend', 'Mobile']);
+  assert.deepEqual(qaOnly, ['QA']);
+});
+
 test('снимок: испорченный или без доски не принимается', () => {
   // Arrange
   const good = { boardId: CORE_BOARD, takenAt: '2026-09-29T09:00:00.000Z', totals: { back: '3', front: 0, qa: 1.5 }, doneIds: [4, 'x', 5] };

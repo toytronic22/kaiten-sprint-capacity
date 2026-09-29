@@ -13,31 +13,35 @@ button { font: inherit; color: inherit; background: none; border: 0; border-radi
 .icon:disabled { cursor: default; }
 .icon:disabled span { display: inline-block; animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
-.geese { position: fixed; inset: 0; z-index: 2147483001; overflow: hidden; pointer-events: none; --w: clamp(56px, min(11vw, 17vh), 200px); }
-.goose { position: absolute; left: 0; width: var(--w); animation: goose-run var(--speed) linear var(--delay) both; }
-.goose .bob { animation: goose-bob .22s ease-in-out infinite alternate; }
-.goose svg { display: block; width: 100%; overflow: visible; }
-.goose .leg { transform-box: fill-box; transform-origin: 50% 0; animation: goose-leg .22s ease-in-out infinite alternate; }
+.geese { position: fixed; inset: 0; z-index: 2147483001; overflow: hidden; pointer-events: none; --w: clamp(60px, min(10vw, 16vh), 190px); }
+.goose { position: absolute; left: 0; width: var(--w); animation: goose-run var(--speed) cubic-bezier(.35, .05, .65, .95) var(--delay) both; }
+.goose .wave { animation: goose-wave var(--wave) ease-in-out var(--phase) infinite alternate; }
+.goose .bob { transform-origin: 50% 100%; animation: goose-bob var(--step) ease-in-out infinite alternate; }
+.goose svg { display: block; width: 100%; overflow: visible; filter: drop-shadow(0 .35em .25em rgba(0, 0, 0, .18)); }
+.goose .leg { transform-box: fill-box; transform-origin: 50% 0; animation: goose-leg var(--step) ease-in-out infinite alternate; }
 .goose .leg + .leg { animation-direction: alternate-reverse; }
-.goose .wing { transform-box: fill-box; transform-origin: 0 50%; animation: goose-wing .15s ease-in-out infinite alternate; }
-.goose .jaw { transform-box: fill-box; transform-origin: 0 0; animation: goose-jaw .18s ease-in-out infinite alternate; }
-.goose .say { position: absolute; right: -24%; top: -32%; padding: .2em .55em; font: 900 max(10px, calc(var(--w) * .14))/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; color: #d62828; background: #fff; border: max(2px, .16em) solid #26282c; border-radius: .8em; white-space: nowrap; animation: goose-say .3s ease-in-out infinite alternate; }
-.goose .say::after { content: ""; position: absolute; left: 1.2em; bottom: -.6em; border: .45em solid transparent; border-top-color: #26282c; border-bottom: 0; }
-.boom { position: absolute; left: 50%; top: max(12px, 14vh); width: min(900px, 92vw, 120vh); container-type: inline-size; aspect-ratio: 2.1; display: grid; place-items: center; transform: translateX(-50%) rotate(-8deg); animation: boom-in .35s cubic-bezier(.2, 1.8, .4, 1) both, boom-out .5s ease-in var(--boom-end) forwards; }
+.goose .wing { transform-box: fill-box; transform-origin: 88% 30%; animation: goose-wing calc(var(--step) * .7) ease-in-out infinite alternate; }
+.goose .jaw { transform-box: fill-box; transform-origin: 0 0; animation: goose-jaw calc(var(--step) * 1.3) ease-in-out infinite alternate; }
+.goose .say { position: absolute; left: 52%; bottom: 92%; padding: .28em .7em .32em; font: 800 max(11px, calc(var(--w) * .15))/1.1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; color: #e0303a; background: #fff; border-radius: 1em; box-shadow: 0 .15em 0 rgba(0, 0, 0, .12), 0 .3em .9em rgba(0, 0, 0, .18); white-space: nowrap; transform-origin: 10% 100%; animation: goose-say .5s cubic-bezier(.2, 1.8, .4, 1) both, goose-shake .32s ease-in-out .5s infinite alternate; }
+.goose .say::after { content: ""; position: absolute; left: .9em; bottom: -.5em; border: .3em solid transparent; border-top: .55em solid #fff; border-bottom: 0; transform: skewX(20deg); }
+.boom { position: absolute; z-index: 20; left: 50%; top: max(12px, 12vh); width: min(820px, 90vw, 110vh); container-type: inline-size; aspect-ratio: 2.2; display: grid; place-items: center; transform: translateX(-50%) rotate(-6deg); animation: boom-in .45s cubic-bezier(.2, 1.7, .4, 1) both, boom-out .45s ease-in var(--boom-end) forwards; }
 .boom::before, .boom::after { content: ""; position: absolute; inset: 0; clip-path: polygon(100.0% 50.0%, 87.0% 58.5%, 95.0% 71.7%, 79.7% 73.7%, 81.2% 89.1%, 66.5% 84.2%, 61.1% 98.7%, 50.0% 88.0%, 38.9% 98.7%, 33.5% 84.2%, 18.8% 89.1%, 20.3% 73.7%, 5.0% 71.7%, 13.0% 58.5%, 0.0% 50.0%, 13.0% 41.5%, 5.0% 28.3%, 20.3% 26.3%, 18.8% 10.9%, 33.5% 15.8%, 38.9% 1.3%, 50.0% 12.0%, 61.1% 1.3%, 66.5% 15.8%, 81.2% 10.9%, 79.7% 26.3%, 95.0% 28.3%, 87.0% 41.5%); }
-.boom::before { background: #111; transform: scale(1.06); }
-.boom::after { background: #e63a2e; animation: boom-flash .18s steps(1) infinite; }
-.boom span { position: relative; z-index: 1; padding: 0 12%; text-align: center; font: italic 900 max(14px, 9.4cqw)/1 Impact, "Arial Black", "Helvetica Neue", sans-serif; letter-spacing: 1px; color: #ffe14d; -webkit-text-stroke: max(1px, .035em) #111; text-shadow: .07em .07em 0 #111; animation: boom-text .18s steps(1) infinite; }
-@keyframes boom-in { from { transform: translateX(-50%) rotate(-8deg) scale(0); } to { transform: translateX(-50%) rotate(-8deg) scale(1); } }
-@keyframes boom-out { to { opacity: 0; transform: translateX(-50%) rotate(-8deg) scale(1.4); } }
-@keyframes boom-flash { 50% { background: #ffe14d; } }
-@keyframes boom-text { 50% { color: #e63a2e; } }
-@keyframes goose-run { from { transform: translateX(-160%) scale(var(--size)); } to { transform: translateX(calc(100vw + 60%)) scale(var(--size)); } }
-@keyframes goose-bob { from { transform: translateY(0); } to { transform: translateY(-9px); } }
-@keyframes goose-leg { from { transform: rotate(-32deg); } to { transform: rotate(32deg); } }
-@keyframes goose-wing { from { transform: rotate(0); } to { transform: rotate(-38deg); } }
-@keyframes goose-jaw { from { transform: rotate(0); } to { transform: rotate(28deg); } }
-@keyframes goose-say { from { transform: rotate(-6deg) scale(1); } to { transform: rotate(5deg) scale(1.12); } }
+.boom::before { background: #1b1c20; transform: scale(1.05) translate(1.2%, 2%); }
+.boom::after { background: radial-gradient(circle at 50% 45%, #ff5a4a, #d8261d 70%); animation: boom-flash .5s steps(1) infinite; }
+.boom span { position: relative; z-index: 1; max-width: 76%; text-align: center; font: italic 900 max(16px, 10.5cqw)/.95 Impact, "Arial Black", "Helvetica Neue", sans-serif; letter-spacing: .02em; color: #fff15c; -webkit-text-stroke: max(1px, .03em) #1b1c20; text-shadow: .06em .07em 0 #1b1c20; }
+.boom span.pop { animation: boom-pop .3s cubic-bezier(.2, 1.9, .4, 1); }
+@keyframes boom-in { from { transform: translateX(-50%) rotate(-24deg) scale(0); } to { transform: translateX(-50%) rotate(-6deg) scale(1); } }
+@keyframes boom-out { to { opacity: 0; transform: translateX(-50%) rotate(-6deg) scale(1.3); } }
+@keyframes boom-flash { 50% { background: radial-gradient(circle at 50% 45%, #ffe45c, #ffb21e 70%); } }
+@keyframes boom-pop { from { transform: scale(.6) rotate(-4deg); } to { transform: scale(1) rotate(0); } }
+@keyframes goose-run { from { transform: translateX(-130%) scale(var(--size)); } to { transform: translateX(calc(100vw + 40%)) scale(var(--size)); } }
+@keyframes goose-wave { from { transform: translateY(calc(var(--amp) * -1)) rotate(var(--lean)); } to { transform: translateY(var(--amp)) rotate(calc(var(--lean) * -1)); } }
+@keyframes goose-bob { from { transform: translateY(0) rotate(-3deg); } to { transform: translateY(-12%) rotate(4deg) scaleY(1.04); } }
+@keyframes goose-leg { from { transform: rotate(-30deg); } to { transform: rotate(30deg); } }
+@keyframes goose-wing { from { transform: rotate(0); } to { transform: rotate(24deg); } }
+@keyframes goose-jaw { from { transform: rotate(0); } to { transform: rotate(22deg); } }
+@keyframes goose-say { from { opacity: 0; transform: scale(.3); } to { opacity: 1; transform: scale(1); } }
+@keyframes goose-shake { from { transform: rotate(-4deg); } to { transform: rotate(4deg) scale(1.06); } }
 .error { margin: 10px 14px 0; padding: 8px 10px; background: #4a2428; color: #ffb4b8; border-radius: 8px; font-size: 12px; }
 .summary { padding: 12px 14px 14px; }
 .summary.stale { opacity: .55; }
@@ -124,20 +128,17 @@ const PANEL_HTML = `
   </div>
 </div>`;
 
-const GOOSE_SVG = `<svg viewBox="0 0 130 112" aria-hidden="true">
-<path class="leg" d="M50 80 L46 104 L58 107" fill="none" stroke="#e8801a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-<path class="leg" d="M64 80 L62 104 L74 107" fill="none" stroke="#e8801a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M28 62 L10 50 L20 72 Z" fill="#fff" stroke="#26282c" stroke-width="3" stroke-linejoin="round"/>
-<ellipse cx="57" cy="66" rx="34" ry="22" fill="#fff" stroke="#26282c" stroke-width="3"/>
-<path d="M80 60 C94 48 84 32 95 22" fill="none" stroke="#26282c" stroke-width="17" stroke-linecap="round"/>
-<circle cx="97" cy="20" r="14" fill="#26282c"/>
-<path d="M80 60 C94 48 84 32 95 22" fill="none" stroke="#fff" stroke-width="11" stroke-linecap="round"/>
-<circle cx="97" cy="20" r="11" fill="#fff"/>
-<path class="jaw" d="M106 22 L123 28 L105 29 Z" fill="#f59a2a" stroke="#b85f0c" stroke-width="2" stroke-linejoin="round"/>
-<path d="M105 13 L127 18 L106 23 Z" fill="#f59a2a" stroke="#b85f0c" stroke-width="2" stroke-linejoin="round"/>
-<circle cx="100" cy="16" r="3.4" fill="#111"/><circle cx="101.2" cy="14.8" r="1.1" fill="#fff"/>
-<path d="M93 9 L104 12.5" stroke="#111" stroke-width="2.8" stroke-linecap="round"/>
-<path class="wing" d="M42 60 C56 44 80 50 82 63 C70 72 52 72 42 60 Z" fill="#e3e6ea" stroke="#26282c" stroke-width="2.5" stroke-linejoin="round"/>
+const GOOSE_SVG = `<svg viewBox="0 0 130 118" aria-hidden="true">
+<g class="leg"><path d="M50 92 V106" stroke="#f28b24" stroke-width="5" stroke-linecap="round"/><path d="M47 105 Q46 112 53 112 H63 Q64 107 58 105 Z" fill="#f28b24"/></g>
+<g class="leg"><path d="M66 92 V106" stroke="#f28b24" stroke-width="5" stroke-linecap="round"/><path d="M63 105 Q62 112 69 112 H79 Q80 107 74 105 Z" fill="#f28b24"/></g>
+<g fill="#2b2d33" stroke="#2b2d33" stroke-width="6" stroke-linejoin="round"><path d="M30 70 Q12 60 14 48 Q26 54 38 62 Z"/><ellipse cx="58" cy="74" rx="36" ry="25"/><path d="M80 64 C92 54 86 40 96 30" fill="none" stroke-width="22" stroke-linecap="round"/><circle cx="97" cy="28" r="18"/></g>
+<g fill="#fff"><path d="M30 70 Q12 60 14 48 Q26 54 38 62 Z"/><ellipse cx="58" cy="74" rx="36" ry="25"/><path d="M80 64 C92 54 86 40 96 30" fill="none" stroke="#fff" stroke-width="16" stroke-linecap="round"/><circle cx="97" cy="28" r="18"/></g>
+<path d="M25 80 Q58 110 93 78 Q60 97 25 80 Z" fill="#e6ebf2"/>
+<path class="wing" d="M79 65 C71 56 50 57 39 70 Q46 70 48 74 Q54 72 57 77 Q63 74 67 78 C75 76 81 71 79 65 Z" fill="#e4e9f0" stroke="#bfc7d3" stroke-width="2" stroke-linejoin="round"/>
+<path class="jaw" d="M110 32 Q119 33 122 36 Q116 40 109 37 Z" fill="#ef8a1f" stroke="#2b2d33" stroke-width="2" stroke-linejoin="round"/>
+<path d="M109 25 Q122 24 126 31 Q118 35 108 33 Z" fill="#ffa93a" stroke="#2b2d33" stroke-width="2" stroke-linejoin="round"/>
+<ellipse cx="97" cy="37" rx="5" ry="3.2" fill="#ff9aac" opacity=".75"/>
+<circle cx="102" cy="24" r="4.6" fill="#1b1c20"/><circle cx="103.6" cy="22.4" r="1.7" fill="#fff"/><circle cx="100.6" cy="26" r=".8" fill="#fff"/>
 </svg>`;
 
 const ISSUE_LABELS = {
@@ -382,79 +383,42 @@ function sprintCapacityMount(config) {
 
   let chaosBefore = false;
   let chaosTimer = null;
-  const VOLUME = 0.6;
-  let audio = null;
-  let speaker = null;
-  const honk = (when) => {
-    const oscillator = audio.createOscillator();
-    const filter = audio.createBiquadFilter();
-    const gain = audio.createGain();
-    oscillator.type = 'sawtooth';
-    oscillator.frequency.setValueAtTime(560 + Math.random() * 120, when);
-    oscillator.frequency.exponentialRampToValueAtTime(320, when + 0.22);
-    filter.type = 'bandpass';
-    filter.frequency.value = 1300;
-    filter.Q.value = 1.5;
-    gain.gain.setValueAtTime(0.0001, when);
-    gain.gain.exponentialRampToValueAtTime(0.16, when + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, when + 0.25);
-    oscillator.connect(filter).connect(gain).connect(speaker);
-    oscillator.start(when);
-    oscillator.stop(when + 0.3);
-  };
-  const shout = (count, seconds) => {
-    try {
-      if (!audio) {
-        audio = new (window.AudioContext || window.webkitAudioContext)();
-        speaker = audio.createGain();
-        speaker.gain.value = VOLUME;
-        speaker.connect(audio.destination);
-      }
-      audio.resume();
-      for (let index = 0; index < count * 3; index += 1) honk(audio.currentTime + Math.random() * (seconds - 0.4));
-    } catch (error) {
-      audio = null;
-    }
-    try {
-      for (let index = 0; index < 2; index += 1) {
-        const phrase = new window.SpeechSynthesisUtterance('Беспредел!');
-        phrase.lang = 'ru-RU';
-        phrase.pitch = 2;
-        phrase.rate = 1.3;
-        phrase.volume = VOLUME;
-        window.speechSynthesis.speak(phrase);
-      }
-    } catch (error) {
-      return;
-    }
-  };
-  const releaseGeese = () => {
+  let chaosWords = null;
+  const releaseGeese = (names) => {
     if ($('.geese')) return;
     const count = 7;
     const lifetime = 5;
-    const speed = 2.8;
-    const gap = 0.3;
+    const shouters = new Set(Array.from({ length: count }, (_, index) => index).sort(() => Math.random() - 0.5).slice(0, 3));
+    const words = ['!!Overload!!', ...names.map((name) => `${name} трещит!`)];
+    const random = (from, to) => from + Math.random() * (to - from);
     const flock = document.createElement('div');
     flock.className = 'geese';
-    const total = lifetime;
-    flock.innerHTML = `<div class="boom" style="--boom-end:${total - 0.5}s"><span>C-C-C-COMBO BREAKER!</span></div>` + Array.from({ length: count }, (_, index) => {
-      const style = `--delay:${index * gap}s;--speed:${speed + Math.random() * 0.4}s;--size:${0.8 + Math.random() * 0.45};bottom:${14 + Math.random() * 12}%`;
-      return `<div class="goose" style="${style}"><div class="bob">${GOOSE_SVG}<span class="say">Беспредел!</span></div></div>`;
+    flock.innerHTML = `<div class="boom" style="--boom-end:${lifetime - 0.45}s"><span>${escapeHtml(words[0])}</span></div>` + Array.from({ length: count }, (_, index) => {
+      const size = random(0.75, 1.2);
+      const style = `--delay:${random(0, 1.2).toFixed(2)}s;--speed:${random(2.4, 3.5).toFixed(2)}s;--size:${size.toFixed(2)};--step:${random(0.16, 0.24).toFixed(2)}s;--wave:${random(0.5, 0.9).toFixed(2)}s;--phase:${random(-1, 0).toFixed(2)}s;--amp:${random(1.5, 5).toFixed(1)}vh;--lean:${random(-6, 6).toFixed(1)}deg;bottom:${random(3, 48).toFixed(1)}%;z-index:${Math.round(size * 10)}`;
+      const say = shouters.has(index) ? '<span class="say">Беспредел!</span>' : '';
+      return `<div class="goose" style="${style}"><div class="wave"><div class="bob">${GOOSE_SVG}</div>${say}</div></div>`;
     }).join('');
     shadow.appendChild(flock);
-    shout(count, total);
+    const label = flock.querySelector('.boom span');
+    let word = 0;
+    window.clearInterval(chaosWords);
+    chaosWords = window.setInterval(() => {
+      word = (word + 1) % words.length;
+      label.textContent = words[word];
+      label.classList.remove('pop');
+      void label.offsetWidth;
+      label.classList.add('pop');
+    }, 650);
     window.setTimeout(() => {
+      window.clearInterval(chaosWords);
       flock.remove();
-      try {
-        window.speechSynthesis.cancel();
-      } catch (error) {
-        return;
-      }
     }, lifetime * 1000);
   };
   const checkChaos = () => {
-    const chaos = Boolean(report && report.rows.some(isChaos));
-    if (chaos && !chaosBefore) releaseGeese();
+    const names = report ? chaosNames(report.rows, boardConfig(boardId, config)) : [];
+    const chaos = names.length > 0;
+    if (chaos && !chaosBefore) releaseGeese(names);
     chaosBefore = chaos;
   };
   const checkChaosLater = () => {
@@ -466,6 +430,7 @@ function sprintCapacityMount(config) {
     closed = true;
     window.clearInterval(timer);
     window.clearTimeout(chaosTimer);
+    window.clearInterval(chaosWords);
     document.removeEventListener('visibilitychange', onVisible);
     host.remove();
     delete window.__sprintCapacity;
