@@ -85,7 +85,7 @@ const PANEL_HTML = `
         <div class="team">
           <span></span><span class="th">людей</span><span class="th" title="Отпуска, отгулы, дежурства за спринт">нет, чел.-дн</span>
           <span>Бэк</span>${PANEL_INPUT('team.back.people', '0')}${PANEL_INPUT('team.back.absence', '0')}
-          <span>Фронт</span>${PANEL_INPUT('team.front.people', '0')}${PANEL_INPUT('team.front.absence', '0')}
+          <span data-label="front">Фронт</span>${PANEL_INPUT('team.front.people', '0')}${PANEL_INPUT('team.front.absence', '0')}
           <span>QA</span>${PANEL_INPUT('team.qa.people', '0')}${PANEL_INPUT('team.qa.absence', '0')}
         </div>
         <div class="days">
@@ -100,7 +100,7 @@ const PANEL_HTML = `
 </div>`;
 
 const ISSUE_LABELS = {
-  noPlatform: 'Нет Backend или Frontend — не считаю',
+  noPlatform: 'Нет {back} или {front} — не считаю',
   needQaWithoutQa: 'Need QA, а QA 0 SP',
   noEstimate: 'Без оценки',
 };
@@ -181,7 +181,7 @@ function sprintCapacityMount(config) {
   const cardLink = (item) => `<a href="${window.location.origin}/${item.id}" target="_blank" rel="noopener">${escapeHtml(item.title || item.id)}</a>`;
 
   const recompute = () => {
-    report = data.cards ? buildReport({ cards: data.cards, settings, snapshot, config }) : null;
+    report = data.cards ? buildReport({ cards: data.cards, settings, snapshot, config: boardConfig(boardId, config) }) : null;
   };
 
   const renderStatus = () => {
@@ -206,7 +206,7 @@ function sprintCapacityMount(config) {
     const split = snapshot ? `<span class="split">${formatNumber(row.base)} ${row.added < 0 ? '−' : '+'} ${formatNumber(Math.abs(row.added))} =</span> ` : '';
     const capacity = row.capacity === null ? '—' : formatNumber(row.capacity);
     return `<div class="row${row.over ? ' over' : ''}" title="${escapeHtml(formatRow(row))}">`
-      + `<div class="row-head"><span class="name">${DIRECTION_LABELS[row.direction]}</span>`
+      + `<div class="row-head"><span class="name">${escapeHtml(row.label)}</span>`
       + `<span class="value">${split}<b>${formatNumber(row.total)}</b><span class="of"> / ${capacity}</span></span></div>`
       + `<div class="bar"><i class="base" style="width:${share(base)}"></i><i class="add" style="width:${share(row.total - base)}"></i>${limit}</div></div>`;
   };
@@ -239,7 +239,7 @@ function sprintCapacityMount(config) {
       const items = report.warnings.filter((warning) => warning.issue === issue).map((warning) => warning.item);
       if (!items.length) return '';
       const links = items.map((item) => `<li>${cardLink(item)}</li>`).join('');
-      return `<div class="group"><div class="group-title">${ISSUE_LABELS[issue]}</div><ul>${links}</ul></div>`;
+      return `<div class="group"><div class="group-title">${escapeHtml(ISSUE_LABELS[issue].replace(/\{(\w+)\}/g, (_, key) => boardConfig(boardId, config).platformTags[key]))}</div><ul>${links}</ul></div>`;
     }).join('');
     box.innerHTML = `<summary>Проверить <span class="count">${count}</span></summary><div class="inner">${groups}</div>`;
   };
@@ -258,6 +258,7 @@ function sprintCapacityMount(config) {
   };
 
   const fillSettings = () => {
+    for (const label of shadow.querySelectorAll('[data-label]')) label.textContent = boardConfig(boardId, config).labels[label.dataset.label];
     for (const input of shadow.querySelectorAll('.settings input[data-set]')) {
       const value = input.dataset.set.split('.').reduce((node, key) => node[key], settings);
       input.value = value === 0 && input.placeholder === '0' ? '' : formatNumber(value);
@@ -320,7 +321,7 @@ function sprintCapacityMount(config) {
     const board = boardId;
     try {
       const cards = await kaitenBoardCards(board);
-      await kaitenAddComment(config.snapshotCardId, snapshotComment(takeSnapshot({ cards, settings, now: Date.now(), boardId: board, config }), config));
+      await kaitenAddComment(config.snapshotCardId, snapshotComment(takeSnapshot({ cards, settings, now: Date.now(), boardId: board, config: boardConfig(board, config) }), config));
     } catch (error) {
       window.alert(`Снимок не сохранился: ${error.message || error}`);
     }

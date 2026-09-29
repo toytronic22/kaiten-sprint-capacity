@@ -1,8 +1,12 @@
 const SPRINT_CAPACITY = {
-  boards: [{ id: 68084, title: 'Staff Core' }, { id: 1321013, title: 'Staff Mobile' }],
+  boards: [
+    { id: 68084, title: 'Staff Core' },
+    { id: 1321013, title: 'Staff Mobile', platform: { back: 16232407, front: 16237830 }, platformTags: { back: 'Backend', front: 'Mobile' }, labels: { front: 'Mobile' } },
+  ],
   snapshotCardId: 71238243,
   fields: { devEstimate: 'id_396449', platform: 'id_499149', testType: 'id_505017' },
   platform: { back: 16232407, front: 16232408 },
+  platformTags: { back: 'Backend', front: 'Frontend' },
   needQa: 16238652,
   doneState: 3,
   bugTypeIds: [446247],
@@ -173,13 +177,14 @@ function buildReport({ cards, settings, snapshot = null, config = SPRINT_CAPACIT
   }
   if (cards.length && !hasDevField) report.problems.push('Ни в одной карте нет поля Story Points — всё считаю в разработку, QA не выделить');
   if (cards.length && !hasPlatformField) report.problems.push('Ни в одной карте нет поля Platform — бэк и фронт не разделить');
+  const labels = { ...DIRECTION_LABELS, ...config.labels };
   report.rows = DIRECTIONS.map((direction) => {
     const total = round1(sums[direction]);
     const people = settings.team[direction].people;
     const capacity = people > 0 ? round1(capacityOf(settings, direction)) : null;
     const base = snapshot ? snapshot.totals[direction] : null;
     const added = base === null ? null : round1(total - base);
-    return { direction, base, added, total, capacity, over: capacity !== null && total > capacity };
+    return { direction, label: labels[direction], base, added, total, capacity, over: capacity !== null && total > capacity };
   });
   report.done.percent = percentOf(report.done.count, report.done.of);
   report.notCounted.points = round1(report.notCounted.points);
@@ -189,11 +194,21 @@ function buildReport({ cards, settings, snapshot = null, config = SPRINT_CAPACIT
   return report;
 }
 
+function boardConfig(boardId, config = SPRINT_CAPACITY) {
+  const board = config.boards.find((item) => item.id === boardId) || {};
+  return {
+    ...config,
+    platform: board.platform || config.platform,
+    platformTags: board.platformTags || config.platformTags,
+    labels: { ...DIRECTION_LABELS, ...config.labels, ...board.labels },
+  };
+}
+
 function formatRow(row) {
   const capacity = row.capacity === null ? '—' : formatNumber(row.capacity);
   const hasBase = row.base !== null && row.base !== undefined;
   const change = hasBase ? `${formatNumber(row.base)} ${row.added < 0 ? '−' : '+'} ${formatNumber(Math.abs(row.added))} = ` : '';
-  return `${DIRECTION_LABELS[row.direction]}: ${change}${formatNumber(row.total)} из ${capacity}`;
+  return `${row.label || DIRECTION_LABELS[row.direction]}: ${change}${formatNumber(row.total)} из ${capacity}`;
 }
 
 function takeSnapshot({ cards, settings, now, boardId, config = SPRINT_CAPACITY }) {
@@ -223,7 +238,8 @@ function boardTitle(boardId, config = SPRINT_CAPACITY) {
 }
 
 function snapshotComment(snapshot, config = SPRINT_CAPACITY) {
-  const left = DIRECTIONS.map((direction) => `${DIRECTION_LABELS[direction]} ${formatNumber(snapshot.totals[direction])}`).join(' · ');
+  const { labels } = boardConfig(snapshot.boardId, config);
+  const left = DIRECTIONS.map((direction) => `${labels[direction]} ${formatNumber(snapshot.totals[direction])}`).join(' · ');
   return `${SNAPSHOT_MARK}, ${boardTitle(snapshot.boardId, config)}. Осталось: ${left}.\n\n\`\`\`json\n${JSON.stringify(snapshot)}\n\`\`\``;
 }
 
@@ -245,4 +261,4 @@ function snapshotFromComments(comments, boardId) {
   return null;
 }
 
-if (typeof module !== 'undefined') module.exports = { SPRINT_CAPACITY, DIRECTIONS, DIRECTION_LABELS, toNumber, round1, formatNumber, plural, readEstimate, platformOf, needsQa, isBug, splitEstimate, estimateIssues, defaultSettings, normalizeSettings, capacityOf, buildReport, formatRow, takeSnapshot, normalizeSnapshot, boardTitle, snapshotComment, snapshotFromComments };
+if (typeof module !== 'undefined') module.exports = { SPRINT_CAPACITY, DIRECTIONS, DIRECTION_LABELS, toNumber, round1, formatNumber, plural, readEstimate, platformOf, needsQa, isBug, splitEstimate, estimateIssues, defaultSettings, normalizeSettings, capacityOf, buildReport, boardConfig, formatRow, takeSnapshot, normalizeSnapshot, boardTitle, snapshotComment, snapshotFromComments };

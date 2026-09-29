@@ -324,6 +324,25 @@ test('карту, бывшую в Done, вернули в работу — сн�
   assert.deepEqual(report.rows.map(core.formatRow)[0], 'Бэк: 0 + 2 = 2 из —');
 });
 
+test('доска Staff Mobile: вместо фронта Mobile по тегу Mobile, Frontend не считается', () => {
+  // Arrange
+  const cards = [
+    card(1, { size: 5, sp: 3, platforms: [MOBILE] }),
+    card(2, { size: 2, platforms: [FRONT] }),
+    card(3, { size: 4, platforms: [BACK, MOBILE] }),
+  ];
+
+  // Act
+  const mobile = core.buildReport({ cards, settings: core.defaultSettings(), config: core.boardConfig(MOBILE_BOARD) });
+  const coreBoard = core.buildReport({ cards, settings: core.defaultSettings(), config: core.boardConfig(CORE_BOARD) });
+
+  // Assert
+  assert.deepEqual(mobile.rows.map(core.formatRow), ['Бэк: 4 из —', 'Mobile: 3 из —', 'QA: 2 из —']);
+  assert.deepEqual(mobile.warnings.map((warning) => [warning.issue, warning.item.id]), [['noPlatform', 2]]);
+  assert.deepEqual(coreBoard.rows.map(core.formatRow), ['Бэк: 4 из —', 'Фронт: 2 из —', 'QA: 2 из —']);
+  assert.deepEqual(coreBoard.warnings.map((warning) => [warning.issue, warning.item.id]), [['noPlatform', 1]]);
+});
+
 test('снимок: испорченный или без доски не принимается', () => {
   // Arrange
   const good = { boardId: CORE_BOARD, takenAt: '2026-09-29T09:00:00.000Z', totals: { back: '3', front: 0, qa: 1.5 }, doneIds: [4, 'x', 5] };
@@ -347,7 +366,7 @@ test('общий снимок: пишется комментарием в Kaiten
   const actual = core.snapshotFromComments([comment], MOBILE_BOARD);
 
   // Assert
-  assert.ok(comment.text.startsWith('Снимок начала планирования, Staff Mobile. Осталось: Бэк 20 · Фронт 6,5 · QA 12.'));
+  assert.ok(comment.text.startsWith('Снимок начала планирования, Staff Mobile. Осталось: Бэк 20 · Mobile 6,5 · QA 12.'));
   assert.deepEqual(actual, { ...snapshot, author: 'Aleksey Martynov' });
 });
 
