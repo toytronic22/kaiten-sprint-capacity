@@ -153,10 +153,15 @@ function sprintCapacityMount(config) {
 
   let settings = normalizeSettings(readStored('settings', null));
   let collapsed = readStored('collapsed', false) === true;
-  let snapshot = normalizeSnapshot(readStored('snapshot', null));
+  let snapshot = null;
   let report = null;
   let closed = false;
-  const data = { cards: null, loadedAt: null, error: null, busy: false };
+  const data = { cards: null, loadedAt: null, error: null, snapshotError: null, busy: false };
+  try {
+    window.localStorage.removeItem(STORAGE_PREFIX + 'snapshot');
+  } catch (error) {
+    storageBroken = true;
+  }
 
   const host = document.createElement('div');
   host.id = 'sprint-capacity-panel';
@@ -178,6 +183,7 @@ function sprintCapacityMount(config) {
     $('.time').textContent = when;
     const messages = [];
     if (data.error) messages.push(`${data.error.message || data.error}${data.loadedAt ? ` — цифры на ${clockTime(data.loadedAt)}` : ''}`);
+    if (data.snapshotError) messages.push(`Общий снимок: ${data.snapshotError.message || data.snapshotError}`);
     if (report) messages.push(...report.problems);
     if (storageBroken) messages.push('Браузер не сохраняет вписанное');
     $('.status').innerHTML = messages.map((message) => `<div class="error">${escapeHtml(message)}</div>`).join('');
@@ -208,8 +214,8 @@ function sprintCapacityMount(config) {
     const legend = snapshot ? '<div class="legend">осталось + прибавилось = сейчас / можно</div>' : '';
     const percent = report.done.percent === null ? '—' : `${report.done.percent}%`;
     const done = `<div class="done"><span>Done</span><b>${percent}</b><span class="of">${report.done.count} из ${report.done.of} ${plural(report.done.of, ['карты', 'карт', 'карт'])} · ${formatNumber(report.done.points)} SP</span></div>`;
-    const since = snapshot ? `<span>с ${snapshotTime(snapshot.takenAt)}</span>` : '';
-    const plan = `<div class="plan"><button type="button" data-act="start-planning"${snapshot ? ' class="again"' : ''}>Начать планирование</button>${since}</div>`;
+    const since = snapshot ? `<span title="${escapeHtml(snapshot.author)}">с ${snapshotTime(snapshot.takenAt)}</span>` : '';
+    const plan = `<div class="plan"><button type="button" data-act="start-planning"${snapshot ? ' class="again"' : ''}${data.busy ? ' disabled' : ''}>Начать планирование</button>${since}</div>`;
     box.innerHTML = rows + legend + done + plan;
   };
 
@@ -270,10 +276,33 @@ function sprintCapacityMount(config) {
     } catch (error) {
       data.error = error;
     }
+    try {
+      snapshot = snapshotFromComments(await kaitenCardComments(config.snapshotCardId));
+      data.snapshotError = null;
+    } catch (error) {
+      data.snapshotError = error;
+    }
     data.busy = false;
     if (closed) return;
     recompute();
     render();
+  };
+
+  const startPlanning = async () => {
+    const text = snapshot
+      ? `Начать планирование заново? Снимок от ${snapshotTime(snapshot.takenAt)} заменится текущей доской у всей команды.`
+      : 'Запомнить для всей команды, сколько сейчас осталось в работе? Карты в Done дальше не считаются.';
+    if (!window.confirm(text)) return;
+    data.busy = true;
+    render();
+    try {
+      const cards = await kaitenBoardCards(config.boardId);
+      await kaitenAddComment(config.snapshotCardId, snapshotComment(takeSnapshot({ cards, settings, now: Date.now(), config })));
+    } catch (error) {
+      window.alert(`Снимок не сохранился: ${error.message || error}`);
+    }
+    data.busy = false;
+    await refresh();
   };
 
   const timer = window.setInterval(() => {
@@ -299,17 +328,7 @@ function sprintCapacityMount(config) {
     const act = button.dataset.act;
     if (act === 'close') close();
     if (act === 'refresh') refresh();
-    if (act === 'start-planning' && data.cards) {
-      const text = snapshot
-        ? `Начать планирование заново? Снимок от ${snapshotTime(snapshot.takenAt)} заменится текущей доской.`
-        : 'Запомнить, сколько сейчас осталось в работе? Карты в Done дальше не считаются.';
-      if (window.confirm(text)) {
-        snapshot = takeSnapshot({ cards: data.cards, settings, now: Date.now(), config });
-        writeStored('snapshot', snapshot);
-        recompute();
-        render();
-      }
-    }
+    if (act === 'start-planning' && !data.busy) startPlanning();
     if (act === 'collapse') {
       collapsed = !collapsed;
       writeStored('collapsed', collapsed);

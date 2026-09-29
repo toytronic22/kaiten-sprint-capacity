@@ -1,14 +1,20 @@
 function kaitenError(status, path) {
   const text = status === 401 || status === 403
-    ? 'Kaiten не пускает — войдите в Kaiten и нажмите «Обновить»'
+    ? 'Kaiten не пускает — войдите в Kaiten и нажмите ↻'
     : `Kaiten ответил ${status} на ${path}`;
   const error = new Error(text);
   error.status = status;
   return error;
 }
 
-async function kaitenJson(path) {
-  const response = await fetch(path, { credentials: 'include', headers: { accept: 'application/json' } });
+async function kaitenJson(path, body) {
+  const options = { credentials: 'include', headers: { accept: 'application/json' } };
+  if (body !== undefined) {
+    options.method = 'POST';
+    options.headers['content-type'] = 'application/json';
+    options.body = JSON.stringify(body);
+  }
+  const response = await fetch(path, options);
   if (!response.ok) throw kaitenError(response.status, path);
   return response.json();
 }
@@ -22,4 +28,14 @@ async function kaitenBoardCards(boardId) {
     if (page.length < 100) return cards;
   }
   throw new Error('На доске больше 5000 карт — остановился');
+}
+
+async function kaitenCardComments(cardId) {
+  const comments = await kaitenJson(`/api/cards/${cardId}/comments`);
+  if (!Array.isArray(comments)) throw new Error('Kaiten вернул комментарии не списком');
+  return comments;
+}
+
+async function kaitenAddComment(cardId, text) {
+  return kaitenJson(`/api/cards/${cardId}/comments`, { text });
 }

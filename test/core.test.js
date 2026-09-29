@@ -336,6 +336,38 @@ test('снимок из браузера: испорченный не прини
   assert.deepEqual(actual, [null, null, null, null, null]);
 });
 
+test('общий снимок: пишется комментарием в Kaiten и читается обратно', () => {
+  // Arrange
+  const snapshot = { takenAt: '2026-09-29T09:00:00.000Z', totals: { back: 20, front: 6.5, qa: 12 }, doneIds: [4, 5] };
+  const comment = { text: core.snapshotComment(snapshot), created: '2026-09-29T09:00:01Z', author: { full_name: 'Aleksey Martynov' } };
+
+  // Act
+  const actual = core.snapshotFromComments([comment]);
+
+  // Assert
+  assert.ok(comment.text.startsWith('Снимок начала планирования. Осталось: Бэк 20 · Фронт 6,5 · QA 12.'));
+  assert.deepEqual(actual, { ...snapshot, author: 'Aleksey Martynov' });
+});
+
+test('общий снимок: берётся последний, удалённые и чужие комментарии не считаются, испорченный — снимка нет', () => {
+  // Arrange
+  const make = (back, created, extra = {}) => ({ text: core.snapshotComment({ takenAt: created, totals: { back, front: 0, qa: 0 }, doneIds: [] }), created, ...extra });
+  const older = make(1, '2026-09-01T09:00:00Z');
+  const newer = make(2, '2026-09-15T09:00:00Z');
+  const deleted = make(3, '2026-09-20T09:00:00Z', { deleted: true });
+  const other = { text: 'Здесь панель хранит снимки', created: '2026-09-25T09:00:00Z' };
+  const broken = { text: 'Снимок начала планирования. ```json\n{"totals":\n```', created: '2026-09-28T09:00:00Z' };
+
+  // Act
+  const latest = core.snapshotFromComments([newer, other, deleted, older]);
+  const afterBroken = core.snapshotFromComments([older, newer, broken]);
+
+  // Assert
+  assert.equal(latest.totals.back, 2);
+  assert.equal(afterBroken, null);
+  assert.deepEqual([core.snapshotFromComments([]), core.snapshotFromComments(null)], [null, null]);
+});
+
 test('нет полей Story Points и Platform ни в одной карте — явная ошибка', () => {
   // Arrange
   const cards = [{ id: 1, size: 3, properties: {}, state: 1 }];

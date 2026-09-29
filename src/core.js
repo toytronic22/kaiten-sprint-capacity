@@ -1,5 +1,6 @@
 const SPRINT_CAPACITY = {
   boardId: 68084,
+  snapshotCardId: 71238243,
   fields: { devEstimate: 'id_396449', platform: 'id_499149', testType: 'id_505017' },
   platform: { back: 16232407, front: 16232408 },
   needQa: 16238652,
@@ -9,6 +10,8 @@ const SPRINT_CAPACITY = {
 };
 
 const DIRECTIONS = ['back', 'front', 'qa'];
+
+const SNAPSHOT_MARK = 'Снимок начала планирования';
 
 const DIRECTION_LABELS = { back: 'Бэк', front: 'Фронт', qa: 'QA' };
 
@@ -214,4 +217,26 @@ function normalizeSnapshot(raw) {
   return { takenAt: raw.takenAt, totals, doneIds };
 }
 
-if (typeof module !== 'undefined') module.exports = { SPRINT_CAPACITY, DIRECTIONS, DIRECTION_LABELS, toNumber, round1, formatNumber, plural, readEstimate, platformOf, needsQa, isBug, splitEstimate, estimateIssues, defaultSettings, normalizeSettings, capacityOf, buildReport, formatRow, takeSnapshot, normalizeSnapshot };
+function snapshotComment(snapshot) {
+  const left = DIRECTIONS.map((direction) => `${DIRECTION_LABELS[direction]} ${formatNumber(snapshot.totals[direction])}`).join(' · ');
+  return `${SNAPSHOT_MARK}. Осталось: ${left}.\n\n\`\`\`json\n${JSON.stringify(snapshot)}\n\`\`\``;
+}
+
+function snapshotFromComments(comments) {
+  const found = (Array.isArray(comments) ? comments : [])
+    .filter((comment) => comment && !comment.deleted && typeof comment.text === 'string' && comment.text.startsWith(SNAPSHOT_MARK))
+    .sort((a, b) => Date.parse(b.created) - Date.parse(a.created));
+  const latest = found[0];
+  if (!latest) return null;
+  const match = latest.text.match(/```json\s*([\s\S]*?)```/);
+  let raw = null;
+  try {
+    raw = match ? JSON.parse(match[1]) : null;
+  } catch (error) {
+    raw = null;
+  }
+  const snapshot = normalizeSnapshot(raw);
+  return snapshot ? { ...snapshot, author: (latest.author && latest.author.full_name) || '' } : null;
+}
+
+if (typeof module !== 'undefined') module.exports = { SPRINT_CAPACITY, DIRECTIONS, DIRECTION_LABELS, toNumber, round1, formatNumber, plural, readEstimate, platformOf, needsQa, isBug, splitEstimate, estimateIssues, defaultSettings, normalizeSettings, capacityOf, buildReport, formatRow, takeSnapshot, normalizeSnapshot, snapshotComment, snapshotFromComments };
