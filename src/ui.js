@@ -54,6 +54,15 @@ button { font: inherit; color: inherit; background: none; border: 0; border-radi
 @keyframes splat-slide { from { transform: translate(-50%, -50%); } 75% { opacity: 1; } to { opacity: 0; transform: translate(-50%, -22%) rotate(3deg); } }
 @keyframes drip { from { transform: scaleY(0); } to { transform: scaleY(1); } }
 @keyframes feather-fly { from { opacity: 1; transform: translate(-50%, -50%); } to { opacity: 0; transform: translate(calc(-50% + var(--fx)), calc(-50% + var(--fy))) rotate(var(--fr)); } }
+.flash { position: absolute; inset: 0; z-index: 35; background: #b0001a; animation: flash .6s ease-out var(--hit) both; }
+.spray { position: absolute; z-index: 38; left: var(--x); top: var(--y); width: var(--s); aspect-ratio: 1; animation: splat-hit .25s cubic-bezier(.2, 1.7, .4, 1) calc(var(--hit) + var(--d)) both, spray-fade 1.6s ease-in calc(var(--hit) + 1.3s) forwards; }
+.spray svg { display: block; width: 100%; overflow: visible; }
+.jet { position: absolute; z-index: 41; left: var(--x); top: var(--y); animation: jet-x var(--t) linear calc(var(--hit) + var(--d)) both; }
+.jet i { display: block; width: var(--r); height: calc(var(--r) * 1.25); margin: calc(var(--r) * -.6) 0 0 calc(var(--r) * -.5); border-radius: 50%; background: #c1001c; animation: jet-y var(--t) linear calc(var(--hit) + var(--d)) both; }
+@keyframes flash { 0% { opacity: 0; } 6% { opacity: .6; } 100% { opacity: 0; } }
+@keyframes spray-fade { to { opacity: 0; transform: translate(-50%, -35%); } }
+@keyframes jet-x { from { transform: translateX(0); } to { transform: translateX(var(--dx)); } }
+@keyframes jet-y { 0% { opacity: 0; transform: translateY(0); animation-timing-function: cubic-bezier(.2, .7, .5, 1); } 3% { opacity: 1; } 40% { transform: translateY(var(--up)); animation-timing-function: cubic-bezier(.5, 0, .8, .4); } 90% { opacity: 1; } 100% { opacity: 0; transform: translateY(var(--down)); } }
 @keyframes geese-shake { 0%, 100% { transform: none; } 20% { transform: translate(-6px, 4px); } 40% { transform: translate(5px, -5px); } 60% { transform: translate(-4px, -2px); } 80% { transform: translate(3px, 3px); } }
 .error { margin: 10px 14px 0; padding: 8px 10px; background: #4a2428; color: #ffb4b8; border-radius: 8px; font-size: 12px; }
 .summary { padding: 12px 14px 14px; }
@@ -411,26 +420,47 @@ function sprintCapacityMount(config) {
   let chaosTimer = null;
   let chaosWords = null;
   const crashGoose = (random) => {
-    const place = `--x:${random(28, 60).toFixed(1)}%;--y:${random(56, 68).toFixed(1)}%`;
-    const points = Array.from({ length: 22 }, (_, index) => {
-      const angle = (index / 22) * Math.PI * 2;
-      const radius = index % 2 ? random(50, 64) : random(74, 100);
-      return [100 + Math.cos(angle) * radius, 100 + Math.sin(angle) * radius * 0.9];
-    });
-    const middle = (a, b) => `${((a[0] + b[0]) / 2).toFixed(1)} ${((a[1] + b[1]) / 2).toFixed(1)}`;
-    const blob = `M${middle(points[0], points[1])} ` + points.map((_, index) => {
-      const next = points[(index + 1) % points.length];
-      return `Q${next[0].toFixed(1)} ${next[1].toFixed(1)} ${middle(next, points[(index + 2) % points.length])}`;
-    }).join(' ') + 'Z';
-    const drops = Array.from({ length: 8 }, () => {
+    const x = random(28, 60);
+    const y = random(56, 68);
+    const place = `--x:${x.toFixed(1)}%;--y:${y.toFixed(1)}%`;
+    const splash = (count, valley, spike) => {
+      const points = Array.from({ length: count }, (_, index) => {
+        const angle = (index / count) * Math.PI * 2;
+        const radius = index % 2 ? random(...valley) : random(...spike);
+        return [100 + Math.cos(angle) * radius, 100 + Math.sin(angle) * radius * 0.9];
+      });
+      const middle = (a, b) => `${((a[0] + b[0]) / 2).toFixed(1)} ${((a[1] + b[1]) / 2).toFixed(1)}`;
+      return `M${middle(points[0], points[1])} ` + points.map((_, index) => {
+        const next = points[(index + 1) % points.length];
+        return `Q${next[0].toFixed(1)} ${next[1].toFixed(1)} ${middle(next, points[(index + 2) % points.length])}`;
+      }).join(' ') + 'Z';
+    };
+    const blob = splash(26, [58, 72], [84, 124]);
+    const drops = Array.from({ length: 18 }, () => {
       const angle = random(0, Math.PI * 2);
-      const distance = random(104, 128);
-      return `<circle cx="${(100 + Math.cos(angle) * distance).toFixed(1)}" cy="${(100 + Math.sin(angle) * distance).toFixed(1)}" r="${random(2.5, 7).toFixed(1)}"/>`;
+      const distance = random(112, 170);
+      return `<circle cx="${(100 + Math.cos(angle) * distance).toFixed(1)}" cy="${(100 + Math.sin(angle) * distance).toFixed(1)}" r="${random(2.5, 9).toFixed(1)}"/>`;
     }).join('');
-    const drips = [random(70, 84), random(92, 108), random(116, 130)].map((x) => `<rect class="drip" x="${x.toFixed(1)}" y="156" width="${random(6, 9).toFixed(1)}" height="${random(40, 80).toFixed(0)}" rx="3.5"/>`).join('');
-    const feathers = Array.from({ length: 6 }, () => `<i class="feather" style="--fx:${random(-60, 60).toFixed(0)}cqw;--fy:${random(-55, 20).toFixed(0)}cqw;--fr:${random(-300, 300).toFixed(0)}deg"></i>`).join('');
-    return `<div class="goose crash" style="${place};--step:.13s"><div class="bob">${GOOSE_SVG}</div></div>`
-      + `<div class="splat" style="${place}"><svg viewBox="0 0 200 200" aria-hidden="true"><g fill="#a80d22">${drops}${drips}<path d="${blob}"/></g><path d="${blob}" fill="#dc2338" transform="translate(100 100) scale(.66) translate(-100 -100)"/><g transform="translate(100 100) scale(.82) translate(-100 -100)">${SPLAT_GOOSE}</g>${SPLAT_CRACKS}</svg>${feathers}</div>`;
+    const streaks = Array.from({ length: 12 }, () => {
+      const angle = random(0, 360);
+      const distance = random(118, 160);
+      const radians = (angle * Math.PI) / 180;
+      const cx = 100 + Math.cos(radians) * distance;
+      const cy = 100 + Math.sin(radians) * distance;
+      return `<ellipse cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" rx="${random(14, 34).toFixed(1)}" ry="${random(2.5, 5).toFixed(1)}" transform="rotate(${angle.toFixed(0)} ${cx.toFixed(1)} ${cy.toFixed(1)})"/>`;
+    }).join('');
+    const drips = Array.from({ length: 7 }, (_, index) => `<rect class="drip" x="${(52 + index * 14 + random(-4, 4)).toFixed(1)}" y="${random(150, 168).toFixed(0)}" width="${random(6, 11).toFixed(1)}" height="${random(70, 190).toFixed(0)}" rx="4"/>`).join('');
+    const feathers = Array.from({ length: 8 }, () => `<i class="feather" style="--fx:${random(-70, 70).toFixed(0)}cqw;--fy:${random(-60, 25).toFixed(0)}cqw;--fr:${random(-300, 300).toFixed(0)}deg"></i>`).join('');
+    const sprays = Array.from({ length: 6 }, () => {
+      const style = `--x:${(x + random(-38, 38)).toFixed(1)}%;--y:${(y + random(-45, 20)).toFixed(1)}%;--s:calc(var(--w) * ${random(0.5, 1.3).toFixed(2)});--d:${random(0.05, 0.35).toFixed(2)}s`;
+      return `<div class="spray" style="${style}"><svg viewBox="0 0 200 200" aria-hidden="true"><path d="${splash(16, [40, 60], [70, 100])}" fill="#b3001b"/></svg></div>`;
+    }).join('');
+    const jets = Array.from({ length: 22 }, () => {
+      const style = `${place};--dx:${random(-34, 34).toFixed(1)}vw;--up:${random(-48, -18).toFixed(1)}vh;--down:${random(8, 40).toFixed(1)}vh;--t:${random(0.8, 1.4).toFixed(2)}s;--d:${random(0, 0.5).toFixed(2)}s;--r:${random(6, 16).toFixed(0)}px`;
+      return `<div class="jet" style="${style}"><i></i></div>`;
+    }).join('');
+    return `<div class="goose crash" style="${place};--step:.13s"><div class="bob">${GOOSE_SVG}</div></div><div class="flash"></div>${sprays}`
+      + `<div class="splat" style="${place}"><svg viewBox="0 0 200 200" aria-hidden="true"><g fill="#a80d22">${streaks}${drops}${drips}<path d="${blob}"/></g><path d="${blob}" fill="#d41a30" transform="translate(100 100) scale(.62) translate(-100 -100)"/><g transform="translate(100 100) scale(.82) translate(-100 -100)">${SPLAT_GOOSE}</g><g fill="#a80d22" opacity=".85"><circle cx="78" cy="96" r="6"/><circle cx="118" cy="120" r="8"/><circle cx="104" cy="44" r="4"/></g>${SPLAT_CRACKS}</svg>${feathers}</div>${jets}`;
   };
   const releaseGeese = (names) => {
     if ($('.geese')) return;
