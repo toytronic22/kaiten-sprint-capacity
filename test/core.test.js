@@ -254,6 +254,75 @@ test('строка итога: нагрузка из возможных', () => 
   assert.equal(core.formatRow({ ...row, direction: 'qa', total: 29.5, capacity: null }), 'QA: 29,5 из —');
 });
 
+test('начало планирования: осталось — всё, что не в Done, дальше растёт «прибавилось»', () => {
+  // Arrange
+  const start = [card(1, { size: 6, sp: 3, platforms: [BACK] }), card(2, { size: 2, platforms: [FRONT] }), card(4, { size: 9, sp: 5, platforms: [BACK], state: DONE })];
+  const later = [card(1, { size: 6, sp: 3, platforms: [BACK], state: DONE }), card(3, { size: 5, sp: 4, platforms: [BACK] })];
+  const snapshot = core.takeSnapshot({ cards: start, settings: core.defaultSettings(), now: Date.parse('2026-09-29T09:00:00.000Z') });
+
+  // Act
+  const report = core.buildReport({ cards: later, settings: settingsWith({ back: { people: 1 } }), snapshot });
+
+  // Assert
+  assert.deepEqual(snapshot, { takenAt: '2026-09-29T09:00:00.000Z', totals: { back: 3, front: 2, qa: 3 }, doneIds: [4] });
+  assert.deepEqual(report.rows.map(core.formatRow), ['Бэк: 3 + 4 = 7 из 10', 'Фронт: 2 − 2 = 0 из —', 'QA: 3 + 1 = 4 из —']);
+  assert.deepEqual([report.done.points, report.board.points, report.done.percent], [6, 11, 55]);
+});
+
+test('спринт закрыли в конце планирования: карты, бывшие в Done, не считаются, пока не уйдут в архив', () => {
+  // Arrange
+  const old = card(4, { size: 9, sp: 5, platforms: [BACK], state: DONE });
+  const tail = card(1, { size: 6, sp: 3, platforms: [BACK] });
+  const snapshot = core.takeSnapshot({ cards: [old, tail], settings: core.defaultSettings(), now: 0 });
+  const planned = card(5, { size: 3, platforms: [FRONT] });
+
+  // Act
+  const beforeClose = core.buildReport({ cards: [old, tail, planned], settings: core.defaultSettings(), snapshot });
+  const afterClose = core.buildReport({ cards: [tail, planned], settings: core.defaultSettings(), snapshot });
+
+  // Assert
+  for (const report of [beforeClose, afterClose]) {
+    assert.deepEqual(report.rows.map(core.formatRow), ['Бэк: 3 + 0 = 3 из —', 'Фронт: 0 + 3 = 3 из —', 'QA: 3 + 0 = 3 из —']);
+    assert.deepEqual([report.done.points, report.board.points, report.done.percent], [0, 9, 0]);
+  }
+});
+
+test('переоценка хвоста и смена оценки в спринте идут в «прибавилось»', () => {
+  // Arrange
+  const snapshot = core.takeSnapshot({ cards: [card(1, { size: 6, sp: 3, platforms: [BACK] })], settings: core.defaultSettings(), now: 0 });
+
+  // Act
+  const report = core.buildReport({ cards: [card(1, { size: 10, sp: 5, platforms: [BACK] })], settings: core.defaultSettings(), snapshot });
+
+  // Assert
+  assert.deepEqual(report.rows.map(core.formatRow), ['Бэк: 3 + 2 = 5 из —', 'Фронт: 0 + 0 = 0 из —', 'QA: 3 + 2 = 5 из —']);
+});
+
+test('карту, бывшую в Done, вернули в работу — снова считается', () => {
+  // Arrange
+  const snapshot = core.takeSnapshot({ cards: [card(4, { size: 2, platforms: [BACK], state: DONE })], settings: core.defaultSettings(), now: 0 });
+
+  // Act
+  const report = core.buildReport({ cards: [card(4, { size: 2, platforms: [BACK] })], settings: core.defaultSettings(), snapshot });
+
+  // Assert
+  assert.deepEqual(report.rows.map(core.formatRow)[0], 'Бэк: 0 + 2 = 2 из —');
+});
+
+test('снимок из браузера: испорченный не принимается', () => {
+  // Arrange
+  const good = { takenAt: '2026-09-29T09:00:00.000Z', totals: { back: '3', front: 0, qa: 1.5 }, doneIds: [4, 'x', 5] };
+  const broken = [null, 'снимок', { totals: good.totals }, { takenAt: good.takenAt }, { ...good, totals: { back: 3, front: 'abc', qa: 1 } }];
+
+  // Act
+  const actual = broken.map((raw) => core.normalizeSnapshot(raw));
+
+  // Assert
+  assert.deepEqual(core.normalizeSnapshot(good), { takenAt: good.takenAt, totals: { back: 3, front: 0, qa: 1.5 }, doneIds: [4, 5] });
+  assert.deepEqual(core.normalizeSnapshot({ takenAt: good.takenAt, totals: good.totals }).doneIds, []);
+  assert.deepEqual(actual, [null, null, null, null, null]);
+});
+
 test('нет полей Story Points и Platform ни в одной карте — явная ошибка', () => {
   // Arrange
   const cards = [{ id: 1, size: 3, properties: {}, state: 1 }];

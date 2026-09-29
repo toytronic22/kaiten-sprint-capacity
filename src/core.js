@@ -118,7 +118,7 @@ function percentOf(part, whole) {
   return whole > 0 ? Math.round((part / whole) * 100) : null;
 }
 
-function buildReport({ cards, settings, config = SPRINT_CAPACITY }) {
+function buildReport({ cards, settings, snapshot = null, config = SPRINT_CAPACITY }) {
   const sums = {};
   for (const direction of DIRECTIONS) sums[direction] = 0;
   const report = {
@@ -131,7 +131,9 @@ function buildReport({ cards, settings, config = SPRINT_CAPACITY }) {
   };
   let hasDevField = false;
   let hasPlatformField = false;
+  const doneAtStart = new Set(snapshot ? snapshot.doneIds : []);
   for (const card of cards) {
+    if (card.state === config.doneState && doneAtStart.has(card.id)) continue;
     const properties = card.properties || {};
     if (config.fields.devEstimate in properties) hasDevField = true;
     if (config.fields.platform in properties) hasPlatformField = true;
@@ -170,7 +172,9 @@ function buildReport({ cards, settings, config = SPRINT_CAPACITY }) {
     const total = round1(sums[direction]);
     const people = settings.team[direction].people;
     const capacity = people > 0 ? round1(capacityOf(settings, direction)) : null;
-    return { direction, total, capacity, over: capacity !== null && total > capacity };
+    const base = snapshot ? snapshot.totals[direction] : null;
+    const added = base === null ? null : round1(total - base);
+    return { direction, base, added, total, capacity, over: capacity !== null && total > capacity };
   });
   report.done.percent = percentOf(report.done.points, report.board.points);
   report.notCounted.points = round1(report.notCounted.points);
@@ -182,7 +186,30 @@ function buildReport({ cards, settings, config = SPRINT_CAPACITY }) {
 
 function formatRow(row) {
   const capacity = row.capacity === null ? '—' : formatNumber(row.capacity);
-  return `${DIRECTION_LABELS[row.direction]}: ${formatNumber(row.total)} из ${capacity}`;
+  const hasBase = row.base !== null && row.base !== undefined;
+  const change = hasBase ? `${formatNumber(row.base)} ${row.added < 0 ? '−' : '+'} ${formatNumber(Math.abs(row.added))} = ` : '';
+  return `${DIRECTION_LABELS[row.direction]}: ${change}${formatNumber(row.total)} из ${capacity}`;
 }
 
-if (typeof module !== 'undefined') module.exports = { SPRINT_CAPACITY, DIRECTIONS, DIRECTION_LABELS, toNumber, round1, formatNumber, plural, readEstimate, platformOf, needsQa, isBug, splitEstimate, estimateIssues, defaultSettings, normalizeSettings, capacityOf, buildReport, formatRow };
+function takeSnapshot({ cards, settings, now, config = SPRINT_CAPACITY }) {
+  const inWork = cards.filter((card) => card.state !== config.doneState);
+  const report = buildReport({ cards: inWork, settings, config });
+  const totals = {};
+  for (const row of report.rows) totals[row.direction] = row.total;
+  const doneIds = cards.filter((card) => card.state === config.doneState).map((card) => card.id);
+  return { takenAt: new Date(now).toISOString(), totals, doneIds };
+}
+
+function normalizeSnapshot(raw) {
+  if (!raw || typeof raw !== 'object' || !raw.totals || !Number.isFinite(Date.parse(raw.takenAt))) return null;
+  const totals = {};
+  for (const direction of DIRECTIONS) {
+    const number = toNumber(raw.totals[direction]);
+    if (number === null) return null;
+    totals[direction] = number;
+  }
+  const doneIds = Array.isArray(raw.doneIds) ? raw.doneIds.filter((id) => Number.isInteger(id)) : [];
+  return { takenAt: raw.takenAt, totals, doneIds };
+}
+
+if (typeof module !== 'undefined') module.exports = { SPRINT_CAPACITY, DIRECTIONS, DIRECTION_LABELS, toNumber, round1, formatNumber, plural, readEstimate, platformOf, needsQa, isBug, splitEstimate, estimateIssues, defaultSettings, normalizeSettings, capacityOf, buildReport, formatRow, takeSnapshot, normalizeSnapshot };
