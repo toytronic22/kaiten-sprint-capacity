@@ -176,7 +176,7 @@ function buildReport({ cards, settings, snapshot = null, config = SPRINT_CAPACIT
     const added = base === null ? null : round1(total - base);
     return { direction, base, added, total, capacity, over: capacity !== null && total > capacity };
   });
-  report.done.percent = percentOf(report.done.points, report.board.points);
+  report.done.percent = percentOf(report.done.cards.length, report.board.cards.length);
   report.notCounted.points = round1(report.notCounted.points);
   report.bugs.points = round1(report.bugs.points);
   report.board.points = round1(report.board.points);
