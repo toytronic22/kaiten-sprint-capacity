@@ -13,26 +13,26 @@ button { font: inherit; color: inherit; background: none; border: 0; border-radi
 .icon:disabled { cursor: default; }
 .icon:disabled span { display: inline-block; animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
-.geese { position: fixed; inset: 0; z-index: 2147483001; overflow: hidden; pointer-events: none; }
-.goose { position: absolute; left: 0; width: 130px; animation: goose-run var(--speed) linear var(--delay) both; }
+.geese { position: fixed; inset: 0; z-index: 2147483001; overflow: hidden; pointer-events: none; --w: clamp(56px, min(11vw, 17vh), 200px); }
+.goose { position: absolute; left: 0; width: var(--w); animation: goose-run var(--speed) linear var(--delay) both; }
 .goose .bob { animation: goose-bob .22s ease-in-out infinite alternate; }
 .goose svg { display: block; width: 100%; overflow: visible; }
 .goose .leg { transform-box: fill-box; transform-origin: 50% 0; animation: goose-leg .22s ease-in-out infinite alternate; }
 .goose .leg + .leg { animation-direction: alternate-reverse; }
 .goose .wing { transform-box: fill-box; transform-origin: 0 50%; animation: goose-wing .15s ease-in-out infinite alternate; }
 .goose .jaw { transform-box: fill-box; transform-origin: 0 0; animation: goose-jaw .18s ease-in-out infinite alternate; }
-.goose .say { position: absolute; right: -30px; top: -40px; padding: 4px 10px; font: 900 18px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; color: #d62828; background: #fff; border: 3px solid #26282c; border-radius: 14px; white-space: nowrap; animation: goose-say .3s ease-in-out infinite alternate; }
-.goose .say::after { content: ""; position: absolute; left: 22px; bottom: -11px; border: 8px solid transparent; border-top-color: #26282c; border-bottom: 0; }
-.boom { position: absolute; left: 50%; top: 18%; width: min(620px, 92vw); aspect-ratio: 2.1; display: grid; place-items: center; transform: translateX(-50%) rotate(-8deg); animation: boom-in .35s cubic-bezier(.2, 1.8, .4, 1) both, boom-out .5s ease-in var(--boom-end) forwards; }
+.goose .say { position: absolute; right: -24%; top: -32%; padding: .2em .55em; font: 900 max(10px, calc(var(--w) * .14))/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; color: #d62828; background: #fff; border: max(2px, .16em) solid #26282c; border-radius: .8em; white-space: nowrap; animation: goose-say .3s ease-in-out infinite alternate; }
+.goose .say::after { content: ""; position: absolute; left: 1.2em; bottom: -.6em; border: .45em solid transparent; border-top-color: #26282c; border-bottom: 0; }
+.boom { position: absolute; left: 50%; top: max(12px, 14vh); width: min(900px, 92vw, 120vh); container-type: inline-size; aspect-ratio: 2.1; display: grid; place-items: center; transform: translateX(-50%) rotate(-8deg); animation: boom-in .35s cubic-bezier(.2, 1.8, .4, 1) both, boom-out .5s ease-in var(--boom-end) forwards; }
 .boom::before, .boom::after { content: ""; position: absolute; inset: 0; clip-path: polygon(100.0% 50.0%, 87.0% 58.5%, 95.0% 71.7%, 79.7% 73.7%, 81.2% 89.1%, 66.5% 84.2%, 61.1% 98.7%, 50.0% 88.0%, 38.9% 98.7%, 33.5% 84.2%, 18.8% 89.1%, 20.3% 73.7%, 5.0% 71.7%, 13.0% 58.5%, 0.0% 50.0%, 13.0% 41.5%, 5.0% 28.3%, 20.3% 26.3%, 18.8% 10.9%, 33.5% 15.8%, 38.9% 1.3%, 50.0% 12.0%, 61.1% 1.3%, 66.5% 15.8%, 81.2% 10.9%, 79.7% 26.3%, 95.0% 28.3%, 87.0% 41.5%); }
 .boom::before { background: #111; transform: scale(1.06); }
 .boom::after { background: #e63a2e; animation: boom-flash .18s steps(1) infinite; }
-.boom span { position: relative; z-index: 1; padding: 0 12%; text-align: center; font: italic 900 clamp(26px, 5.4vw, 58px)/1 Impact, "Arial Black", "Helvetica Neue", sans-serif; letter-spacing: 1px; color: #ffe14d; -webkit-text-stroke: 2px #111; text-shadow: 4px 4px 0 #111; animation: boom-text .18s steps(1) infinite; }
+.boom span { position: relative; z-index: 1; padding: 0 12%; text-align: center; font: italic 900 max(14px, 9.4cqw)/1 Impact, "Arial Black", "Helvetica Neue", sans-serif; letter-spacing: 1px; color: #ffe14d; -webkit-text-stroke: max(1px, .035em) #111; text-shadow: .07em .07em 0 #111; animation: boom-text .18s steps(1) infinite; }
 @keyframes boom-in { from { transform: translateX(-50%) rotate(-8deg) scale(0); } to { transform: translateX(-50%) rotate(-8deg) scale(1); } }
 @keyframes boom-out { to { opacity: 0; transform: translateX(-50%) rotate(-8deg) scale(1.4); } }
 @keyframes boom-flash { 50% { background: #ffe14d; } }
 @keyframes boom-text { 50% { color: #e63a2e; } }
-@keyframes goose-run { from { transform: translateX(-200px) scale(var(--size)); } to { transform: translateX(calc(100vw + 60px)) scale(var(--size)); } }
+@keyframes goose-run { from { transform: translateX(-160%) scale(var(--size)); } to { transform: translateX(calc(100vw + 60%)) scale(var(--size)); } }
 @keyframes goose-bob { from { transform: translateY(0); } to { transform: translateY(-9px); } }
 @keyframes goose-leg { from { transform: rotate(-32deg); } to { transform: rotate(32deg); } }
 @keyframes goose-wing { from { transform: rotate(0); } to { transform: rotate(-38deg); } }
@@ -382,7 +382,9 @@ function sprintCapacityMount(config) {
 
   let chaosBefore = false;
   let chaosTimer = null;
+  const VOLUME = 0.6;
   let audio = null;
+  let speaker = null;
   const honk = (when) => {
     const oscillator = audio.createOscillator();
     const filter = audio.createBiquadFilter();
@@ -396,13 +398,18 @@ function sprintCapacityMount(config) {
     gain.gain.setValueAtTime(0.0001, when);
     gain.gain.exponentialRampToValueAtTime(0.16, when + 0.02);
     gain.gain.exponentialRampToValueAtTime(0.0001, when + 0.25);
-    oscillator.connect(filter).connect(gain).connect(audio.destination);
+    oscillator.connect(filter).connect(gain).connect(speaker);
     oscillator.start(when);
     oscillator.stop(when + 0.3);
   };
   const shout = (count, seconds) => {
     try {
-      audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+      if (!audio) {
+        audio = new (window.AudioContext || window.webkitAudioContext)();
+        speaker = audio.createGain();
+        speaker.gain.value = VOLUME;
+        speaker.connect(audio.destination);
+      }
       audio.resume();
       for (let index = 0; index < count * 3; index += 1) honk(audio.currentTime + Math.random() * (seconds - 0.4));
     } catch (error) {
@@ -414,6 +421,7 @@ function sprintCapacityMount(config) {
         phrase.lang = 'ru-RU';
         phrase.pitch = 2;
         phrase.rate = 1.3;
+        phrase.volume = VOLUME;
         window.speechSynthesis.speak(phrase);
       }
     } catch (error) {
