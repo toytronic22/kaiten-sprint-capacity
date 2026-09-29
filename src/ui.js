@@ -13,18 +13,22 @@ button { font: inherit; color: inherit; background: none; border: 0; border-radi
 .icon:disabled { cursor: default; }
 .icon:disabled span { display: inline-block; animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
-.geese { position: fixed; inset: 0; z-index: 2147483001; overflow: hidden; pointer-events: none; --w: clamp(60px, min(10vw, 16vh), 190px); }
+.geese { position: fixed; inset: 0; z-index: 2147483001; overflow: hidden; pointer-events: none; --w: clamp(40px, min(7vw, 11vh), 120px); --sw: min(max(96vw, 70vh), 125vh); --top: calc(max(12px, 12vh) + min(820px, 90vw, 110vh) / 2.2 + 3vh); --gy: calc((var(--top) + 104vh) / 2); }
 .goose { position: absolute; left: 0; width: var(--w); animation: goose-run var(--speed) cubic-bezier(.35, .05, .65, .95) var(--delay) both; }
 .goose .wave { animation: goose-wave var(--wave) ease-in-out var(--phase) infinite alternate; }
 .goose .bob { transform-origin: 50% 100%; animation: goose-bob var(--step) ease-in-out infinite alternate; }
 .goose svg { display: block; width: 100%; overflow: visible; filter: drop-shadow(0 .35em .25em rgba(0, 0, 0, .18)); }
 .goose .leg { transform-box: fill-box; transform-origin: 50% 0; animation: goose-leg var(--step) ease-in-out infinite alternate; }
 .goose .leg + .leg { animation-direction: alternate-reverse; }
-.goose .wing { transform-box: fill-box; transform-origin: 88% 30%; animation: goose-wing calc(var(--step) * .7) ease-in-out infinite alternate; }
+.goose .wing { transform-box: fill-box; transform-origin: 6% 30%; animation: goose-flap calc(var(--step) * 1.2) ease-in-out infinite alternate; }
+.goose .far .wing { animation-delay: calc(var(--step) * -.4); }
+.goose.back svg { transform: scaleX(-1); }
+.goose.tag { aspect-ratio: 262 / 446; }
 .goose .jaw { transform-box: fill-box; transform-origin: 0 0; animation: goose-jaw calc(var(--step) * 1.3) ease-in-out infinite alternate; }
-.goose .say { position: absolute; left: 52%; bottom: 92%; padding: .28em .7em .32em; font: 800 max(11px, calc(var(--w) * .15))/1.1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; color: #e0303a; background: #fff; border-radius: 1em; box-shadow: 0 .15em 0 rgba(0, 0, 0, .12), 0 .3em .9em rgba(0, 0, 0, .18); white-space: nowrap; transform-origin: 10% 100%; animation: goose-say .5s cubic-bezier(.2, 1.8, .4, 1) both, goose-shake .32s ease-in-out .5s infinite alternate; }
-.goose .say::after { content: ""; position: absolute; left: .9em; bottom: -.5em; border: .3em solid transparent; border-top: .55em solid #fff; border-bottom: 0; transform: skewX(20deg); }
-.boom { position: absolute; z-index: 20; left: 50%; top: max(12px, 12vh); width: min(820px, 90vw, 110vh); container-type: inline-size; aspect-ratio: 2.2; display: grid; place-items: center; transform: translateX(-50%) rotate(-6deg); animation: boom-in .45s cubic-bezier(.2, 1.7, .4, 1) both, boom-out .45s ease-in var(--boom-end) forwards; }
+.goose .say { position: absolute; left: 45%; bottom: 97%; translate: -50% 0; padding: .28em .7em .32em; font: 800 max(12px, calc(var(--w) * .2))/1.1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; color: #e0001a; background: #fff; border-radius: 1em; box-shadow: 0 .15em 0 rgba(0, 0, 0, .12), 0 .3em .9em rgba(0, 0, 0, .18); white-space: nowrap; transform-origin: 50% 100%; animation: goose-say .5s cubic-bezier(.2, 1.8, .4, 1) calc(var(--delay) + .3s) both, say-float 1.6s ease-in-out calc(var(--delay) + .8s) infinite alternate; }
+.goose.back .say { left: 55%; }
+.goose .say::after { content: ""; position: absolute; left: calc(50% - .3em); bottom: -.5em; border: .3em solid transparent; border-top: .55em solid #fff; border-bottom: 0; transform: skewX(20deg); }
+.boom { position: absolute; z-index: 60; left: 50%; top: max(12px, 12vh); width: min(820px, 90vw, 110vh); container-type: inline-size; aspect-ratio: 2.2; display: grid; place-items: center; transform: translateX(-50%) rotate(-6deg); animation: boom-in .45s cubic-bezier(.2, 1.7, .4, 1) both, boom-out .45s ease-in var(--boom-end) forwards; }
 .boom::before, .boom::after { content: ""; position: absolute; inset: 0; clip-path: polygon(100.0% 50.0%, 87.0% 58.5%, 95.0% 71.7%, 79.7% 73.7%, 81.2% 89.1%, 66.5% 84.2%, 61.1% 98.7%, 50.0% 88.0%, 38.9% 98.7%, 33.5% 84.2%, 18.8% 89.1%, 20.3% 73.7%, 5.0% 71.7%, 13.0% 58.5%, 0.0% 50.0%, 13.0% 41.5%, 5.0% 28.3%, 20.3% 26.3%, 18.8% 10.9%, 33.5% 15.8%, 38.9% 1.3%, 50.0% 12.0%, 61.1% 1.3%, 66.5% 15.8%, 81.2% 10.9%, 79.7% 26.3%, 95.0% 28.3%, 87.0% 41.5%); }
 .boom::before { background: #1b1c20; transform: scale(1.05) translate(1.2%, 2%); }
 .boom::after { background: radial-gradient(circle at 50% 45%, #ff5a4a, #d8261d 70%); animation: boom-flash .5s steps(1) infinite; }
@@ -34,31 +38,35 @@ button { font: inherit; color: inherit; background: none; border: 0; border-radi
 @keyframes boom-out { to { opacity: 0; transform: translateX(-50%) rotate(-6deg) scale(1.3); } }
 @keyframes boom-flash { 50% { background: radial-gradient(circle at 50% 45%, #ffe45c, #ffb21e 70%); } }
 @keyframes boom-pop { from { transform: scale(.6) rotate(-4deg); } to { transform: scale(1) rotate(0); } }
-@keyframes goose-run { from { transform: translateX(-130%) scale(var(--size)); } to { transform: translateX(calc(100vw + 40%)) scale(var(--size)); } }
+@keyframes goose-run { from { transform: translate(var(--x0), 0) scale(var(--size)); } to { transform: translate(var(--x1), var(--dy)) scale(var(--size)); } }
 @keyframes goose-wave { from { transform: translateY(calc(var(--amp) * -1)) rotate(var(--lean)); } to { transform: translateY(var(--amp)) rotate(calc(var(--lean) * -1)); } }
 @keyframes goose-bob { from { transform: translateY(0) rotate(-3deg); } to { transform: translateY(-12%) rotate(4deg) scaleY(1.04); } }
 @keyframes goose-leg { from { transform: rotate(-30deg); } to { transform: rotate(30deg); } }
-@keyframes goose-wing { from { transform: rotate(0); } to { transform: rotate(24deg); } }
+@keyframes goose-flap { from { transform: rotate(12deg); } to { transform: rotate(-62deg); } }
 @keyframes goose-jaw { from { transform: rotate(0); } to { transform: rotate(22deg); } }
 @keyframes goose-say { from { opacity: 0; transform: scale(.3); } to { opacity: 1; transform: scale(1); } }
-@keyframes goose-shake { from { transform: rotate(-4deg); } to { transform: rotate(4deg) scale(1.06); } }
+@keyframes say-float { from { transform: translateY(-4%) rotate(-2deg); } to { transform: translateY(4%) rotate(2deg); } }
 .geese { animation: geese-shake .4s linear var(--hit) both; }
-.goose.crash { left: var(--x); top: var(--y); bottom: auto; z-index: 30; animation: crash-fly .9s cubic-bezier(.6, 0, .9, .4) calc(var(--hit) - .9s) both, crash-hide .01s linear var(--hit) forwards; }
-.splat { position: absolute; z-index: 40; left: var(--x); top: var(--y); width: calc(var(--w) * 3.4); aspect-ratio: 1; container-type: inline-size; animation: splat-hit .3s cubic-bezier(.2, 1.7, .4, 1) var(--hit) both, splat-slide 2.5s cubic-bezier(.5, 0, .8, .6) calc(var(--hit) + .5s) forwards; }
-.splat svg { display: block; width: 100%; overflow: visible; }
+.goose.crash { left: var(--x); top: var(--y); bottom: auto; z-index: 30; width: min(30vw, 22vh); animation: crash-fly .9s cubic-bezier(.6, 0, .9, .4) calc(var(--hit) - .9s) both, crash-hide .01s linear var(--hit) forwards; }
+.splat { position: absolute; z-index: 40; left: var(--x); top: var(--y); width: var(--sw); aspect-ratio: 1; container-type: inline-size; animation: splat-hit .3s cubic-bezier(.2, 1.7, .4, 1) var(--hit) both, splat-slide 2.5s cubic-bezier(.5, 0, .8, .6) calc(var(--hit) + .5s) forwards; }
+.splat svg, .flat svg { display: block; width: 100%; overflow: visible; }
+.flat { position: absolute; z-index: 41; left: var(--x); top: var(--y); width: min(104vw, (104vh - var(--top)) * 2.1); animation: splat-hit .3s cubic-bezier(.2, 1.7, .4, 1) var(--hit) both, splat-slide 2.5s cubic-bezier(.5, 0, .8, .6) calc(var(--hit) + .5s) forwards; }
 .splat .drip { transform-box: fill-box; transform-origin: 50% 0; animation: drip 2.2s ease-in calc(var(--hit) + .2s) both; }
-.splat .feather { position: absolute; left: 50%; top: 45%; width: 7%; height: 2.6%; background: #fff; border-radius: 50%; box-shadow: 0 0 0 1px #c5ccd7; animation: feather-fly 1.4s cubic-bezier(.2, .8, .4, 1) var(--hit) both; }
-@keyframes crash-fly { from { opacity: 0; transform: translate(-50%, -50%) scale(.1); } 15% { opacity: 1; } to { opacity: 1; transform: translate(-50%, -50%) scale(3.4) rotate(-10deg); } }
+.splat .feather { position: absolute; left: 50%; top: 45%; width: 3%; height: 1.1%; background: #fff; border-radius: 50%; box-shadow: 0 0 0 1px rgba(0, 0, 0, .15); animation: feather-fly 1.4s cubic-bezier(.2, .8, .4, 1) var(--hit) both; }
+@keyframes crash-fly { from { opacity: 0; transform: translate(-50%, -50%) scale(.1); } 15% { opacity: 1; } to { opacity: 1; transform: translate(-50%, -50%) scale(3.2) rotate(-10deg); } }
 @keyframes crash-hide { to { opacity: 0; visibility: hidden; } }
 @keyframes splat-hit { from { opacity: 0; transform: translate(-50%, -50%) scale(.3); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
-@keyframes splat-slide { from { transform: translate(-50%, -50%); } 75% { opacity: 1; } to { opacity: 0; transform: translate(-50%, -22%) rotate(3deg); } }
+@keyframes splat-slide { from { transform: translate(-50%, -50%); } 75% { opacity: 1; } to { opacity: 0; transform: translate(-50%, -38%) rotate(2deg); } }
 @keyframes drip { from { transform: scaleY(0); } to { transform: scaleY(1); } }
 @keyframes feather-fly { from { opacity: 1; transform: translate(-50%, -50%); } to { opacity: 0; transform: translate(calc(-50% + var(--fx)), calc(-50% + var(--fy))) rotate(var(--fr)); } }
-.flash { position: absolute; inset: 0; z-index: 35; background: #b0001a; animation: flash .6s ease-out var(--hit) both; }
+.flash { position: absolute; inset: 0; z-index: 35; background: #e0001a; animation: flash .6s ease-out var(--hit) both; }
 .spray { position: absolute; z-index: 38; left: var(--x); top: var(--y); width: var(--s); aspect-ratio: 1; animation: splat-hit .25s cubic-bezier(.2, 1.7, .4, 1) calc(var(--hit) + var(--d)) both, spray-fade 1.6s ease-in calc(var(--hit) + 1.3s) forwards; }
 .spray svg { display: block; width: 100%; overflow: visible; }
+.crack { position: absolute; z-index: 43; left: var(--x); top: var(--y); width: var(--sw); aspect-ratio: 1; transform: translate(-50%, -50%); animation: crack-in .01s steps(1) var(--hit) both; }
+.crack svg { display: block; width: 100%; overflow: visible; }
+@keyframes crack-in { from { opacity: 0; } to { opacity: 1; } }
 .jet { position: absolute; z-index: 41; left: var(--x); top: var(--y); animation: jet-x var(--t) linear calc(var(--hit) + var(--d)) both; }
-.jet i { display: block; width: var(--r); height: calc(var(--r) * 1.25); margin: calc(var(--r) * -.6) 0 0 calc(var(--r) * -.5); border-radius: 50%; background: #c1001c; animation: jet-y var(--t) linear calc(var(--hit) + var(--d)) both; }
+.jet i { display: block; width: var(--r); height: calc(var(--r) * 1.25); margin: calc(var(--r) * -.6) 0 0 calc(var(--r) * -.5); border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ff7a86 0 14%, #f0001c 42%, #a3000f); animation: jet-y var(--t) linear calc(var(--hit) + var(--d)) both; }
 @keyframes flash { 0% { opacity: 0; } 6% { opacity: .6; } 100% { opacity: 0; } }
 @keyframes spray-fade { to { opacity: 0; transform: translate(-50%, -35%); } }
 @keyframes jet-x { from { transform: translateX(0); } to { transform: translateX(var(--dx)); } }
@@ -150,31 +158,23 @@ const PANEL_HTML = `
   </div>
 </div>`;
 
-const GOOSE_SVG = `<svg viewBox="0 0 130 118" aria-hidden="true">
-<g class="leg"><path d="M50 92 V106" stroke="#f28b24" stroke-width="5" stroke-linecap="round"/><path d="M47 105 Q46 112 53 112 H63 Q64 107 58 105 Z" fill="#f28b24"/></g>
-<g class="leg"><path d="M66 92 V106" stroke="#f28b24" stroke-width="5" stroke-linecap="round"/><path d="M63 105 Q62 112 69 112 H79 Q80 107 74 105 Z" fill="#f28b24"/></g>
-<g fill="#2b2d33" stroke="#2b2d33" stroke-width="6" stroke-linejoin="round"><path d="M30 70 Q12 60 14 48 Q26 54 38 62 Z"/><ellipse cx="58" cy="74" rx="36" ry="25"/><path d="M80 64 C92 54 86 40 96 30" fill="none" stroke-width="22" stroke-linecap="round"/><circle cx="97" cy="28" r="18"/></g>
-<g fill="#fff"><path d="M30 70 Q12 60 14 48 Q26 54 38 62 Z"/><ellipse cx="58" cy="74" rx="36" ry="25"/><path d="M80 64 C92 54 86 40 96 30" fill="none" stroke="#fff" stroke-width="16" stroke-linecap="round"/><circle cx="97" cy="28" r="18"/></g>
-<path d="M25 80 Q58 110 93 78 Q60 97 25 80 Z" fill="#e6ebf2"/>
-<path class="wing" d="M79 65 C71 56 50 57 39 70 Q46 70 48 74 Q54 72 57 77 Q63 74 67 78 C75 76 81 71 79 65 Z" fill="#e4e9f0" stroke="#bfc7d3" stroke-width="2" stroke-linejoin="round"/>
-<path class="jaw" d="M110 32 Q119 33 122 36 Q116 40 109 37 Z" fill="#ef8a1f" stroke="#2b2d33" stroke-width="2" stroke-linejoin="round"/>
-<path d="M109 25 Q122 24 126 31 Q118 35 108 33 Z" fill="#ffa93a" stroke="#2b2d33" stroke-width="2" stroke-linejoin="round"/>
-<ellipse cx="97" cy="37" rx="5" ry="3.2" fill="#ff9aac" opacity=".75"/>
-<circle cx="102" cy="24" r="4.6" fill="#1b1c20"/><circle cx="103.6" cy="22.4" r="1.7" fill="#fff"/><circle cx="100.6" cy="26" r=".8" fill="#fff"/>
+const GOOSE_SVG = `<svg viewBox="100 28 262 446" aria-hidden="true">
+<g class="leg"><path d="M218 398 V450" stroke="#e8923a" stroke-width="9" stroke-linecap="round"/><path d="M211 446 Q207 462 208 468 H248 Q242 454 226 446 Z" fill="#e8923a"/></g>
+<g class="leg"><path d="M252 396 V450" stroke="#e8923a" stroke-width="9" stroke-linecap="round"/><path d="M245 446 Q241 462 242 468 H282 Q276 454 260 446 Z" fill="#e8923a"/></g>
+<g class="far" transform="translate(10 -12)"><path class="wing" d="M180 280 C230 250 292 262 334 300 C292 294 252 304 222 326 C200 340 177 316 180 280 Z" fill="#d6d5ce"/></g>
+<path d="M205 45 C188 45 180 58 180 80 C180 130 140 190 128 260 C116 340 160 412 232 412 C280 412 318 340 342 294 C312 292 272 284 248 268 C214 246 196 215 198 170 C200 130 226 110 228 78 C229 56 220 45 205 45 Z" fill="#f4f3ee"/>
+<path class="wing" d="M180 280 C230 250 292 262 334 300 C292 294 252 304 222 326 C200 340 177 316 180 280 Z" fill="#e6e5df"/>
+<path class="jaw" d="M226 68 L254 62 L230 80 Z" fill="#d57a26"/>
+<path d="M224 52 L263 49 L229 71 Z" fill="#e8923a"/>
+<circle cx="207" cy="64" r="4.8" fill="#1b1c20"/>
 </svg>`;
 
-const SPLAT_GOOSE = `<g stroke="#2b2d33" stroke-width="3" stroke-linejoin="round">
-<path d="M62 104 Q36 92 24 110 Q44 120 62 116 Z" fill="#fff"/><path d="M138 104 Q164 92 176 110 Q156 120 138 116 Z" fill="#fff"/>
-<path d="M76 134 L62 152 H80 Z" fill="#f28b24"/><path d="M124 134 L138 152 H120 Z" fill="#f28b24"/>
-<path d="M100 92 V64" fill="none" stroke-width="22" stroke-linecap="round"/><circle cx="100" cy="52" r="20" fill="#2b2d33"/>
-<ellipse cx="100" cy="112" rx="42" ry="28" fill="#fff"/>
-<path d="M100 92 V64" fill="none" stroke="#fff" stroke-width="16" stroke-linecap="round"/><circle cx="100" cy="52" r="17" fill="#fff" stroke="none"/>
-<ellipse cx="100" cy="61" rx="12" ry="5" fill="#ffa93a" stroke-width="2"/>
-<path d="M89 43 l8 8 m0 -8 l-8 8 M103 43 l8 8 m0 -8 l-8 8" fill="none" stroke="#1b1c20" stroke-width="2.6" stroke-linecap="round"/>
-</g>
-<g fill="#ff9aac" opacity=".75"><ellipse cx="87" cy="57" rx="4" ry="2.5"/><ellipse cx="113" cy="57" rx="4" ry="2.5"/></g>`;
-
-const SPLAT_CRACKS = `<path d="M100 100 L62 34 L54 6 M62 34 L40 30 M100 100 L168 62 L198 56 M168 62 L180 40 M100 100 L150 168 L158 198 M100 100 L32 148 L2 156 M32 148 L28 176 M100 100 L128 18 M100 100 L18 86" fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round" opacity=".5"/>`;
+const FLAT_GOOSE = `<g fill="#e8923a"><path d="M88 76 L66 96 L78 94 L74 100 L94 82 Z"/><path d="M122 76 L144 96 L132 94 L136 100 L116 82 Z"/></g>
+<g fill="#e6e5df"><path d="M66 50 C44 30 18 28 0 34 C20 42 34 58 60 72 C67 66 69 58 66 50 Z"/><path d="M144 50 C166 30 192 28 210 34 C190 42 176 58 150 72 C143 66 141 58 144 50 Z"/></g>
+<g fill="#f4f3ee"><ellipse cx="105" cy="62" rx="46" ry="26"/><circle cx="105" cy="30" r="20"/></g>
+<path d="M90 39 Q105 33 120 39 Q117 48 105 50 Q93 48 90 39 Z" fill="#e8923a"/>
+<path d="M92 19 l7 7 m0 -7 l-7 7 M111 19 l7 7 m0 -7 l-7 7" fill="none" stroke="#1b1c20" stroke-width="2.4" stroke-linecap="round"/>
+<g fill="#ff9aac" opacity=".7"><ellipse cx="91" cy="33" rx="4" ry="2.4"/><ellipse cx="119" cy="33" rx="4" ry="2.4"/></g>`;
 
 const ISSUE_LABELS = {
   noPlatform: 'Нет {back} или {front} — не считаю',
@@ -420,9 +420,9 @@ function sprintCapacityMount(config) {
   let chaosTimer = null;
   let chaosWords = null;
   const crashGoose = (random) => {
-    const x = random(28, 60);
-    const y = random(56, 68);
-    const place = `--x:${x.toFixed(1)}%;--y:${y.toFixed(1)}%`;
+    const x = random(46, 54);
+    const y = 70;
+    const place = `--x:${x.toFixed(1)}%;--y:var(--gy)`;
     const splash = (count, valley, spike) => {
       const points = Array.from({ length: count }, (_, index) => {
         const angle = (index / count) * Math.PI * 2;
@@ -450,17 +450,39 @@ function sprintCapacityMount(config) {
       return `<ellipse cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" rx="${random(14, 34).toFixed(1)}" ry="${random(2.5, 5).toFixed(1)}" transform="rotate(${angle.toFixed(0)} ${cx.toFixed(1)} ${cy.toFixed(1)})"/>`;
     }).join('');
     const drips = Array.from({ length: 7 }, (_, index) => `<rect class="drip" x="${(52 + index * 14 + random(-4, 4)).toFixed(1)}" y="${random(150, 168).toFixed(0)}" width="${random(6, 11).toFixed(1)}" height="${random(70, 190).toFixed(0)}" rx="4"/>`).join('');
-    const feathers = Array.from({ length: 8 }, () => `<i class="feather" style="--fx:${random(-70, 70).toFixed(0)}cqw;--fy:${random(-60, 25).toFixed(0)}cqw;--fr:${random(-300, 300).toFixed(0)}deg"></i>`).join('');
+    const cracks = Array.from({ length: 11 }, (_, index) => {
+      let angle = (index / 11) * Math.PI * 2 + random(-0.2, 0.2);
+      let radius = 0;
+      const points = [[100, 100]];
+      while (radius < 150) {
+        radius += random(14, 32);
+        angle += random(-0.18, 0.18);
+        points.push([100 + Math.cos(angle) * radius, 100 + Math.sin(angle) * radius]);
+      }
+      return points;
+    });
+    const line = (points) => 'M' + points.map((point) => `${point[0].toFixed(1)} ${point[1].toFixed(1)}`).join(' L');
+    const web = cracks.map(line).concat(cracks.flatMap((ray, index) => [1, 2, 3]
+      .filter((step) => step < 3 || random(0, 1) > 0.5)
+      .map((step) => line([ray[step], cracks[(index + 1) % cracks.length][step]])))).join(' ');
+    const crack = `<div class="crack" style="${place}"><svg viewBox="0 0 200 200" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="${web}" stroke="rgba(0,0,0,.45)" stroke-width="3.2" vector-effect="non-scaling-stroke"/><path d="${web}" stroke="#fff" stroke-width="1.4" opacity=".85" vector-effect="non-scaling-stroke"/></g><circle cx="100" cy="100" r="4" fill="#fff" opacity=".6"/></svg></div>`;
+    const gloss = Array.from({ length: 7 }, () => {
+      const angle = random(0, Math.PI * 2);
+      const distance = random(26, 50);
+      return `<ellipse cx="${(100 + Math.cos(angle) * distance).toFixed(1)}" cy="${(100 + Math.sin(angle) * distance).toFixed(1)}" rx="${random(2, 4.5).toFixed(1)}" ry="${random(.8, 1.6).toFixed(1)}" transform="rotate(${random(-40, 40).toFixed(0)})" transform-origin="${(100 + Math.cos(angle) * distance).toFixed(1)} ${(100 + Math.sin(angle) * distance).toFixed(1)}"/>`;
+    }).join('');
+    const clots = Array.from({ length: 9 }, () => `<circle cx="${random(64, 146).toFixed(1)}" cy="${random(22, 84).toFixed(1)}" r="${random(1.5, 5).toFixed(1)}"/>`).join('');
+    const feathers = Array.from({ length: 14 }, () => `<i class="feather" style="--fx:${random(-70, 70).toFixed(0)}cqw;--fy:${random(-60, 25).toFixed(0)}cqw;--fr:${random(-300, 300).toFixed(0)}deg"></i>`).join('');
     const sprays = Array.from({ length: 6 }, () => {
-      const style = `--x:${(x + random(-38, 38)).toFixed(1)}%;--y:${(y + random(-45, 20)).toFixed(1)}%;--s:calc(var(--w) * ${random(0.5, 1.3).toFixed(2)});--d:${random(0.05, 0.35).toFixed(2)}s`;
-      return `<div class="spray" style="${style}"><svg viewBox="0 0 200 200" aria-hidden="true"><path d="${splash(16, [40, 60], [70, 100])}" fill="#b3001b"/></svg></div>`;
+      const style = `--x:${(x + random(-48, 48)).toFixed(1)}%;--y:${(y + random(-50, 30)).toFixed(1)}%;--s:calc(var(--sw) * ${random(0.1, 0.24).toFixed(2)});--d:${random(0.05, 0.35).toFixed(2)}s`;
+      return `<div class="spray" style="${style}"><svg viewBox="0 0 200 200" aria-hidden="true"><path d="${splash(16, [40, 60], [70, 100])}" fill="#c8000f"/></svg></div>`;
     }).join('');
     const jets = Array.from({ length: 22 }, () => {
-      const style = `${place};--dx:${random(-34, 34).toFixed(1)}vw;--up:${random(-48, -18).toFixed(1)}vh;--down:${random(8, 40).toFixed(1)}vh;--t:${random(0.8, 1.4).toFixed(2)}s;--d:${random(0, 0.5).toFixed(2)}s;--r:${random(6, 16).toFixed(0)}px`;
+      const style = `${place};--dx:${random(-48, 48).toFixed(1)}vw;--up:${random(-60, -22).toFixed(1)}vh;--down:${random(10, 45).toFixed(1)}vh;--t:${random(0.8, 1.5).toFixed(2)}s;--d:${random(0, 0.5).toFixed(2)}s;--r:${random(8, 22).toFixed(0)}px`;
       return `<div class="jet" style="${style}"><i></i></div>`;
     }).join('');
     return `<div class="goose crash" style="${place};--step:.13s"><div class="bob">${GOOSE_SVG}</div></div><div class="flash"></div>${sprays}`
-      + `<div class="splat" style="${place}"><svg viewBox="0 0 200 200" aria-hidden="true"><g fill="#a80d22">${streaks}${drops}${drips}<path d="${blob}"/></g><path d="${blob}" fill="#d41a30" transform="translate(100 100) scale(.62) translate(-100 -100)"/><g transform="translate(100 100) scale(.82) translate(-100 -100)">${SPLAT_GOOSE}</g><g fill="#a80d22" opacity=".85"><circle cx="78" cy="96" r="6"/><circle cx="118" cy="120" r="8"/><circle cx="104" cy="44" r="4"/></g>${SPLAT_CRACKS}</svg>${feathers}</div>${jets}`;
+      + `<div class="splat" style="${place}"><svg viewBox="0 0 200 200" aria-hidden="true"><g fill="#b0000c">${streaks}${drops}${drips}<path d="${blob}"/></g><path d="${blob}" fill="#e00016" transform="translate(100 100) scale(.62) translate(-100 -100)"/><g fill="#fff" opacity=".3">${gloss}</g></svg>${feathers}</div><div class="flat" style="${place}"><svg viewBox="0 0 210 100" aria-hidden="true">${FLAT_GOOSE}<g fill="#d0000f" opacity=".9">${clots}</g></svg></div>${crack}${jets}`;
   };
   const releaseGeese = (names) => {
     if ($('.geese')) return;
@@ -472,11 +494,18 @@ function sprintCapacityMount(config) {
     const flock = document.createElement('div');
     flock.className = 'geese';
     flock.style.setProperty('--hit', '1.9s');
+    const sides = [1, -1, Math.random() < 0.5 ? 1 : -1].sort(() => Math.random() - 0.5);
+    let shouter = 0;
     flock.innerHTML = `<div class="boom" style="--boom-end:${lifetime - 0.45}s"><span>${escapeHtml(words[0])}</span></div>` + Array.from({ length: count }, (_, index) => {
       const size = random(0.75, 1.2);
-      const style = `--delay:${random(0, 1.2).toFixed(2)}s;--speed:${random(2.4, 3.5).toFixed(2)}s;--size:${size.toFixed(2)};--step:${random(0.16, 0.24).toFixed(2)}s;--wave:${random(0.5, 0.9).toFixed(2)}s;--phase:${random(-1, 0).toFixed(2)}s;--amp:${random(1.5, 5).toFixed(1)}vh;--lean:${random(-6, 6).toFixed(1)}deg;bottom:${random(3, 48).toFixed(1)}%;z-index:${Math.round(size * 10)}`;
-      const say = shouters.has(index) ? '<span class="say">Беспредел!</span>' : '';
-      return `<div class="goose" style="${style}"><div class="wave"><div class="bob">${GOOSE_SVG}</div>${say}</div></div>`;
+      const shouts = shouters.has(index);
+      const side = shouts ? sides[shouter++] : 1;
+      const run = side > 0 ? '--x0:-130%;--x1:calc(100vw + 40%)' : '--x0:calc(100vw + 40%);--x1:-130%';
+      const dy = shouts ? random(-18, 14) : random(-6, 6);
+      const style = `${run};--dy:${dy.toFixed(1)}vh;--delay:${random(0, 1.2).toFixed(2)}s;--speed:${random(2.4, 3.5).toFixed(2)}s;--size:${size.toFixed(2)};--step:${random(0.16, 0.24).toFixed(2)}s;--wave:${random(0.5, 0.9).toFixed(2)}s;--phase:${random(-1, 0).toFixed(2)}s;--amp:${random(1.5, 5).toFixed(1)}vh;--lean:${random(-6, 6).toFixed(1)}deg;bottom:${random(shouts ? 12 : 3, shouts ? 40 : 48).toFixed(1)}%`;
+      const back = side < 0 ? ' back' : '';
+      const goose = `<div class="goose${back}" style="${style};z-index:${Math.round(size * 10)}"><div class="wave"><div class="bob">${GOOSE_SVG}</div></div></div>`;
+      return shouts ? `${goose}<div class="goose tag${back}" style="${style};z-index:55"><span class="say">Беспредел!</span></div>` : goose;
     }).join('') + crashGoose(random);
     shadow.appendChild(flock);
     const label = flock.querySelector('.boom span');
