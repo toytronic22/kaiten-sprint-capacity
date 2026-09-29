@@ -204,6 +204,10 @@ function boardConfig(boardId, config = SPRINT_CAPACITY) {
   };
 }
 
+function isChaos(row) {
+  return row.capacity !== null && row.capacity > 0 && row.total >= row.capacity * 2;
+}
+
 function formatRow(row) {
   const capacity = row.capacity === null ? '—' : formatNumber(row.capacity);
   const hasBase = row.base !== null && row.base !== undefined;
@@ -261,4 +265,4 @@ function snapshotFromComments(comments, boardId) {
   return null;
 }
 
-if (typeof module !== 'undefined') module.exports = { SPRINT_CAPACITY, DIRECTIONS, DIRECTION_LABELS, toNumber, round1, formatNumber, plural, readEstimate, platformOf, needsQa, isBug, splitEstimate, estimateIssues, defaultSettings, normalizeSettings, capacityOf, buildReport, boardConfig, formatRow, takeSnapshot, normalizeSnapshot, boardTitle, snapshotComment, snapshotFromComments };
+if (typeof module !== 'undefined') module.exports = { SPRINT_CAPACITY, DIRECTIONS, DIRECTION_LABELS, toNumber, round1, formatNumber, plural, readEstimate, platformOf, needsQa, isBug, splitEstimate, estimateIssues, defaultSettings, normalizeSettings, capacityOf, buildReport, boardConfig, isChaos, formatRow, takeSnapshot, normalizeSnapshot, boardTitle, snapshotComment, snapshotFromComments };

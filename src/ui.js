@@ -13,6 +13,31 @@ button { font: inherit; color: inherit; background: none; border: 0; border-radi
 .icon:disabled { cursor: default; }
 .icon:disabled span { display: inline-block; animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+.geese { position: fixed; inset: 0; z-index: 2147483001; overflow: hidden; pointer-events: none; }
+.goose { position: absolute; left: 0; width: 130px; animation: goose-run var(--speed) linear var(--delay) both; }
+.goose .bob { animation: goose-bob .22s ease-in-out infinite alternate; }
+.goose svg { display: block; width: 100%; overflow: visible; }
+.goose .leg { transform-box: fill-box; transform-origin: 50% 0; animation: goose-leg .22s ease-in-out infinite alternate; }
+.goose .leg + .leg { animation-direction: alternate-reverse; }
+.goose .wing { transform-box: fill-box; transform-origin: 0 50%; animation: goose-wing .15s ease-in-out infinite alternate; }
+.goose .jaw { transform-box: fill-box; transform-origin: 0 0; animation: goose-jaw .18s ease-in-out infinite alternate; }
+.goose .say { position: absolute; right: -30px; top: -40px; padding: 4px 10px; font: 900 18px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; color: #d62828; background: #fff; border: 3px solid #26282c; border-radius: 14px; white-space: nowrap; animation: goose-say .3s ease-in-out infinite alternate; }
+.goose .say::after { content: ""; position: absolute; left: 22px; bottom: -11px; border: 8px solid transparent; border-top-color: #26282c; border-bottom: 0; }
+.boom { position: absolute; left: 50%; top: 18%; width: min(620px, 92vw); aspect-ratio: 2.1; display: grid; place-items: center; transform: translateX(-50%) rotate(-8deg); animation: boom-in .35s cubic-bezier(.2, 1.8, .4, 1) both, boom-out .5s ease-in var(--boom-end) forwards; }
+.boom::before, .boom::after { content: ""; position: absolute; inset: 0; clip-path: polygon(100.0% 50.0%, 87.0% 58.5%, 95.0% 71.7%, 79.7% 73.7%, 81.2% 89.1%, 66.5% 84.2%, 61.1% 98.7%, 50.0% 88.0%, 38.9% 98.7%, 33.5% 84.2%, 18.8% 89.1%, 20.3% 73.7%, 5.0% 71.7%, 13.0% 58.5%, 0.0% 50.0%, 13.0% 41.5%, 5.0% 28.3%, 20.3% 26.3%, 18.8% 10.9%, 33.5% 15.8%, 38.9% 1.3%, 50.0% 12.0%, 61.1% 1.3%, 66.5% 15.8%, 81.2% 10.9%, 79.7% 26.3%, 95.0% 28.3%, 87.0% 41.5%); }
+.boom::before { background: #111; transform: scale(1.06); }
+.boom::after { background: #e63a2e; animation: boom-flash .18s steps(1) infinite; }
+.boom span { position: relative; z-index: 1; padding: 0 12%; text-align: center; font: italic 900 clamp(26px, 5.4vw, 58px)/1 Impact, "Arial Black", "Helvetica Neue", sans-serif; letter-spacing: 1px; color: #ffe14d; -webkit-text-stroke: 2px #111; text-shadow: 4px 4px 0 #111; animation: boom-text .18s steps(1) infinite; }
+@keyframes boom-in { from { transform: translateX(-50%) rotate(-8deg) scale(0); } to { transform: translateX(-50%) rotate(-8deg) scale(1); } }
+@keyframes boom-out { to { opacity: 0; transform: translateX(-50%) rotate(-8deg) scale(1.4); } }
+@keyframes boom-flash { 50% { background: #ffe14d; } }
+@keyframes boom-text { 50% { color: #e63a2e; } }
+@keyframes goose-run { from { transform: translateX(-200px) scale(var(--size)); } to { transform: translateX(calc(100vw + 60px)) scale(var(--size)); } }
+@keyframes goose-bob { from { transform: translateY(0); } to { transform: translateY(-9px); } }
+@keyframes goose-leg { from { transform: rotate(-32deg); } to { transform: rotate(32deg); } }
+@keyframes goose-wing { from { transform: rotate(0); } to { transform: rotate(-38deg); } }
+@keyframes goose-jaw { from { transform: rotate(0); } to { transform: rotate(28deg); } }
+@keyframes goose-say { from { transform: rotate(-6deg) scale(1); } to { transform: rotate(5deg) scale(1.12); } }
 .error { margin: 10px 14px 0; padding: 8px 10px; background: #4a2428; color: #ffb4b8; border-radius: 8px; font-size: 12px; }
 .summary { padding: 12px 14px 14px; }
 .summary.stale { opacity: .55; }
@@ -98,6 +123,22 @@ const PANEL_HTML = `
     <details class="warnings"></details>
   </div>
 </div>`;
+
+const GOOSE_SVG = `<svg viewBox="0 0 130 112" aria-hidden="true">
+<path class="leg" d="M50 80 L46 104 L58 107" fill="none" stroke="#e8801a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+<path class="leg" d="M64 80 L62 104 L74 107" fill="none" stroke="#e8801a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M28 62 L10 50 L20 72 Z" fill="#fff" stroke="#26282c" stroke-width="3" stroke-linejoin="round"/>
+<ellipse cx="57" cy="66" rx="34" ry="22" fill="#fff" stroke="#26282c" stroke-width="3"/>
+<path d="M80 60 C94 48 84 32 95 22" fill="none" stroke="#26282c" stroke-width="17" stroke-linecap="round"/>
+<circle cx="97" cy="20" r="14" fill="#26282c"/>
+<path d="M80 60 C94 48 84 32 95 22" fill="none" stroke="#fff" stroke-width="11" stroke-linecap="round"/>
+<circle cx="97" cy="20" r="11" fill="#fff"/>
+<path class="jaw" d="M106 22 L123 28 L105 29 Z" fill="#f59a2a" stroke="#b85f0c" stroke-width="2" stroke-linejoin="round"/>
+<path d="M105 13 L127 18 L106 23 Z" fill="#f59a2a" stroke="#b85f0c" stroke-width="2" stroke-linejoin="round"/>
+<circle cx="100" cy="16" r="3.4" fill="#111"/><circle cx="101.2" cy="14.8" r="1.1" fill="#fff"/>
+<path d="M93 9 L104 12.5" stroke="#111" stroke-width="2.8" stroke-linecap="round"/>
+<path class="wing" d="M42 60 C56 44 80 50 82 63 C70 72 52 72 42 60 Z" fill="#e3e6ea" stroke="#26282c" stroke-width="2.5" stroke-linejoin="round"/>
+</svg>`;
 
 const ISSUE_LABELS = {
   noPlatform: 'Нет {back} или {front} — не считаю',
@@ -309,6 +350,7 @@ function sprintCapacityMount(config) {
     }
     recompute();
     render();
+    checkChaos();
   };
 
   const startPlanning = async () => {
@@ -338,9 +380,84 @@ function sprintCapacityMount(config) {
   };
   document.addEventListener('visibilitychange', onVisible);
 
+  let chaosBefore = false;
+  let chaosTimer = null;
+  let audio = null;
+  const honk = (when) => {
+    const oscillator = audio.createOscillator();
+    const filter = audio.createBiquadFilter();
+    const gain = audio.createGain();
+    oscillator.type = 'sawtooth';
+    oscillator.frequency.setValueAtTime(560 + Math.random() * 120, when);
+    oscillator.frequency.exponentialRampToValueAtTime(320, when + 0.22);
+    filter.type = 'bandpass';
+    filter.frequency.value = 1300;
+    filter.Q.value = 1.5;
+    gain.gain.setValueAtTime(0.0001, when);
+    gain.gain.exponentialRampToValueAtTime(0.16, when + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, when + 0.25);
+    oscillator.connect(filter).connect(gain).connect(audio.destination);
+    oscillator.start(when);
+    oscillator.stop(when + 0.3);
+  };
+  const shout = (count, seconds) => {
+    try {
+      audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+      audio.resume();
+      for (let index = 0; index < count * 3; index += 1) honk(audio.currentTime + Math.random() * (seconds - 0.4));
+    } catch (error) {
+      audio = null;
+    }
+    try {
+      for (let index = 0; index < 2; index += 1) {
+        const phrase = new window.SpeechSynthesisUtterance('Беспредел!');
+        phrase.lang = 'ru-RU';
+        phrase.pitch = 2;
+        phrase.rate = 1.3;
+        window.speechSynthesis.speak(phrase);
+      }
+    } catch (error) {
+      return;
+    }
+  };
+  const releaseGeese = () => {
+    if ($('.geese')) return;
+    const count = 7;
+    const lifetime = 5;
+    const speed = 2.8;
+    const gap = 0.3;
+    const flock = document.createElement('div');
+    flock.className = 'geese';
+    const total = lifetime;
+    flock.innerHTML = `<div class="boom" style="--boom-end:${total - 0.5}s"><span>C-C-C-COMBO BREAKER!</span></div>` + Array.from({ length: count }, (_, index) => {
+      const style = `--delay:${index * gap}s;--speed:${speed + Math.random() * 0.4}s;--size:${0.8 + Math.random() * 0.45};bottom:${14 + Math.random() * 12}%`;
+      return `<div class="goose" style="${style}"><div class="bob">${GOOSE_SVG}<span class="say">Беспредел!</span></div></div>`;
+    }).join('');
+    shadow.appendChild(flock);
+    shout(count, total);
+    window.setTimeout(() => {
+      flock.remove();
+      try {
+        window.speechSynthesis.cancel();
+      } catch (error) {
+        return;
+      }
+    }, lifetime * 1000);
+  };
+  const checkChaos = () => {
+    const chaos = Boolean(report && report.rows.some(isChaos));
+    if (chaos && !chaosBefore) releaseGeese();
+    chaosBefore = chaos;
+  };
+  const checkChaosLater = () => {
+    window.clearTimeout(chaosTimer);
+    chaosTimer = window.setTimeout(checkChaos, 1500);
+  };
+
   const close = () => {
     closed = true;
     window.clearInterval(timer);
+    window.clearTimeout(chaosTimer);
     document.removeEventListener('visibilitychange', onVisible);
     host.remove();
     delete window.__sprintCapacity;
@@ -366,6 +483,7 @@ function sprintCapacityMount(config) {
     writeStored('board', boardId);
     settings = loadSettings();
     snapshot = null;
+    chaosBefore = false;
     Object.assign(data, { cards: null, loadedAt: null, error: null, snapshotError: null });
     fillSettings();
     $('.settings').open = DIRECTIONS.some((direction) => settings.team[direction].people === 0);
@@ -384,6 +502,7 @@ function sprintCapacityMount(config) {
     setSetting(target.dataset.set, target.value);
     recompute();
     render();
+    checkChaosLater();
   });
 
   for (const type of ['keydown', 'keyup', 'keypress']) {

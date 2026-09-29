@@ -343,6 +343,17 @@ test('доска Staff Mobile: вместо фронта Mobile по тегу Mo
   assert.deepEqual(coreBoard.warnings.map((warning) => [warning.issue, warning.item.id]), [['noPlatform', 1]]);
 });
 
+test('беспредел: сейчас вдвое больше возможного', () => {
+  // Arrange
+  const row = (total, capacity) => ({ direction: 'back', total, capacity });
+
+  // Act
+  const actual = [row(20, 10), row(25, 10), row(19.9, 10), row(48, null), row(5, 0)].map(core.isChaos);
+
+  // Assert
+  assert.deepEqual(actual, [true, true, false, false, false]);
+});
+
 test('снимок: испорченный или без доски не принимается', () => {
   // Arrange
   const good = { boardId: CORE_BOARD, takenAt: '2026-09-29T09:00:00.000Z', totals: { back: '3', front: 0, qa: 1.5 }, doneIds: [4, 'x', 5] };
