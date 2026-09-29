@@ -19,7 +19,10 @@ const source = [core.replace(EXPORT_LINE, ''), read('./src/kaiten.js'), read('./
 const script = `(function () {\n'use strict';\n${source}\n})();\n`;
 new Function(script);
 
-const bookmarklet = `javascript:${encodeURIComponent(script)}`;
+const PAGES_URL = 'https://toytronic22.github.io/kaiten-sprint-capacity/sprint-capacity.js';
+const loader = `(()=>{const s=document.createElement('script');s.src='${PAGES_URL}?t='+Date.now();s.onload=()=>s.remove();s.onerror=()=>{s.remove();alert('Ёмкость спринта: панель не загрузилась, проверьте интернет')};document.head.appendChild(s)})()`;
+new Function(loader);
+const bookmarklet = `javascript:${encodeURIComponent(loader)}`;
 const escapeHtml = (text) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 const installPage = `<!doctype html>
@@ -43,6 +46,7 @@ li { margin: 4px 0; }
 <li>Откройте доску Development(P2P) в Kaiten.</li>
 <li>Нажмите закладку — справа появится панель. Нажмите ещё раз — панель закроется.</li>
 </ol>
+<p>Закладка при каждом нажатии берёт свежую версию панели с этой страницы — перетаскивать заново после обновлений не нужно.</p>
 <p>Не перетаскивается — создайте закладку вручную и вставьте в поле адреса этот код:</p>
 <textarea readonly onclick="this.select()">${escapeHtml(bookmarklet)}</textarea>
 </body>
@@ -53,4 +57,4 @@ mkdirSync(new URL('./dist/', import.meta.url), { recursive: true });
 write('./dist/sprint-capacity.js', script);
 write('./dist/bookmarklet.txt', `${bookmarklet}\n`);
 write('./dist/install.html', installPage);
-console.log(`Готово: скрипт ${Math.round(script.length / 1024)} КБ, закладка ${Math.round(bookmarklet.length / 1024)} КБ`);
+console.log(`Готово: скрипт ${Math.round(script.length / 1024)} КБ, закладка ${bookmarklet.length} знаков`);

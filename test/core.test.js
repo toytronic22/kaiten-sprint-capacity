@@ -368,8 +368,8 @@ test('беспредел: трещит тот, у кого вдвое больш
   const qaOnly = core.chaosNames([{ direction: 'back', total: 5, capacity: 10 }, { direction: 'qa', total: 20, capacity: 10 }], core.boardConfig(CORE_BOARD));
 
   // Assert
-  assert.deepEqual(coreNames, ['Backend', 'Frontend']);
-  assert.deepEqual(mobileNames, ['Backend', 'Mobile']);
+  assert.deepEqual(coreNames, ['Бэк', 'Frontend']);
+  assert.deepEqual(mobileNames, ['Бэк', 'Mobile']);
   assert.deepEqual(qaOnly, ['QA']);
 });
 

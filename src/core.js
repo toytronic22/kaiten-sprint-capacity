@@ -209,7 +209,7 @@ function isChaos(row) {
 }
 
 function chaosNames(rows, config = SPRINT_CAPACITY) {
-  const names = { ...config.platformTags, qa: 'QA' };
+  const names = { ...config.platformTags, back: 'Бэк', qa: 'QA' };
   return rows.filter(isChaos).map((row) => names[row.direction]);
 }
 
