@@ -82,80 +82,10 @@ function estimateIssues(estimate, platform, needQa) {
   return issues;
 }
 
-function sprintBoundary(sprint) {
-  const times = [sprint.finish_date, sprint.actual_finish_date]
-    .filter(Boolean)
-    .map((value) => Date.parse(value))
-    .filter(Number.isFinite);
-  return times.length ? Math.min(...times) : Infinity;
-}
-
-function snapshotsAtSprintEnd(sprint) {
-  const boundary = sprintBoundary(sprint);
-  const latest = new Map();
-  for (const version of sprint.cardUpdates || []) {
-    if (version.sprint_id !== sprint.id) continue;
-    const at = Date.parse(version.updated);
-    if (!(at <= boundary)) continue;
-    const known = latest.get(version.id);
-    const newer = !known || at > known.at || (at === known.at && (version.version || 0) > (known.version.version || 0));
-    if (newer) latest.set(version.id, { at, version });
-  }
-  const result = new Map();
-  for (const [id, entry] of latest) result.set(id, entry.version);
-  return result;
-}
-
-function currentSprintId(cards) {
-  let best = null;
-  for (const card of cards) {
-    if (card.sprint_id && (best === null || card.sprint_id > best)) best = card.sprint_id;
-  }
-  return best;
-}
-
-function isSprintRunning(head, now) {
-  if (!head || !head.active || head.actual_finish_date) return false;
-  const finish = Date.parse(head.finish_date);
-  return !Number.isFinite(finish) || now <= finish;
-}
-
-function previousSprintPlan(currentId, head, now) {
-  if (currentId === null) return { source: 'history', below: null };
-  if (!isSprintRunning(head, now)) return { source: 'current', id: currentId };
-  return { source: 'history', below: currentId };
-}
-
-function latestSprintId(records, boardId, below) {
-  let best = null;
-  for (const record of records) {
-    const id = record && record.sprint_id;
-    if (!id || record.board_id !== boardId) continue;
-    if (below !== null && below !== undefined && id >= below) continue;
-    if (best === null || id > best) best = id;
-  }
-  return best;
-}
-
-function newerSprintInUpdates(sprint, boardId, below) {
-  const newer = latestSprintId(sprint.cardUpdates || [], boardId, below);
-  return newer !== null && newer > sprint.id ? newer : null;
-}
-
-function sprintHeadFrom(text) {
-  const cut = text.indexOf(',"cards":');
-  if (cut === -1) return { found: false, head: null };
-  try {
-    return { found: true, head: JSON.parse(`${text.slice(0, cut)}}`) };
-  } catch (error) {
-    return { found: true, head: null };
-  }
-}
-
 function defaultSettings() {
   const team = {};
   for (const direction of DIRECTIONS) team[direction] = { people: 0, absence: 0 };
-  return { workDays: 10, holidays: 0, coefficient: 1, includeDone: false, team };
+  return { workDays: 10, holidays: 0, coefficient: 1, team };
 }
 
 function normalizeSettings(raw) {
@@ -174,7 +104,6 @@ function normalizeSettings(raw) {
     workDays: pick(source.workDays, base.workDays),
     holidays: pick(source.holidays, base.holidays),
     coefficient: pick(source.coefficient, base.coefficient),
-    includeDone: source.includeDone === true,
     team,
   };
 }
@@ -185,34 +114,19 @@ function capacityOf(settings, direction) {
   return Math.max(0, team.people * days - team.absence) * settings.coefficient;
 }
 
-function pickRemainder(entered, fallback) {
-  const number = toNumber(entered);
-  return number === null ? fallback : number;
+function percentOf(part, whole) {
+  return whole > 0 ? Math.round((part / whole) * 100) : null;
 }
 
-function addToSums(sums, notCounted, kind, item, counted) {
-  if (counted.dev !== null) {
-    if (item.platform) {
-      sums[item.platform][kind] += counted.dev;
-    } else {
-      notCounted.points += counted.dev;
-      notCounted.cards.push(item);
-    }
-  }
-  if (counted.qa !== null) sums.qa[kind] += counted.qa;
-}
-
-function buildReport({ cards, previous, settings, remainders = {}, config = SPRINT_CAPACITY }) {
-  const snapshots = previous ? snapshotsAtSprintEnd(previous) : new Map();
+function buildReport({ cards, settings, config = SPRINT_CAPACITY }) {
   const sums = {};
-  for (const direction of DIRECTIONS) sums[direction] = { tail: 0, added: 0 };
+  for (const direction of DIRECTIONS) sums[direction] = 0;
   const report = {
-    tails: [],
-    added: [],
     warnings: [],
     notCounted: { points: 0, cards: [] },
     bugs: { cards: [], points: 0 },
-    done: { cards: [], points: 0, counted: settings.includeDone },
+    board: { cards: [], points: 0 },
+    done: { cards: [], points: 0, percent: null },
     problems: [],
   };
   let hasDevField = false;
@@ -223,53 +137,52 @@ function buildReport({ cards, previous, settings, remainders = {}, config = SPRI
     if (config.fields.platform in properties) hasPlatformField = true;
     const estimate = readEstimate(card, config);
     const platform = platformOf(card, config);
-    const full = splitEstimate(estimate);
-    const total = (full.dev || 0) + (full.qa || 0);
-    const item = { id: card.id, title: card.title || '', columnId: card.column_id, platform, estimate, full };
+    const parts = splitEstimate(estimate);
+    const total = (parts.dev || 0) + (parts.qa || 0);
+    const item = { id: card.id, title: card.title || '', platform, estimate, parts };
     if (isBug(card, config)) {
       report.bugs.cards.push(item);
       report.bugs.points += total;
       continue;
     }
+    report.board.cards.push(item);
+    report.board.points += total;
     if (card.state === config.doneState) {
       report.done.cards.push(item);
       report.done.points += total;
-      if (!settings.includeDone) continue;
     }
     for (const issue of estimateIssues(estimate, platform, needsQa(card, config))) {
       report.warnings.push({ issue, item });
     }
-    const snapshot = snapshots.get(card.id);
-    const before = snapshot ? readEstimate(snapshot, config) : null;
-    if (before && before.size === estimate.size && before.sp === estimate.sp) {
-      const entered = remainders[card.id] || {};
-      const counted = { dev: pickRemainder(entered.dev, full.dev), qa: pickRemainder(entered.qa, full.qa) };
-      report.tails.push({ ...item, counted, entered: { dev: toNumber(entered.dev), qa: toNumber(entered.qa) } });
-      addToSums(sums, report.notCounted, 'tail', item, counted);
-    } else {
-      report.added.push({ ...item, counted: full, before });
-      addToSums(sums, report.notCounted, 'added', item, full);
+    if (parts.dev !== null) {
+      if (platform) {
+        sums[platform] += parts.dev;
+      } else {
+        report.notCounted.points += parts.dev;
+        report.notCounted.cards.push(item);
+      }
     }
+    if (parts.qa !== null) sums.qa += parts.qa;
   }
   if (cards.length && !hasDevField) report.problems.push('Ни в одной карте нет поля Story Points — всё считаю в разработку, QA не выделить');
   if (cards.length && !hasPlatformField) report.problems.push('Ни в одной карте нет поля Platform — бэк и фронт не разделить');
   report.rows = DIRECTIONS.map((direction) => {
-    const tail = round1(sums[direction].tail);
-    const added = round1(sums[direction].added);
+    const total = round1(sums[direction]);
     const people = settings.team[direction].people;
     const capacity = people > 0 ? round1(capacityOf(settings, direction)) : null;
-    const total = round1(tail + added);
-    return { direction, tail, added, total, capacity, over: capacity !== null && total > capacity };
+    return { direction, total, capacity, over: capacity !== null && total > capacity };
   });
+  report.done.percent = percentOf(report.done.points, report.board.points);
   report.notCounted.points = round1(report.notCounted.points);
   report.bugs.points = round1(report.bugs.points);
+  report.board.points = round1(report.board.points);
   report.done.points = round1(report.done.points);
   return report;
 }
 
 function formatRow(row) {
   const capacity = row.capacity === null ? '—' : formatNumber(row.capacity);
-  return `${DIRECTION_LABELS[row.direction]}: ${formatNumber(row.tail)} + ${formatNumber(row.added)} = ${formatNumber(row.total)} из ${capacity}`;
+  return `${DIRECTION_LABELS[row.direction]}: ${formatNumber(row.total)} из ${capacity}`;
 }
 
-if (typeof module !== 'undefined') module.exports = { SPRINT_CAPACITY, DIRECTIONS, DIRECTION_LABELS, toNumber, round1, formatNumber, plural, readEstimate, platformOf, needsQa, isBug, splitEstimate, estimateIssues, sprintBoundary, snapshotsAtSprintEnd, currentSprintId, isSprintRunning, previousSprintPlan, latestSprintId, newerSprintInUpdates, sprintHeadFrom, defaultSettings, normalizeSettings, capacityOf, buildReport, formatRow };
+if (typeof module !== 'undefined') module.exports = { SPRINT_CAPACITY, DIRECTIONS, DIRECTION_LABELS, toNumber, round1, formatNumber, plural, readEstimate, platformOf, needsQa, isBug, splitEstimate, estimateIssues, defaultSettings, normalizeSettings, capacityOf, buildReport, formatRow };
