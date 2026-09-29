@@ -71,10 +71,7 @@ const PANEL_HTML = `
 
 const ISSUE_LABELS = {
   noPlatform: 'Нет платформы Backend или Frontend — разработку не считаю',
-  noDevEstimate: 'Есть общая оценка, нет Story Points — не считаю',
-  sizeBelowDev: 'Общая оценка меньше Story Points — QA считаю 0',
   needQaWithoutQa: 'Test type — Need QA, а на QA 0 SP',
-  noSize: 'Есть Story Points, нет общей оценки — QA не считаю',
   noEstimate: 'Без оценок',
 };
 
@@ -203,7 +200,7 @@ function sprintCapacityMount(config) {
       : '';
     const bugCount = report.bugs.cards.length;
     const bugs = bugCount ? `<div class="hint">Баги не считаю: ${cardsWord(bugCount)}, ${formatNumber(report.bugs.points)} SP</div>` : '';
-    const done = `<label class="done"><input type="checkbox" data-set="includeDone"${settings.includeDone ? ' checked' : ''}> считать карты в Done — сейчас там ${cardsWord(report.done.cards.length)}, общая оценка ${formatNumber(report.done.size)}</label>`;
+    const done = `<label class="done"><input type="checkbox" data-set="includeDone"${settings.includeDone ? ' checked' : ''}> считать карты в Done — сейчас там ${cardsWord(report.done.cards.length)}, общая оценка ${formatNumber(report.done.points)}</label>`;
     box.innerHTML = rows + legend + missing + notCounted + bugs + done;
   };
 

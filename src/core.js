@@ -68,20 +68,17 @@ function isBug(card, config = SPRINT_CAPACITY) {
 }
 
 function splitEstimate({ size, sp }) {
-  if (sp === null) return { dev: null, qa: null };
-  if (size === null) return { dev: sp, qa: null };
-  return { dev: sp, qa: Math.max(0, size - sp) };
+  if (size === null && sp === null) return { dev: null, qa: null };
+  if (size === null || sp === null) return { dev: size === null ? sp : size, qa: 0 };
+  return { dev: Math.min(size, sp), qa: Math.abs(size - sp) };
 }
 
 function estimateIssues(estimate, platform, needQa) {
-  const { size, sp } = estimate;
+  const parts = splitEstimate(estimate);
+  if (parts.dev === null) return ['noEstimate'];
   const issues = [];
-  if (size === null && sp === null) issues.push('noEstimate');
-  else if (sp === null) issues.push('noDevEstimate');
-  else if (size === null) issues.push('noSize');
-  else if (size < sp) issues.push('sizeBelowDev');
-  if (sp !== null && platform === null) issues.push('noPlatform');
-  if (needQa && size !== null && sp !== null && size <= sp) issues.push('needQaWithoutQa');
+  if (platform === null) issues.push('noPlatform');
+  if (needQa && parts.qa === 0) issues.push('needQaWithoutQa');
   return issues;
 }
 
@@ -194,13 +191,6 @@ function pickRemainder(entered, fallback) {
 }
 
 function addToSums(sums, notCounted, kind, item, counted) {
-  if (counted.dev === null && counted.qa === null) {
-    if (item.estimate.size !== null) {
-      notCounted.points += item.estimate.size;
-      notCounted.cards.push(item);
-    }
-    return;
-  }
   if (counted.dev !== null) {
     if (item.platform) {
       sums[item.platform][kind] += counted.dev;
@@ -222,7 +212,7 @@ function buildReport({ cards, previous, settings, remainders = {}, config = SPRI
     warnings: [],
     notCounted: { points: 0, cards: [] },
     bugs: { cards: [], points: 0 },
-    done: { cards: [], size: 0, counted: settings.includeDone },
+    done: { cards: [], points: 0, counted: settings.includeDone },
     problems: [],
   };
   let hasDevField = false;
@@ -234,15 +224,16 @@ function buildReport({ cards, previous, settings, remainders = {}, config = SPRI
     const estimate = readEstimate(card, config);
     const platform = platformOf(card, config);
     const full = splitEstimate(estimate);
+    const total = (full.dev || 0) + (full.qa || 0);
     const item = { id: card.id, title: card.title || '', columnId: card.column_id, platform, estimate, full };
     if (isBug(card, config)) {
       report.bugs.cards.push(item);
-      report.bugs.points += estimate.size !== null ? estimate.size : estimate.sp || 0;
+      report.bugs.points += total;
       continue;
     }
     if (card.state === config.doneState) {
       report.done.cards.push(item);
-      report.done.size += estimate.size || 0;
+      report.done.points += total;
       if (!settings.includeDone) continue;
     }
     for (const issue of estimateIssues(estimate, platform, needsQa(card, config))) {
@@ -260,7 +251,7 @@ function buildReport({ cards, previous, settings, remainders = {}, config = SPRI
       addToSums(sums, report.notCounted, 'added', item, full);
     }
   }
-  if (cards.length && !hasDevField) report.problems.push('Ни в одной карте нет поля Story Points — разработку посчитать не из чего');
+  if (cards.length && !hasDevField) report.problems.push('Ни в одной карте нет поля Story Points — всё считаю в разработку, QA не выделить');
   if (cards.length && !hasPlatformField) report.problems.push('Ни в одной карте нет поля Platform — бэк и фронт не разделить');
   report.rows = DIRECTIONS.map((direction) => {
     const tail = round1(sums[direction].tail);
@@ -272,7 +263,7 @@ function buildReport({ cards, previous, settings, remainders = {}, config = SPRI
   });
   report.notCounted.points = round1(report.notCounted.points);
   report.bugs.points = round1(report.bugs.points);
-  report.done.size = round1(report.done.size);
+  report.done.points = round1(report.done.points);
   return report;
 }
 

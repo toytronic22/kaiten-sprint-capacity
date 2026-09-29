@@ -34,10 +34,9 @@ test('на снимке планирования 28.09 хвосты и доба�
   const rows = rowsByDirection(report);
 
   // Assert
-  assert.deepEqual([rows.back.tail, rows.front.tail, rows.qa.tail], [8, 2, 5]);
-  assert.deepEqual([rows.back.added, rows.front.added, rows.qa.added], [31, 4, 14]);
-  assert.equal(report.notCounted.points, 9);
-  assert.equal(report.notCounted.cards.length, 4);
+  assert.deepEqual([rows.back.tail, rows.front.tail, rows.qa.tail], [15, 2, 5]);
+  assert.deepEqual([rows.back.added, rows.front.added, rows.qa.added], [33, 4, 14]);
+  assert.equal(report.notCounted.points, 0);
   assert.equal(report.problems.length, 0);
 });
 
@@ -64,9 +63,9 @@ test('вписанный остаток хвоста заменяет полну
   const rows = rowsByDirection(report);
 
   // Assert
-  assert.equal(rows.back.tail, 4);
+  assert.equal(rows.back.tail, 9);
   assert.equal(rows.qa.tail, 1.5);
-  assert.equal(report.notCounted.points, 7);
+  assert.equal(report.notCounted.points, 0);
 });
 
 test('пустой остаток возвращает полную оценку', () => {
@@ -78,7 +77,7 @@ test('пустой остаток возвращает полную оценку
   const report = core.buildReport({ cards: fixture.cards, previous: fixture.previousSprint, settings, remainders });
 
   // Assert
-  assert.equal(rowsByDirection(report).back.tail, 8);
+  assert.equal(rowsByDirection(report).back.tail, 15);
 });
 
 test('без прошлого спринта все карты считаются добавленными', () => {
@@ -91,7 +90,7 @@ test('без прошлого спринта все карты считаютс�
 
   // Assert
   assert.equal(report.tails.length, 0);
-  assert.deepEqual([rows.back.added, rows.front.added, rows.qa.added], [39, 6, 19]);
+  assert.deepEqual([rows.back.added, rows.front.added, rows.qa.added], [48, 6, 19]);
 });
 
 test('карты в Done не считаются, пока не включена галочка', () => {
@@ -105,7 +104,7 @@ test('карты в Done не считаются, пока не включена
   // Assert
   assert.equal(rowsByDirection(without).back.added, 3);
   assert.equal(without.done.cards.length, 1);
-  assert.equal(without.done.size, 4);
+  assert.equal(without.done.points, 4);
   assert.equal(rowsByDirection(withDone).back.added, 5);
   assert.equal(rowsByDirection(withDone).qa.added, 4);
 });
@@ -164,7 +163,7 @@ test('баг в Done уходит в баги, а не в Done, и с галоч
 
   // Assert
   assert.deepEqual(without.done.cards.map((item) => item.id), [2]);
-  assert.equal(without.done.size, 3);
+  assert.equal(without.done.points, 3);
   assert.equal(rowsByDirection(withDone).back.added, 1);
   assert.equal(rowsByDirection(withDone).qa.added, 2);
   assert.equal(withDone.bugs.cards.length, 1);
@@ -181,9 +180,9 @@ test('на снимке 28.09 баги без оценок: цифры те же
   const rows = rowsByDirection(report);
 
   // Assert
-  assert.deepEqual([rows.back.tail, rows.front.tail, rows.qa.tail], [8, 2, 5]);
-  assert.deepEqual([rows.back.added, rows.front.added, rows.qa.added], [31, 4, 14]);
-  assert.equal(report.notCounted.points, 9);
+  assert.deepEqual([rows.back.tail, rows.front.tail, rows.qa.tail], [15, 2, 5]);
+  assert.deepEqual([rows.back.added, rows.front.added, rows.qa.added], [33, 4, 14]);
+  assert.equal(report.notCounted.points, 0);
   assert.deepEqual(report.tails.map((item) => item.id).sort(), [64631102, 68898872, 69645690, 70686961, 70851370]);
   assert.equal(report.bugs.cards.length, 8);
   assert.equal(report.bugs.points, 0);
@@ -211,34 +210,55 @@ test('платформа: Backend важнее Frontend, без них разр�
 test('предупреждения по оценкам', () => {
   // Arrange
   const cases = [
-    [{ size: 2, sp: 3 }, ['sizeBelowDev']],
-    [{ size: 3, sp: null }, ['noDevEstimate']],
-    [{ size: null, sp: 2 }, ['noSize']],
-    [{ size: null, sp: null }, ['noEstimate']],
-    [{ size: 5, sp: 3 }, []],
+    [{ size: 2, sp: 3 }, 'back', false, []],
+    [{ size: 3, sp: null }, 'back', false, []],
+    [{ size: null, sp: 2 }, 'back', false, []],
+    [{ size: 5, sp: 3 }, 'back', false, []],
+    [{ size: null, sp: null }, null, true, ['noEstimate']],
+    [{ size: 3, sp: null }, null, false, ['noPlatform']],
+    [{ size: 2, sp: 2 }, 'front', true, ['needQaWithoutQa']],
+    [{ size: 3, sp: null }, 'back', true, ['needQaWithoutQa']],
+    [{ size: 3, sp: 2 }, 'front', true, []],
   ];
 
   // Act
-  const actual = cases.map(([estimate]) => core.estimateIssues(estimate, 'back', false));
+  const actual = cases.map(([estimate, platform, needQa]) => core.estimateIssues(estimate, platform, needQa));
 
   // Assert
-  assert.deepEqual(actual, cases.map(([, expected]) => expected));
-  assert.deepEqual(core.estimateIssues({ size: 2, sp: 2 }, 'front', true), ['needQaWithoutQa']);
-  assert.deepEqual(core.estimateIssues({ size: 3, sp: 2 }, 'front', true), []);
+  assert.deepEqual(actual, cases.map((item) => item[3]));
 });
 
-test('Size меньше Story Points: разработка по Story Points, QA ноль', () => {
+test('две оценки: большая — общая с QA, меньшая — разработка, в каком бы поле ни стояли', () => {
   // Arrange
-  const cards = [card(1, { size: 2, sp: 3, platforms: [BACK], testType: [NEED_QA] })];
+  const cards = [
+    card(1, { size: 2, sp: 3, platforms: [BACK], testType: [NEED_QA] }),
+    card(2, { size: 8, sp: 5, platforms: [FRONT] }),
+  ];
 
   // Act
   const report = core.buildReport({ cards, previous: null, settings: core.defaultSettings() });
   const rows = rowsByDirection(report);
 
   // Assert
-  assert.equal(rows.back.added, 3);
-  assert.equal(rows.qa.added, 0);
-  assert.deepEqual(report.warnings.map((warning) => warning.issue).sort(), ['needQaWithoutQa', 'sizeBelowDev']);
+  assert.deepEqual([rows.back.added, rows.front.added, rows.qa.added], [2, 5, 4]);
+  assert.deepEqual(report.warnings, []);
+});
+
+test('одна оценка — целиком в разработку, в каком бы поле ни стояла', () => {
+  // Arrange
+  const cards = [
+    card(1, { size: 3, platforms: [BACK] }),
+    card(2, { sp: 2, platforms: [FRONT], testType: [NEED_QA] }),
+  ];
+
+  // Act
+  const report = core.buildReport({ cards, previous: null, settings: core.defaultSettings() });
+  const rows = rowsByDirection(report);
+
+  // Assert
+  assert.deepEqual([rows.back.added, rows.front.added, rows.qa.added], [3, 2, 0]);
+  assert.equal(report.notCounted.points, 0);
+  assert.deepEqual(report.warnings.map((warning) => [warning.item.id, warning.issue]), [[2, 'needQaWithoutQa']]);
 });
 
 test('возможные SP: люди × (рабочие дни − праздники) − отсутствия, умножить на коэффициент', () => {
