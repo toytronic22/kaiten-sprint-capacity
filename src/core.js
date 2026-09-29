@@ -1,5 +1,5 @@
 const SPRINT_CAPACITY = {
-  boardId: 68084,
+  boards: [{ id: 68084, title: 'Staff Core' }, { id: 1321013, title: 'Staff Mobile' }],
   snapshotCardId: 71238243,
   fields: { devEstimate: 'id_396449', platform: 'id_499149', testType: 'id_505017' },
   platform: { back: 16232407, front: 16232408 },
@@ -196,17 +196,17 @@ function formatRow(row) {
   return `${DIRECTION_LABELS[row.direction]}: ${change}${formatNumber(row.total)} из ${capacity}`;
 }
 
-function takeSnapshot({ cards, settings, now, config = SPRINT_CAPACITY }) {
+function takeSnapshot({ cards, settings, now, boardId, config = SPRINT_CAPACITY }) {
   const inWork = cards.filter((card) => card.state !== config.doneState);
   const report = buildReport({ cards: inWork, settings, config });
   const totals = {};
   for (const row of report.rows) totals[row.direction] = row.total;
   const doneIds = cards.filter((card) => card.state === config.doneState).map((card) => card.id);
-  return { takenAt: new Date(now).toISOString(), totals, doneIds };
+  return { boardId, takenAt: new Date(now).toISOString(), totals, doneIds };
 }
 
 function normalizeSnapshot(raw) {
-  if (!raw || typeof raw !== 'object' || !raw.totals || !Number.isFinite(Date.parse(raw.takenAt))) return null;
+  if (!raw || typeof raw !== 'object' || !raw.totals || !Number.isInteger(raw.boardId) || !Number.isFinite(Date.parse(raw.takenAt))) return null;
   const totals = {};
   for (const direction of DIRECTIONS) {
     const number = toNumber(raw.totals[direction]);
@@ -214,29 +214,35 @@ function normalizeSnapshot(raw) {
     totals[direction] = number;
   }
   const doneIds = Array.isArray(raw.doneIds) ? raw.doneIds.filter((id) => Number.isInteger(id)) : [];
-  return { takenAt: raw.takenAt, totals, doneIds };
+  return { boardId: raw.boardId, takenAt: raw.takenAt, totals, doneIds };
 }
 
-function snapshotComment(snapshot) {
+function boardTitle(boardId, config = SPRINT_CAPACITY) {
+  const board = config.boards.find((item) => item.id === boardId);
+  return board ? board.title : `доска ${boardId}`;
+}
+
+function snapshotComment(snapshot, config = SPRINT_CAPACITY) {
   const left = DIRECTIONS.map((direction) => `${DIRECTION_LABELS[direction]} ${formatNumber(snapshot.totals[direction])}`).join(' · ');
-  return `${SNAPSHOT_MARK}. Осталось: ${left}.\n\n\`\`\`json\n${JSON.stringify(snapshot)}\n\`\`\``;
+  return `${SNAPSHOT_MARK}, ${boardTitle(snapshot.boardId, config)}. Осталось: ${left}.\n\n\`\`\`json\n${JSON.stringify(snapshot)}\n\`\`\``;
 }
 
-function snapshotFromComments(comments) {
+function snapshotFromComments(comments, boardId) {
   const found = (Array.isArray(comments) ? comments : [])
     .filter((comment) => comment && !comment.deleted && typeof comment.text === 'string' && comment.text.startsWith(SNAPSHOT_MARK))
     .sort((a, b) => Date.parse(b.created) - Date.parse(a.created));
-  const latest = found[0];
-  if (!latest) return null;
-  const match = latest.text.match(/```json\s*([\s\S]*?)```/);
-  let raw = null;
-  try {
-    raw = match ? JSON.parse(match[1]) : null;
-  } catch (error) {
-    raw = null;
+  for (const comment of found) {
+    const match = comment.text.match(/```json\s*([\s\S]*?)```/);
+    let raw = null;
+    try {
+      raw = match ? JSON.parse(match[1]) : null;
+    } catch (error) {
+      raw = null;
+    }
+    const snapshot = normalizeSnapshot(raw);
+    if (snapshot && snapshot.boardId === boardId) return { ...snapshot, author: (comment.author && comment.author.full_name) || '' };
   }
-  const snapshot = normalizeSnapshot(raw);
-  return snapshot ? { ...snapshot, author: (latest.author && latest.author.full_name) || '' } : null;
+  return null;
 }
 
-if (typeof module !== 'undefined') module.exports = { SPRINT_CAPACITY, DIRECTIONS, DIRECTION_LABELS, toNumber, round1, formatNumber, plural, readEstimate, platformOf, needsQa, isBug, splitEstimate, estimateIssues, defaultSettings, normalizeSettings, capacityOf, buildReport, formatRow, takeSnapshot, normalizeSnapshot, snapshotComment, snapshotFromComments };
+if (typeof module !== 'undefined') module.exports = { SPRINT_CAPACITY, DIRECTIONS, DIRECTION_LABELS, toNumber, round1, formatNumber, plural, readEstimate, platformOf, needsQa, isBug, splitEstimate, estimateIssues, defaultSettings, normalizeSettings, capacityOf, buildReport, formatRow, takeSnapshot, normalizeSnapshot, boardTitle, snapshotComment, snapshotFromComments };

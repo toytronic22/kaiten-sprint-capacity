@@ -9,6 +9,8 @@ const MOBILE = 16237830;
 const NEED_QA = 16238652;
 const DONE = 3;
 const WEB_BUG = { id: 446247, name: 'WEB bug' };
+const CORE_BOARD = 68084;
+const MOBILE_BOARD = 1321013;
 
 function card(id, { size = null, sp = null, platforms = [], testType = [], state = 1, type = null } = {}) {
   const properties = {};
@@ -270,13 +272,13 @@ test('начало планирования: осталось — всё, что
   // Arrange
   const start = [card(1, { size: 6, sp: 3, platforms: [BACK] }), card(2, { size: 2, platforms: [FRONT] }), card(4, { size: 9, sp: 5, platforms: [BACK], state: DONE })];
   const later = [card(1, { size: 6, sp: 3, platforms: [BACK], state: DONE }), card(3, { size: 5, sp: 4, platforms: [BACK] })];
-  const snapshot = core.takeSnapshot({ cards: start, settings: core.defaultSettings(), now: Date.parse('2026-09-29T09:00:00.000Z') });
+  const snapshot = core.takeSnapshot({ cards: start, settings: core.defaultSettings(), now: Date.parse('2026-09-29T09:00:00.000Z'), boardId: CORE_BOARD });
 
   // Act
   const report = core.buildReport({ cards: later, settings: settingsWith({ back: { people: 1 } }), snapshot });
 
   // Assert
-  assert.deepEqual(snapshot, { takenAt: '2026-09-29T09:00:00.000Z', totals: { back: 3, front: 2, qa: 3 }, doneIds: [4] });
+  assert.deepEqual(snapshot, { boardId: CORE_BOARD, takenAt: '2026-09-29T09:00:00.000Z', totals: { back: 3, front: 2, qa: 3 }, doneIds: [4] });
   assert.deepEqual(report.rows.map(core.formatRow), ['Бэк: 3 + 4 = 7 из 10', 'Фронт: 2 − 2 = 0 из —', 'QA: 3 + 1 = 4 из —']);
   assert.deepEqual([report.done.points, report.board.points, report.done.percent], [6, 11, 50]);
 });
@@ -286,7 +288,7 @@ test('спринт закрыли в конце планирования: кар
   const old = card(4, { size: 9, sp: 5, platforms: [BACK], state: DONE });
   const oldBug = card(6, { state: DONE, type: WEB_BUG });
   const tail = card(1, { size: 6, sp: 3, platforms: [BACK] });
-  const snapshot = core.takeSnapshot({ cards: [old, oldBug, tail], settings: core.defaultSettings(), now: 0 });
+  const snapshot = core.takeSnapshot({ cards: [old, oldBug, tail], settings: core.defaultSettings(), now: 0, boardId: CORE_BOARD });
   const planned = card(5, { size: 3, platforms: [FRONT] });
 
   // Act
@@ -302,7 +304,7 @@ test('спринт закрыли в конце планирования: кар
 
 test('переоценка хвоста и смена оценки в спринте идут в «прибавилось»', () => {
   // Arrange
-  const snapshot = core.takeSnapshot({ cards: [card(1, { size: 6, sp: 3, platforms: [BACK] })], settings: core.defaultSettings(), now: 0 });
+  const snapshot = core.takeSnapshot({ cards: [card(1, { size: 6, sp: 3, platforms: [BACK] })], settings: core.defaultSettings(), now: 0, boardId: CORE_BOARD });
 
   // Act
   const report = core.buildReport({ cards: [card(1, { size: 10, sp: 5, platforms: [BACK] })], settings: core.defaultSettings(), snapshot });
@@ -313,7 +315,7 @@ test('переоценка хвоста и смена оценки в сприн
 
 test('карту, бывшую в Done, вернули в работу — снова считается', () => {
   // Arrange
-  const snapshot = core.takeSnapshot({ cards: [card(4, { size: 2, platforms: [BACK], state: DONE })], settings: core.defaultSettings(), now: 0 });
+  const snapshot = core.takeSnapshot({ cards: [card(4, { size: 2, platforms: [BACK], state: DONE })], settings: core.defaultSettings(), now: 0, boardId: CORE_BOARD });
 
   // Act
   const report = core.buildReport({ cards: [card(4, { size: 2, platforms: [BACK] })], settings: core.defaultSettings(), snapshot });
@@ -322,50 +324,50 @@ test('карту, бывшую в Done, вернули в работу — сн�
   assert.deepEqual(report.rows.map(core.formatRow)[0], 'Бэк: 0 + 2 = 2 из —');
 });
 
-test('снимок из браузера: испорченный не принимается', () => {
+test('снимок: испорченный или без доски не принимается', () => {
   // Arrange
-  const good = { takenAt: '2026-09-29T09:00:00.000Z', totals: { back: '3', front: 0, qa: 1.5 }, doneIds: [4, 'x', 5] };
-  const broken = [null, 'снимок', { totals: good.totals }, { takenAt: good.takenAt }, { ...good, totals: { back: 3, front: 'abc', qa: 1 } }];
+  const good = { boardId: CORE_BOARD, takenAt: '2026-09-29T09:00:00.000Z', totals: { back: '3', front: 0, qa: 1.5 }, doneIds: [4, 'x', 5] };
+  const broken = [null, 'снимок', { ...good, totals: undefined }, { ...good, takenAt: undefined }, { ...good, boardId: undefined }, { ...good, totals: { back: 3, front: 'abc', qa: 1 } }];
 
   // Act
   const actual = broken.map((raw) => core.normalizeSnapshot(raw));
 
   // Assert
-  assert.deepEqual(core.normalizeSnapshot(good), { takenAt: good.takenAt, totals: { back: 3, front: 0, qa: 1.5 }, doneIds: [4, 5] });
-  assert.deepEqual(core.normalizeSnapshot({ takenAt: good.takenAt, totals: good.totals }).doneIds, []);
-  assert.deepEqual(actual, [null, null, null, null, null]);
+  assert.deepEqual(core.normalizeSnapshot(good), { boardId: CORE_BOARD, takenAt: good.takenAt, totals: { back: 3, front: 0, qa: 1.5 }, doneIds: [4, 5] });
+  assert.deepEqual(core.normalizeSnapshot({ ...good, doneIds: undefined }).doneIds, []);
+  assert.deepEqual(actual, [null, null, null, null, null, null]);
 });
 
-test('общий снимок: пишется комментарием в Kaiten и читается обратно', () => {
+test('общий снимок: пишется комментарием в Kaiten с названием доски и читается обратно', () => {
   // Arrange
-  const snapshot = { takenAt: '2026-09-29T09:00:00.000Z', totals: { back: 20, front: 6.5, qa: 12 }, doneIds: [4, 5] };
+  const snapshot = { boardId: MOBILE_BOARD, takenAt: '2026-09-29T09:00:00.000Z', totals: { back: 20, front: 6.5, qa: 12 }, doneIds: [4, 5] };
   const comment = { text: core.snapshotComment(snapshot), created: '2026-09-29T09:00:01Z', author: { full_name: 'Aleksey Martynov' } };
 
   // Act
-  const actual = core.snapshotFromComments([comment]);
+  const actual = core.snapshotFromComments([comment], MOBILE_BOARD);
 
   // Assert
-  assert.ok(comment.text.startsWith('Снимок начала планирования. Осталось: Бэк 20 · Фронт 6,5 · QA 12.'));
+  assert.ok(comment.text.startsWith('Снимок начала планирования, Staff Mobile. Осталось: Бэк 20 · Фронт 6,5 · QA 12.'));
   assert.deepEqual(actual, { ...snapshot, author: 'Aleksey Martynov' });
 });
 
-test('общий снимок: берётся последний, удалённые и чужие комментарии не считаются, испорченный — снимка нет', () => {
+test('общий снимок: берётся последний своей доски, удалённые, чужие и испорченные комментарии не считаются', () => {
   // Arrange
-  const make = (back, created, extra = {}) => ({ text: core.snapshotComment({ takenAt: created, totals: { back, front: 0, qa: 0 }, doneIds: [] }), created, ...extra });
-  const older = make(1, '2026-09-01T09:00:00Z');
-  const newer = make(2, '2026-09-15T09:00:00Z');
-  const deleted = make(3, '2026-09-20T09:00:00Z', { deleted: true });
+  const make = (back, created, boardId, extra = {}) => ({ text: core.snapshotComment({ boardId, takenAt: created, totals: { back, front: 0, qa: 0 }, doneIds: [] }), created, ...extra });
+  const older = make(1, '2026-09-01T09:00:00Z', CORE_BOARD);
+  const newer = make(2, '2026-09-15T09:00:00Z', CORE_BOARD);
+  const mobile = make(7, '2026-09-16T09:00:00Z', MOBILE_BOARD);
+  const deleted = make(3, '2026-09-20T09:00:00Z', CORE_BOARD, { deleted: true });
   const other = { text: 'Здесь панель хранит снимки', created: '2026-09-25T09:00:00Z' };
   const broken = { text: 'Снимок начала планирования. ```json\n{"totals":\n```', created: '2026-09-28T09:00:00Z' };
 
   // Act
-  const latest = core.snapshotFromComments([newer, other, deleted, older]);
-  const afterBroken = core.snapshotFromComments([older, newer, broken]);
+  const core1 = core.snapshotFromComments([newer, other, deleted, older, mobile, broken], CORE_BOARD);
+  const mobile1 = core.snapshotFromComments([newer, other, deleted, older, mobile, broken], MOBILE_BOARD);
 
   // Assert
-  assert.equal(latest.totals.back, 2);
-  assert.equal(afterBroken, null);
-  assert.deepEqual([core.snapshotFromComments([]), core.snapshotFromComments(null)], [null, null]);
+  assert.deepEqual([core1.totals.back, mobile1.totals.back], [2, 7]);
+  assert.deepEqual([core.snapshotFromComments([], CORE_BOARD), core.snapshotFromComments(null, CORE_BOARD), core.snapshotFromComments([older], MOBILE_BOARD)], [null, null, null]);
 });
 
 test('нет полей Story Points и Platform ни в одной карте — явная ошибка', () => {

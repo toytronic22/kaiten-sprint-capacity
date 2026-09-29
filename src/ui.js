@@ -3,6 +3,9 @@ const PANEL_CSS = `
 .panel { --bg: #26282c; --fg: #e4e6ea; --muted: #9399a3; --line: #383b41; --soft: #30333a; --field: #1e2024; --accent: #5b9cf6; --accent-soft: #34507c; --bad: #f47174; --bad-soft: #7a3438; color-scheme: dark; position: fixed; top: 72px; right: 16px; width: 300px; max-width: calc(100vw - 32px); max-height: calc(100vh - 88px); overflow: auto; z-index: 2147483000; box-sizing: border-box; background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 16px 40px rgba(0, 0, 0, .45); font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
 header { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 2px; padding: 10px 8px 10px 14px; background: var(--bg); border-bottom: 1px solid var(--line); }
 header b { font-size: 14px; }
+.board { max-width: 150px; padding: 3px 22px 3px 6px; margin-left: -6px; font: 600 14px/1.3 inherit; font-family: inherit; color: var(--fg); background: var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%239399a3' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 6px center; border: 1px solid transparent; border-radius: 8px; appearance: none; cursor: pointer; }
+.board:hover, .board:focus { border-color: var(--line); background-color: var(--soft); outline: none; }
+.board option { background: var(--field); color: var(--fg); }
 .time { flex: 1; margin-left: 8px; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 button { font: inherit; color: inherit; background: none; border: 0; border-radius: 8px; cursor: pointer; }
 .icon { width: 28px; height: 28px; font-size: 16px; line-height: 28px; color: var(--muted); }
@@ -67,7 +70,7 @@ const PANEL_INPUT = (path, placeholder) => `<input type="text" inputmode="decima
 const PANEL_HTML = `
 <div class="panel">
   <header>
-    <b>Ёмкость спринта</b>
+    <select class="board" data-act="board" title="Доска"></select>
     <span class="time"></span>
     <button type="button" class="icon" data-act="refresh" title="Обновить"><span>↻</span></button>
     <button type="button" class="icon" data-act="collapse" title="Свернуть">–</button>
@@ -151,7 +154,12 @@ function sprintCapacityMount(config) {
     }
   };
 
-  let settings = normalizeSettings(readStored('settings', null));
+  const knownBoard = (id) => config.boards.some((board) => board.id === id);
+  let boardId = readStored('board', null);
+  if (!knownBoard(boardId)) boardId = config.boards[0].id;
+  const settingsKey = () => `settings.${boardId}`;
+  const loadSettings = () => normalizeSettings(readStored(settingsKey(), boardId === config.boards[0].id ? readStored('settings', null) : null));
+  let settings = loadSettings();
   let collapsed = readStored('collapsed', false) === true;
   let snapshot = null;
   let report = null;
@@ -262,42 +270,57 @@ function sprintCapacityMount(config) {
     const parent = keys.slice(0, -1).reduce((node, key) => node[key], next);
     parent[keys[keys.length - 1]] = raw;
     settings = normalizeSettings(next);
-    writeStored('settings', settings);
+    writeStored(settingsKey(), settings);
   };
 
   const refresh = async () => {
     if (data.busy || closed) return;
+    const board = boardId;
     data.busy = true;
     renderStatus();
+    const loaded = {};
     try {
-      data.cards = await kaitenBoardCards(config.boardId);
-      data.loadedAt = new Date();
-      data.error = null;
+      loaded.cards = await kaitenBoardCards(board);
     } catch (error) {
-      data.error = error;
+      loaded.error = error;
     }
     try {
-      snapshot = snapshotFromComments(await kaitenCardComments(config.snapshotCardId));
-      data.snapshotError = null;
+      loaded.snapshot = snapshotFromComments(await kaitenCardComments(config.snapshotCardId), board);
     } catch (error) {
-      data.snapshotError = error;
+      loaded.snapshotError = error;
     }
     data.busy = false;
     if (closed) return;
+    if (board !== boardId) {
+      refresh();
+      return;
+    }
+    if (loaded.error) data.error = loaded.error;
+    else {
+      data.cards = loaded.cards;
+      data.loadedAt = new Date();
+      data.error = null;
+    }
+    if (loaded.snapshotError) data.snapshotError = loaded.snapshotError;
+    else {
+      snapshot = loaded.snapshot;
+      data.snapshotError = null;
+    }
     recompute();
     render();
   };
 
   const startPlanning = async () => {
     const text = snapshot
-      ? `Начать планирование заново? Снимок от ${snapshotTime(snapshot.takenAt)} заменится текущей доской у всей команды.`
-      : 'Запомнить для всей команды, сколько сейчас осталось в работе? Карты в Done дальше не считаются.';
+      ? `${boardTitle(boardId, config)}: начать планирование заново? Снимок от ${snapshotTime(snapshot.takenAt)} заменится текущей доской у всей команды.`
+      : `${boardTitle(boardId, config)}: запомнить для всей команды, сколько сейчас осталось в работе? Карты в Done дальше не считаются.`;
     if (!window.confirm(text)) return;
     data.busy = true;
     render();
+    const board = boardId;
     try {
-      const cards = await kaitenBoardCards(config.boardId);
-      await kaitenAddComment(config.snapshotCardId, snapshotComment(takeSnapshot({ cards, settings, now: Date.now(), config })));
+      const cards = await kaitenBoardCards(board);
+      await kaitenAddComment(config.snapshotCardId, snapshotComment(takeSnapshot({ cards, settings, now: Date.now(), boardId: board, config }), config));
     } catch (error) {
       window.alert(`Снимок не сохранился: ${error.message || error}`);
     }
@@ -336,6 +359,24 @@ function sprintCapacityMount(config) {
     }
   });
 
+  const switchBoard = (id) => {
+    if (!knownBoard(id) || id === boardId) return;
+    boardId = id;
+    writeStored('board', boardId);
+    settings = loadSettings();
+    snapshot = null;
+    Object.assign(data, { cards: null, loadedAt: null, error: null, snapshotError: null });
+    fillSettings();
+    $('.settings').open = DIRECTIONS.some((direction) => settings.team[direction].people === 0);
+    recompute();
+    render();
+    refresh();
+  };
+
+  shadow.addEventListener('change', (event) => {
+    if (event.target.dataset.act === 'board') switchBoard(Number(event.target.value));
+  });
+
   shadow.addEventListener('input', (event) => {
     const target = event.target;
     if (!target.dataset.set) return;
@@ -349,6 +390,7 @@ function sprintCapacityMount(config) {
   }
 
   window.__sprintCapacity = { close, refresh };
+  $('.board').innerHTML = config.boards.map((board) => `<option value="${board.id}"${board.id === boardId ? ' selected' : ''}>${escapeHtml(board.title)}</option>`).join('');
   applyCollapsed();
   fillSettings();
   $('.settings').open = DIRECTIONS.some((direction) => settings.team[direction].people === 0);
