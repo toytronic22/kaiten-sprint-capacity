@@ -193,6 +193,7 @@ const page = ({ hostname, stored = {}, opener = null, clipboard = true, holst = 
     if (!timer.repeat) timer.cleared = true;
     timer.listener();
   });
+  env.document = document;
   env.toast = () => {
     const box = document.getElementById('sprintcap-toast');
     return box ? box.children.map((element) => element.textContent).join('') : null;
@@ -416,6 +417,23 @@ test('Сохранённый вход: «В Holst» не спрашивает в
   assert.equal(kaiten.opened.length, 1);
   assert.match(kaiten.toast(), /^В Holst не отправилось: нет сети в тесте/);
   assert.equal(kaiten.stored.get(TOKEN_KEY), JSON.stringify('test-login-4'));
+});
+
+test('Мем в итоге «В Holst» пропадает сам через пять секунд, текст остаётся', async () => {
+  // Arrange
+  const kaiten = page({ hostname: 'dodopizza.kaiten.ru', stored: { [TOKEN_KEY]: JSON.stringify('test-login-5') } });
+  await flush();
+  kaiten.click('to-holst');
+  await flush();
+  const box = kaiten.document.getElementById('sprintcap-toast');
+  assert.deepEqual(box.children.map((element) => element.tagName), ['IMG', 'DIV']);
+
+  // Act
+  kaiten.runTimers(5000);
+
+  // Assert
+  assert.deepEqual(box.children.map((element) => element.tagName), ['DIV']);
+  assert.match(kaiten.toast(), /^В Holst не отправилось: нет сети в тесте/);
 });
 
 test('Закладка на доске Holst: здоровается с Kaiten и отдаёт вход только Kaiten', () => {

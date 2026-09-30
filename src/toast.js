@@ -2,6 +2,7 @@ const SPRINT_MEMES = {
   ok: 'https://toytronic22.github.io/kaiten-sprint-capacity/memes/ok.png',
   fail: 'https://toytronic22.github.io/kaiten-sprint-capacity/memes/fail.png',
 };
+const SPRINT_MEME_MS = 5000;
 
 function sprintToast(text, failed, meme, stay) {
   const old = document.getElementById('sprintcap-toast');
@@ -19,6 +20,7 @@ function sprintToast(text, failed, meme, stay) {
     image.style.cssText = 'display:block;width:300px;max-width:100%;height:auto;filter:drop-shadow(0 2px 6px rgba(0,0,0,.25))';
     image.addEventListener('error', () => image.remove());
     box.appendChild(image);
+    window.setTimeout(() => image.remove(), SPRINT_MEME_MS);
   }
   const note = document.createElement('div');
   note.textContent = text;
