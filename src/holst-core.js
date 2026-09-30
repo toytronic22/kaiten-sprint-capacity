@@ -16,7 +16,7 @@ const HOLST_STYLE = {
   bomb: '💣',
   bug: '🐞',
   line: 'red8',
-  lineWidth: 4,
+  lineWidth: 8,
   weekdays: ['ВС', 'ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ'],
 };
 
