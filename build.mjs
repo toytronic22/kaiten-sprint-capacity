@@ -10,19 +10,34 @@ if (!EXPORT_LINE.test(core)) {
   throw new Error('В src/core.js нет строки с module.exports — сборка остановлена, проверьте её вид');
 }
 
-const source = [core.replace(EXPORT_LINE, ''), read('./src/kaiten.js'), read('./src/ui.js'), 'sprintCapacityMount(SPRINT_CAPACITY);']
-  .join('\n')
-  .split('\n')
-  .map((line) => line.trim())
-  .filter(Boolean)
-  .join('\n');
-const script = `(function () {\n'use strict';\n${source}\n})();\n`;
-new Function(script);
+const holstCore = read('./src/holst-core.js');
+if (!EXPORT_LINE.test(holstCore)) {
+  throw new Error('В src/holst-core.js нет строки с module.exports — сборка остановлена, проверьте её вид');
+}
 
-const PAGES_URL = 'https://toytronic22.github.io/kaiten-sprint-capacity/sprint-capacity.js';
-const loader = `(()=>{const s=document.createElement('script');s.src='${PAGES_URL}?t='+Date.now();s.onload=()=>s.remove();s.onerror=()=>{s.remove();alert('Ёмкость спринта: панель не загрузилась, проверьте интернет')};document.head.appendChild(s)})()`;
-new Function(loader);
-const bookmarklet = `javascript:${encodeURIComponent(loader)}`;
+const wrap = (parts) => {
+  const source = parts
+    .join('\n')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join('\n');
+  const text = `(function () {\n'use strict';\n${source}\n})();\n`;
+  new Function(text);
+  return text;
+};
+
+const script = wrap([core.replace(EXPORT_LINE, ''), holstCore.replace(EXPORT_LINE, ''), read('./src/kaiten.js'), read('./src/ui.js'), 'sprintCapacityMount(SPRINT_CAPACITY);']);
+const holstScript = wrap([holstCore.replace(EXPORT_LINE, ''), read('./src/holst.js'), "holstSprintRun().catch((error) => holstToast(`Ёмкость спринта: ${error.message || error}`, true));"]);
+
+const PAGES = 'https://toytronic22.github.io/kaiten-sprint-capacity/';
+const makeBookmarklet = (file, failure) => {
+  const loader = `(()=>{const s=document.createElement('script');s.src='${PAGES}${file}?t='+Date.now();s.onload=()=>s.remove();s.onerror=()=>{s.remove();alert('${failure}')};document.head.appendChild(s)})()`;
+  new Function(loader);
+  return `javascript:${encodeURIComponent(loader)}`;
+};
+const bookmarklet = makeBookmarklet('sprint-capacity.js', 'Ёмкость спринта: панель не загрузилась, проверьте интернет');
+const holstBookmarklet = makeBookmarklet('holst-sprint.js', 'Ёмкость спринта: скрипт для Holst не загрузился, проверьте интернет');
 const escapeHtml = (text) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 const installPage = `<!doctype html>
@@ -49,12 +64,24 @@ li { margin: 4px 0; }
 <p>Закладка при каждом нажатии берёт свежую версию панели с этой страницы — перетаскивать заново после обновлений не нужно.</p>
 <p>Не перетаскивается — создайте закладку вручную и вставьте в поле адреса этот код:</p>
 <textarea readonly onclick="this.select()">${escapeHtml(bookmarklet)}</textarea>
+<h2>Бомба и розовый список в Holst</h2>
+<p>Вторая закладка — для доски Holst:</p>
+<p><a class="bookmarklet" href="${escapeHtml(holstBookmarklet)}">Спринт → Holst</a></p>
+<ol>
+<li>В панели калькулятора нажмите «В Holst» — откроется доска Holst команды.</li>
+<li>Когда доска загрузится, нажмите закладку «Спринт → Holst».</li>
+<li>Бомба сегодняшнего дня встанет на процент Done, розовый список разложится по колонкам Kaiten. Итог появится сверху.</li>
+</ol>
+<p>Код для ручной закладки:</p>
+<textarea readonly onclick="this.select()">${escapeHtml(holstBookmarklet)}</textarea>
 </body>
 </html>
 `;
 
 mkdirSync(new URL('./dist/', import.meta.url), { recursive: true });
 write('./dist/sprint-capacity.js', script);
+write('./dist/holst-sprint.js', holstScript);
 write('./dist/bookmarklet.txt', `${bookmarklet}\n`);
+write('./dist/holst-bookmarklet.txt', `${holstBookmarklet}\n`);
 write('./dist/install.html', installPage);
-console.log(`Готово: скрипт ${Math.round(script.length / 1024)} КБ, закладка ${bookmarklet.length} знаков`);
+console.log(`Готово: панель ${Math.round(script.length / 1024)} КБ, скрипт Holst ${Math.round(holstScript.length / 1024)} КБ, закладки ${bookmarklet.length} и ${holstBookmarklet.length} знаков`);
