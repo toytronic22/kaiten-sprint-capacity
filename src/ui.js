@@ -472,6 +472,7 @@ function sprintCapacityMount(config) {
       const sprint = await kaitenSprint(sprintId);
       const payload = holstPayload({ cards, report: current, doneAtStart: snapshot ? snapshot.doneIds : [], histories, columns, boards, sprintStart: sprint.start_date, now, config: settingsNow, holst: settingsNow.holst, kaiten: location.origin, title: boardTitle(board, config) });
       tab.location.href = `https://app.holst.so/board/${settingsNow.holst.board}#${HOLST_HASH}=${encodeHolstPayload(payload)}`;
+      sprintToast('Holst открыт в соседней вкладке — нажмите там закладку «Спринт → Holst»');
     } catch (error) {
       tab.close();
       sprintToast(`В Holst не отправилось: ${error.message || error}`, true, 'fail');

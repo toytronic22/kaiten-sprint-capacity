@@ -54,6 +54,8 @@ function fromBase64Url(text) {
   return new TextDecoder().decode(Uint8Array.from(binary, (char) => char.charCodeAt(0)));
 }
 
+const HOLST_PAYLOAD_TTL = 60 * 60 * 1000;
+
 function encodeHolstPayload(payload) {
   return toBase64Url(JSON.stringify(payload));
 }
@@ -340,6 +342,13 @@ function holstForeignBoards(cards, histories) {
   return [...ids];
 }
 
+function holstPayloadStale(payload, now) {
+  if (!payload.generatedAt) return 'в данных нет времени';
+  if (localDay(payload.generatedAt).getTime() !== localDay(now).getTime()) return 'данные не сегодняшние';
+  if (now - payload.generatedAt > HOLST_PAYLOAD_TTL) return 'данным больше часа';
+  return null;
+}
+
 function holstColumns(board) {
   const columns = {};
   for (const column of (board && board.columns) || []) {
@@ -357,4 +366,4 @@ function holstSprintId(cards) {
   return best;
 }
 
-if (typeof module !== 'undefined') module.exports = { HOLST_BLOCKS, HOLST_STYLE, HOLST_HASH, normalizeTitle, blockOfColumn, blockInfo, blockOrder, encodeHolstPayload, decodeHolstPayload, workingDayIndex, shortTime, bombTop, columnAt, holstCards, holstHistoryIds, holstPayload, holstForeignBoards, holstColumns, holstSprintId, readStickerLines, planSticker, kaitenCardId };
+if (typeof module !== 'undefined') module.exports = { HOLST_BLOCKS, HOLST_STYLE, HOLST_HASH, normalizeTitle, blockOfColumn, blockInfo, blockOrder, encodeHolstPayload, decodeHolstPayload, workingDayIndex, shortTime, bombTop, columnAt, holstCards, holstHistoryIds, holstPayload, holstForeignBoards, holstColumns, holstSprintId, holstPayloadStale, readStickerLines, planSticker, kaitenCardId };

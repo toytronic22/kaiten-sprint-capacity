@@ -194,6 +194,19 @@ function holstFindChart({ Y, objects, documents, group }) {
 }
 
 async function holstSprintRun() {
+  if (window.sprintcapRunning) {
+    sprintToast('Ёмкость спринта: уже обновляю доску, подождите');
+    return;
+  }
+  window.sprintcapRunning = true;
+  try {
+    await holstSprintWork();
+  } finally {
+    window.sprintcapRunning = false;
+  }
+}
+
+async function holstSprintWork() {
   let payload;
   try {
     payload = decodeHolstPayload(location.hash);
@@ -207,6 +220,11 @@ async function holstSprintRun() {
   }
   if (!location.pathname.includes(payload.board)) {
     sprintToast('Ёмкость спринта: это не та доска Holst, которую открыл калькулятор', true, 'fail');
+    return;
+  }
+  const stale = holstPayloadStale(payload, Date.now());
+  if (stale) {
+    sprintToast(`Ёмкость спринта: ${stale} — нажмите «В Holst» в калькуляторе ещё раз`, true, 'fail');
     return;
   }
   sprintToast('Ёмкость спринта: обновляю доску…');

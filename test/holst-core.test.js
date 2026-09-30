@@ -180,3 +180,11 @@ test('Колонки доски вместе с подколонками, спр
   assert.equal(H.holstSprintId([{ sprint_id: 5 }, { sprint_id: 7 }, { sprint_id: 7 }, {}]), 7);
   assert.equal(H.holstSprintId([{}]), null);
 });
+
+test('Данные из адреса годятся только сегодня и не дольше часа', () => {
+  const now = new Date(2026, 8, 30, 15, 0).getTime();
+  assert.equal(H.holstPayloadStale({ generatedAt: now - 5 * 60 * 1000 }, now), null);
+  assert.equal(H.holstPayloadStale({ generatedAt: now - 61 * 60 * 1000 }, now), 'данным больше часа');
+  assert.equal(H.holstPayloadStale({ generatedAt: new Date(2026, 8, 29, 23, 50).getTime() }, new Date(2026, 8, 30, 0, 10).getTime()), 'данные не сегодняшние');
+  assert.equal(H.holstPayloadStale({}, now), 'в данных нет времени');
+});
