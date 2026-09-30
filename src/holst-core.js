@@ -18,8 +18,6 @@ const HOLST_STYLE = {
   weekdays: ['ВС', 'ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ'],
 };
 
-const HOLST_HASH = 'sprintcap';
-
 const HOLST_UPDATED = /^\s*Обновлено\s+\d{2}\.\d{2}/;
 
 function normalizeTitle(text) {
@@ -43,30 +41,6 @@ function blockOrder(keys) {
   const standard = HOLST_BLOCKS.map((block) => block.key).filter((key) => keys.includes(key));
   const extra = keys.filter((key) => !standard.includes(key));
   return [...standard, ...extra];
-}
-
-function toBase64Url(text) {
-  const bytes = new TextEncoder().encode(text);
-  let binary = '';
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-
-function fromBase64Url(text) {
-  const binary = atob(text.replace(/-/g, '+').replace(/_/g, '/'));
-  return new TextDecoder().decode(Uint8Array.from(binary, (char) => char.charCodeAt(0)));
-}
-
-const HOLST_PAYLOAD_TTL = 60 * 60 * 1000;
-
-function encodeHolstPayload(payload) {
-  return toBase64Url(JSON.stringify(payload));
-}
-
-function decodeHolstPayload(hash) {
-  const match = String(hash || '').match(new RegExp(`${HOLST_HASH}=([A-Za-z0-9_-]+)`));
-  if (!match) return null;
-  return JSON.parse(fromBase64Url(match[1]));
 }
 
 function localDay(value) {
@@ -484,13 +458,6 @@ function holstForeignBoards(cards, histories) {
   return [...ids];
 }
 
-function holstPayloadStale(payload, now) {
-  if (!payload.generatedAt) return 'в данных нет времени';
-  if (localDay(payload.generatedAt).getTime() !== localDay(now).getTime()) return 'данные не сегодняшние';
-  if (now - payload.generatedAt > HOLST_PAYLOAD_TTL) return 'данным больше часа';
-  return null;
-}
-
 function holstColumns(board) {
   const columns = {};
   for (const column of (board && board.columns) || []) {
@@ -508,4 +475,4 @@ function holstSprintId(cards) {
   return best;
 }
 
-if (typeof module !== 'undefined') module.exports = { HOLST_BLOCKS, HOLST_STYLE, HOLST_HASH, normalizeTitle, blockOfColumn, blockInfo, blockOrder, encodeHolstPayload, decodeHolstPayload, workingDayIndex, sprintBombCount, shortTime, bombTop, columnAt, holstLookback, holstCards, holstHistoryIds, holstPayload, unknownColumnsText, holstForeignBoards, holstColumns, holstSprintId, holstPayloadStale, holstOldTitles, readStickerLines, planSticker, kaitenCardId, stripMarker, updatedLine, stickerSignature, bombPercent, isWeekend, signed, bombLabelItems, bombStoredTrusted, sameDay };
+if (typeof module !== 'undefined') module.exports = { HOLST_BLOCKS, HOLST_STYLE, normalizeTitle, blockOfColumn, blockInfo, blockOrder, workingDayIndex, sprintBombCount, shortTime, bombTop, columnAt, holstLookback, holstCards, holstHistoryIds, holstPayload, unknownColumnsText, holstForeignBoards, holstColumns, holstSprintId, holstOldTitles, readStickerLines, planSticker, kaitenCardId, stripMarker, updatedLine, stickerSignature, bombPercent, isWeekend, signed, bombLabelItems, bombStoredTrusted, sameDay };

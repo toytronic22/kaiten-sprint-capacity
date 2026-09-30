@@ -3,7 +3,7 @@ const SPRINT_MEMES = {
   fail: 'https://toytronic22.github.io/kaiten-sprint-capacity/memes/fail.png',
 };
 
-function sprintToast(text, failed, meme) {
+function sprintToast(text, failed, meme, stay) {
   const old = document.getElementById('sprintcap-toast');
   if (old) old.remove();
   const box = document.createElement('div');
@@ -26,5 +26,5 @@ function sprintToast(text, failed, meme) {
   box.appendChild(note);
   box.addEventListener('click', () => box.remove());
   document.body.appendChild(box);
-  if (!failed) window.setTimeout(() => box.remove(), 20000);
+  if (!failed && !stay) window.setTimeout(() => box.remove(), 20000);
 }

@@ -4,20 +4,21 @@ const HOLST_LIBS = {
   decoding: 'https://cdn.jsdelivr.net/npm/lib0@0.2/decoding/+esm',
 };
 
-async function holstConnect(board) {
+function holstAuthError(text) {
+  const error = new Error(text);
+  error.auth = true;
+  return error;
+}
+
+async function holstConnect(board, token) {
+  if (!token) throw holstAuthError('нет входа в Holst');
   const [Y, enc, dec] = await Promise.all([import(HOLST_LIBS.yjs), import(HOLST_LIBS.encoding), import(HOLST_LIBS.decoding)]);
-  let token = null;
-  try {
-    token = JSON.parse(localStorage.getItem('social-auth-store') || '{}').token;
-  } catch (error) {
-    token = null;
-  }
-  if (!token) throw new Error('Нет входа в Holst — войдите и нажмите закладку ещё раз');
   const doc = new Y.Doc();
   const ws = new WebSocket('wss://app.holst.so/hud/ws');
   ws.binaryType = 'arraybuffer';
   let onAck = null;
   let failure = null;
+  let ready = false;
   const synced = new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error('Holst не прислал доску за 20 секунд')), 20000);
     const fail = (error) => {
@@ -35,7 +36,9 @@ async function holstConnect(board) {
     };
     ws.onerror = () => fail(new Error('Соединение с Holst оборвалось'));
     ws.onclose = (event) => {
-      if (!failure) failure = new Error(`Holst закрыл соединение (${event.code})`);
+      if (failure) return;
+      if (ready) failure = new Error(`Holst закрыл соединение (${event.code})`);
+      else fail(holstAuthError(`Holst закрыл соединение, не отдав доску (${event.code})`));
     };
     ws.onmessage = async (event) => {
       try {
@@ -50,7 +53,7 @@ async function holstConnect(board) {
           const type = dec.readVarUint(d);
           if (type === 3) {
             const response = JSON.parse(dec.readVarString(d));
-            if (response.error) fail(new Error(`Holst: ${response.error}`));
+            if (response.error) fail(ready ? new Error(`Holst: ${response.error}`) : holstAuthError(`Holst не пустил на доску: ${response.error}`));
           } else if (type === 2) {
             dec.readVarUint(d);
             if (onAck) onAck();
@@ -65,6 +68,7 @@ async function holstConnect(board) {
             else data = new Uint8Array(await (await fetch(dec.readVarString(d))).arrayBuffer());
             if (data.length) Y.applyUpdateV2(doc, data, 'server');
             if (left === 0) {
+              ready = true;
               clearTimeout(timer);
               resolve();
             }
@@ -214,67 +218,8 @@ function holstReplaceText({ Y, object, documents, items, x, y, author, now }) {
   object.set('updated', { a: author, t: now });
 }
 
-function holstWaitHash(ms) {
-  return new Promise((resolve) => {
-    const done = () => {
-      clearTimeout(timer);
-      window.removeEventListener('hashchange', done);
-      resolve();
-    };
-    const timer = setTimeout(done, ms);
-    window.addEventListener('hashchange', done);
-  });
-}
-
-async function holstSprintRun() {
-  window.opener = null;
-  if (window.sprintcapRunning) {
-    sprintToast('Ёмкость спринта: уже обновляю доску, подождите');
-    return;
-  }
-  window.sprintcapRunning = true;
-  try {
-    await holstSprintWork();
-  } finally {
-    window.sprintcapRunning = false;
-  }
-}
-
-function holstReadPayload() {
-  try {
-    return { payload: decodeHolstPayload(location.hash) };
-  } catch (error) {
-    return { broken: true };
-  }
-}
-
-async function holstSprintWork() {
-  let read = holstReadPayload();
-  if (!read.broken && !read.payload && performance.now() < 60000) {
-    sprintToast('Ёмкость спринта: жду данные из Kaiten…');
-    await holstWaitHash(30000);
-    read = holstReadPayload();
-  }
-  if (read.broken) {
-    sprintToast('Ёмкость спринта: данные в адресе повреждены — нажмите «В Holst» в калькуляторе ещё раз', true, 'fail');
-    return;
-  }
-  const payload = read.payload;
-  if (!payload) {
-    sprintToast('Ёмкость спринта: сначала нажмите «В Holst» в калькуляторе Kaiten — он откроет эту доску с данными', true, 'fail');
-    return;
-  }
-  if (!location.pathname.includes(payload.board)) {
-    sprintToast('Ёмкость спринта: это не та доска Holst, которую открыл калькулятор', true, 'fail');
-    return;
-  }
-  const stale = holstPayloadStale(payload, Date.now());
-  if (stale) {
-    sprintToast(`Ёмкость спринта: ${stale} — нажмите «В Holst» в калькуляторе ещё раз`, true, 'fail');
-    return;
-  }
-  sprintToast('Ёмкость спринта: обновляю доску…');
-  const connection = await holstConnect(payload.board);
+async function holstApply(payload, token) {
+  const connection = await holstConnect(payload.board, token);
   const { Y, doc, send } = connection;
   try {
     const objects = doc.getMap('objects');
@@ -321,11 +266,9 @@ async function holstSprintWork() {
     const markedText = `Подсвечено карт: ${marked.length} — подвинулись с ${HOLST_STYLE.weekdays[new Date(since).getDay()]} ${shortTime(since).slice(0, 5)}${movedSince === null ? '' : `, из них с прошлого обновления: ${movedSince}`}`;
     const unknown = unknownColumnsText(payload.unknown);
     if (!listChanged && !(bombPlan && bombPlan.changed)) {
-      history.replaceState(null, '', location.pathname + location.search);
       const why = !bombPlan ? 'список как в Kaiten'
         : `бомба ${weekday} уже на ${payload.percent}%, список как в Kaiten`;
-      sprintToast(`${payload.title}: обновлять нечего — ${why}${unknown ? `\nПрогресс: ${unknown}` : ''}`, true, 'fail');
-      return;
+      return { ok: false, text: `${payload.title}: обновлять нечего — ${why}${unknown ? `\nПрогресс: ${unknown}` : ''}` };
     }
     const author = (sticker.get('updated') || sticker.get('created')).a;
     const updates = [];
@@ -359,7 +302,6 @@ async function holstSprintWork() {
     }, 'local');
     doc.off('updateV2', listen);
     for (const update of updates) await send(update);
-    history.replaceState(null, '', location.pathname + location.search);
     const lines = [`${payload.title}: готово`];
     if (bombPlan && bombPlan.changed) lines.push(`Спринт: ${bombPlan.previous}% → ${payload.percent}% (${signed(bombPlan.delta)} за день), бомба ${weekday}, в Done ${payload.done} из ${payload.of}`);
     else if (bombPlan) lines.push(`Спринт: ${payload.percent}%, бомба ${weekday} уже на месте`);
@@ -374,7 +316,7 @@ async function holstSprintWork() {
     if (plan.stats.renamed) lines.push(`Обновил названия: ${plan.stats.renamed}`);
     if (plan.stats.gone) lines.push(`Убрал карт не из спринта: ${plan.stats.gone}`);
     if (plan.stats.manual) lines.push(`Строк без карты не тронул: ${plan.stats.manual}`);
-    sprintToast(lines.join('\n'), false, 'ok');
+    return { ok: true, text: lines.join('\n') };
   } finally {
     connection.ws.close();
   }

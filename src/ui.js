@@ -90,6 +90,11 @@ button { font: inherit; color: inherit; background: none; border: 0; border-radi
 .over .bar .add { background: var(--bad-soft); }
 .over .value b { color: var(--bad); }
 .bar .limit { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--fg); }
+.holst-login { margin: 0 14px 14px; padding: 10px 12px; background: var(--soft); border-radius: 10px; font-size: 12px; }
+.holst-login ol { margin: 6px 0 0; padding-left: 18px; color: var(--muted); }
+.holst-login li { white-space: normal; }
+.holst-login input { text-align: left; }
+.holst-login .plan { flex-wrap: nowrap; margin-top: 8px; }
 .legend { margin-top: 10px; color: var(--muted); font-size: 11px; }
 .done { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin-top: 14px; padding: 10px 12px; background: var(--soft); border-radius: 10px; font-variant-numeric: tabular-nums; }
 .done b { font-size: 20px; }
@@ -115,8 +120,8 @@ details[open] > summary::after { transform: rotate(90deg); }
 .team .th { color: var(--muted); font-size: 11px; text-align: center; }
 .days { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
 .days label { display: flex; flex-direction: column; gap: 3px; color: var(--muted); font-size: 11px; }
-input[type=text] { width: 100%; box-sizing: border-box; font: inherit; color: inherit; padding: 5px 8px; text-align: center; border: 1px solid var(--line); border-radius: 8px; background: var(--field); }
-input[type=text]:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(91, 156, 246, .2); }
+input[type=text], input[type=password] { width: 100%; box-sizing: border-box; font: inherit; color: inherit; padding: 5px 8px; text-align: center; border: 1px solid var(--line); border-radius: 8px; background: var(--field); }
+input[type=text]:focus, input[type=password]:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(91, 156, 246, .2); }
 input[type=text]::placeholder { color: #666c75; }
 .group + .group { margin-top: 8px; }
 .group-title { color: var(--muted); font-size: 11px; }
@@ -140,6 +145,7 @@ const PANEL_HTML = `
   </header>
   <div class="status"></div>
   <div class="summary"></div>
+  <div class="holst-login" hidden></div>
   <div class="body">
     <details class="settings">
       <summary>Команда и дни</summary>
@@ -445,12 +451,61 @@ function sprintCapacityMount(config) {
     await refresh();
   };
 
+  const readHolstToken = () => {
+    const token = readStored('holstToken', null);
+    return typeof token === 'string' && token ? token : null;
+  };
+
+  const dropHolstToken = () => {
+    try {
+      window.localStorage.removeItem(STORAGE_PREFIX + 'holstToken');
+    } catch (error) {
+      storageBroken = true;
+    }
+  };
+
+  const showHolstLogin = (reason) => {
+    const box = $('.holst-login');
+    box.hidden = false;
+    box.innerHTML = `<div class="error">${escapeHtml(reason)}</div>`
+      + '<ol><li>Откройте любую доску Holst и нажмите закладку «Вход в Holst» со <a href="https://toytronic22.github.io/kaiten-sprint-capacity/" target="_blank" rel="noopener">страницы установки</a> — она скопирует вход.</li>'
+      + '<li>Вставьте его сюда и нажмите «Сохранить». Вход хранится только в этом браузере.</li></ol>'
+      + '<div class="plan"><input type="password" autocomplete="off" data-holst-token placeholder="вход Holst"><button type="button" data-act="holst-save">Сохранить</button><button type="button" data-act="holst-cancel" class="again">Отмена</button></div>';
+    box.querySelector('input').focus();
+  };
+
+  const hideHolstLogin = () => {
+    const box = $('.holst-login');
+    box.hidden = true;
+    box.innerHTML = '';
+  };
+
+  const saveHolstLogin = () => {
+    const input = $('[data-holst-token]');
+    const token = input ? input.value.trim().replace(/^["']+|["']+$/g, '') : '';
+    if (!token || /\s/.test(token)) {
+      showHolstLogin('Это не похоже на вход Holst — скопируйте его закладкой «Вход в Holst» ещё раз');
+      return;
+    }
+    writeStored('holstToken', token);
+    if (readHolstToken() !== token) {
+      showHolstLogin('Браузер не сохранил вход — проверьте, не запрещено ли хранение данных для Kaiten');
+      return;
+    }
+    hideHolstLogin();
+    sendToHolst();
+  };
+
   const sendToHolst = async () => {
     const board = boardId;
     const settingsNow = boardConfig(board, config);
     if (!settingsNow.holst) return;
-    const holstUrl = `https://app.holst.so/board/${settingsNow.holst.board}`;
-    const tab = window.open(holstUrl, '_blank');
+    const token = readHolstToken();
+    if (!token) {
+      showHolstLogin('Нужен вход в Holst — один раз на этом компьютере');
+      return;
+    }
+    const tab = window.open(`https://app.holst.so/board/${settingsNow.holst.board}`, '_blank');
     if (!tab) {
       sprintToast('Браузер не дал открыть Holst — разрешите всплывающие окна для Kaiten', true, 'fail');
       return;
@@ -477,11 +532,18 @@ function sprintCapacityMount(config) {
       const foreignList = await Promise.all(foreignIds.map((id) => kaitenBoard(id)));
       const boards = Object.fromEntries(foreignIds.map((id, index) => [id, foreignList[index].title]));
       const payload = holstPayload({ cards, report: current, doneAtStart: snapshot ? snapshot.doneIds : [], histories, columns, boards, renames, sprintStart: sprint.start_date, sprintFinish: sprint.finish_date, now, config: settingsNow, holst: settingsNow.holst, kaiten: location.origin, title: boardTitle(board, config) });
-      tab.location.href = `${holstUrl}#${HOLST_HASH}=${encodeHolstPayload(payload)}`;
-      sprintToast('Holst открыт в соседней вкладке — нажмите там закладку «Спринт → Holst»');
+      sprintToast(`${payload.title}: пишу в Holst…`);
+      const result = await holstApply(payload, token);
+      sprintToast(result.text, !result.ok, result.ok ? 'ok' : 'fail', true);
     } catch (error) {
       tab.close();
-      sprintToast(`В Holst не отправилось: ${error.message || error}`, true, 'fail');
+      if (error.auth) {
+        dropHolstToken();
+        showHolstLogin(`Holst не принял вход — вставьте заново (${error.message})`);
+        sprintToast('В Holst не отправилось: Holst не принял вход — вставьте его заново в панели', true, 'fail');
+      } else {
+        sprintToast(`В Holst не отправилось: ${error.message || error}`, true, 'fail');
+      }
     }
     data.busy = false;
     render();
@@ -633,6 +695,8 @@ function sprintCapacityMount(config) {
     if (act === 'start-planning' && !data.busy) startPlanning();
     if (act === 'end-planning' && !data.busy) endPlanning();
     if (act === 'to-holst' && !data.busy) sendToHolst();
+    if (act === 'holst-save' && !data.busy) saveHolstLogin();
+    if (act === 'holst-cancel') hideHolstLogin();
     if (act === 'collapse') {
       collapsed = !collapsed;
       writeStored('collapsed', collapsed);
@@ -669,7 +733,11 @@ function sprintCapacityMount(config) {
     checkChaosLater();
   });
 
-  for (const type of ['keydown', 'keyup', 'keypress']) {
+  shadow.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' && event.target.dataset.holstToken !== undefined && !data.busy) saveHolstLogin();
+  });
+
+  for (const type of ['keydown', 'keyup', 'keypress', 'paste', 'copy', 'cut']) {
     shadow.addEventListener(type, (event) => event.stopPropagation());
   }
 

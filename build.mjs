@@ -27,8 +27,9 @@ const wrap = (parts) => {
   return text;
 };
 
-const script = wrap([core.replace(EXPORT_LINE, ''), holstCore.replace(EXPORT_LINE, ''), read('./src/kaiten.js'), read('./src/toast.js'), read('./src/ui.js'), 'sprintCapacityMount(SPRINT_CAPACITY);']);
-const holstScript = wrap([holstCore.replace(EXPORT_LINE, ''), read('./src/toast.js'), read('./src/holst.js'), "holstSprintRun().catch((error) => sprintToast(`Ёмкость спринта: ${error.message || error}`, true, 'fail'));"]);
+const script = wrap([core.replace(EXPORT_LINE, ''), holstCore.replace(EXPORT_LINE, ''), read('./src/kaiten.js'), read('./src/toast.js'), read('./src/holst.js'), read('./src/ui.js'), 'sprintCapacityMount(SPRINT_CAPACITY);']);
+const holstLogin = read('./src/holst-login.js');
+const holstScript = wrap([holstLogin, 'holstLoginCopy();']);
 
 const PAGES = 'https://toytronic22.github.io/kaiten-sprint-capacity/';
 const makeBookmarklet = (file, failure) => {
@@ -37,7 +38,9 @@ const makeBookmarklet = (file, failure) => {
   return `javascript:${encodeURIComponent(loader)}`;
 };
 const bookmarklet = makeBookmarklet('sprint-capacity.js', 'Ёмкость спринта: панель не загрузилась, проверьте интернет');
-const holstBookmarklet = makeBookmarklet('holst-sprint.js', 'Ёмкость спринта: скрипт для Holst не загрузился, проверьте интернет');
+const holstLoader = `(()=>{${holstLogin.split('\n').map((line) => line.trim()).filter(Boolean).join('\n')}\nholstLoginCopy()})()`;
+new Function(holstLoader);
+const holstBookmarklet = `javascript:${encodeURIComponent(holstLoader)}`;
 const escapeHtml = (text) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 const installPage = `<!doctype html>
@@ -65,13 +68,15 @@ li { margin: 4px 0; }
 <p>Не перетаскивается — создайте закладку вручную и вставьте в поле адреса этот код:</p>
 <textarea readonly onclick="this.select()">${escapeHtml(bookmarklet)}</textarea>
 <h2>Бомба и розовый список в Holst</h2>
-<p>Вторая закладка — для доски Holst:</p>
-<p><a class="bookmarklet" href="${escapeHtml(holstBookmarklet)}">Спринт → Holst</a></p>
+<p>Кнопка «В Holst» в панели сама двигает бомбу дня на процент Done и раскладывает розовый список по колонкам Kaiten, потом открывает доску Holst. Итог — сверху в Kaiten.</p>
+<p>Для этого один раз на компьютере нужен вход в Holst. Перетащите на панель закладок вторую кнопку:</p>
+<p><a class="bookmarklet" href="${escapeHtml(holstBookmarklet)}">Вход в Holst</a></p>
 <ol>
-<li>В панели калькулятора нажмите «В Holst» — откроется доска Holst команды.</li>
-<li>Когда доска загрузится, нажмите закладку «Спринт → Holst».</li>
-<li>Бомба сегодняшнего дня встанет на процент Done, розовый список разложится по колонкам Kaiten. Итог появится сверху.</li>
+<li>Нажмите «В Holst» в панели — появится поле «вход Holst».</li>
+<li>Откройте любую доску Holst и нажмите закладку «Вход в Holst» — она скопирует вход.</li>
+<li>Вернитесь в Kaiten, вставьте вход в поле и нажмите «Сохранить». Дальше «В Holst» работает в одно нажатие.</li>
 </ol>
+<p>Вход хранится только в этом браузере. Holst перестал его принимать — панель скажет и попросит вставить заново.</p>
 <p>Код для ручной закладки:</p>
 <textarea readonly onclick="this.select()">${escapeHtml(holstBookmarklet)}</textarea>
 </body>

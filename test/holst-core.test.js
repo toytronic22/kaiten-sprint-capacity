@@ -11,14 +11,6 @@ const lineTexts = (items) => items.map((item) => item.runs.map((run) => run.text
 
 const card = (id, title, block, extra = {}) => ({ id, title, block, movedAt: Date.parse('2026-09-29T10:00:00Z'), mark: null, from: null, ...extra });
 
-test('Payload проходит через адрес без потерь, кириллица и эмодзи целы', () => {
-  const payload = { v: 1, cards: [{ id: 1, title: 'Шаг 2в 🔥 «кавычки»' }], percent: 43 };
-  const hash = `#${H.HOLST_HASH}=${H.encodeHolstPayload(payload)}`;
-  assert.match(hash, /^#sprintcap=[A-Za-z0-9_-]+$/);
-  assert.deepEqual(H.decodeHolstPayload(hash), payload);
-  assert.equal(H.decodeHolstPayload('#other=1'), null);
-});
-
 test('Рабочий день спринта: понедельник старта — ноль, выходные пропускаются', () => {
   const start = new Date(2026, 8, 28, 2, 0);
   assert.equal(H.workingDayIndex(start, new Date(2026, 8, 28, 18)), 0);
@@ -357,14 +349,6 @@ test('Колонки доски вместе с подколонками, спр
   assert.deepEqual(H.holstColumns(null), {});
   assert.equal(H.holstSprintId([{ sprint_id: 5 }, { sprint_id: 7 }, { sprint_id: 7 }, {}]), 7);
   assert.equal(H.holstSprintId([{}]), null);
-});
-
-test('Данные из адреса годятся только сегодня и не дольше часа', () => {
-  const now = new Date(2026, 8, 30, 15, 0).getTime();
-  assert.equal(H.holstPayloadStale({ generatedAt: now - 5 * 60 * 1000 }, now), null);
-  assert.equal(H.holstPayloadStale({ generatedAt: now - 61 * 60 * 1000 }, now), 'данным больше часа');
-  assert.equal(H.holstPayloadStale({ generatedAt: new Date(2026, 8, 29, 23, 50).getTime() }, new Date(2026, 8, 30, 0, 10).getTime()), 'данные не сегодняшние');
-  assert.equal(H.holstPayloadStale({}, now), 'в данных нет времени');
 });
 
 test('бомб на графике — по одной на каждый рабочий день спринта, кроме первого', () => {
