@@ -447,3 +447,19 @@ test('Payload для Holst: баг помечен, остальные карты
   assert.deepEqual(payload.cards.map((item) => [item.id, item.bug === true]), [[1, true], [2, false]]);
   assert.equal('bug' in payload.cards[1], false);
 });
+
+test('Первый понедельник спринта: подсвечены карты, сдвинутые в пятницу прошлого спринта', () => {
+  // Arrange
+  const iso = (day, h) => new Date(2026, 8, day, h).toISOString();
+  const moved = (id, day) => ({ id, title: `Карта ${id}`, state: 2, column_id: 20, column: { title: 'Doing' }, column_changed_at: iso(day, 15) });
+  const cards = [moved(1, 25), moved(2, 24)];
+  const histories = Object.fromEntries(cards.map((card) => [card.id, [{ changed: iso(20, 10), column_id: 10 }, { changed: card.column_changed_at, column_id: 20 }]]));
+  const report = buildReport({ cards, settings: defaultSettings() });
+
+  // Act
+  const payload = H.holstPayload({ cards, report, histories, columns: { 10: 'To Do', 20: 'Doing' }, sprintStart: new Date(2026, 8, 28).toISOString(), sprintFinish: new Date(2026, 9, 11, 23, 59).toISOString(), now: new Date(2026, 8, 28, 11).getTime(), config: SPRINT_CAPACITY, holst: { board: 'b', group: 'g', sticker: 's' }, kaiten: 'https://dodopizza.kaiten.ru', title: 'Staff Core' });
+
+  // Assert
+  assert.equal(payload.since, new Date(2026, 8, 25).getTime());
+  assert.deepEqual(Object.fromEntries(payload.cards.map((item) => [item.id, item.mark])), { 1: 'work', 2: null });
+});

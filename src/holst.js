@@ -104,6 +104,11 @@ async function holstConnect(board, token) {
   return { Y, doc, ws, send };
 }
 
+async function holstCheck(board, token) {
+  const connection = await holstConnect(board, token);
+  connection.ws.close();
+}
+
 function holstDocItems(Y, root) {
   const items = [];
   for (const op of root.toDelta()) {

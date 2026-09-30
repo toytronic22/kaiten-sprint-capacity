@@ -27,9 +27,9 @@ const wrap = (parts) => {
   return text;
 };
 
-const script = wrap([core.replace(EXPORT_LINE, ''), holstCore.replace(EXPORT_LINE, ''), read('./src/kaiten.js'), read('./src/toast.js'), read('./src/holst.js'), read('./src/ui.js'), 'sprintCapacityMount(SPRINT_CAPACITY);']);
 const holstLogin = read('./src/holst-login.js');
-const holstScript = wrap([holstLogin, 'holstLoginCopy();']);
+const script = wrap([core.replace(EXPORT_LINE, ''), holstCore.replace(EXPORT_LINE, ''), read('./src/kaiten.js'), read('./src/toast.js'), holstLogin, read('./src/holst.js'), read('./src/ui.js'), 'sprintCapacityMount(SPRINT_CAPACITY);']);
+const holstScript = wrap([read('./src/toast.js'), holstLogin, 'holstHandoff();']);
 
 const PAGES = 'https://toytronic22.github.io/kaiten-sprint-capacity/';
 const makeBookmarklet = (file, failure) => {
@@ -38,9 +38,6 @@ const makeBookmarklet = (file, failure) => {
   return `javascript:${encodeURIComponent(loader)}`;
 };
 const bookmarklet = makeBookmarklet('sprint-capacity.js', 'Ёмкость спринта: панель не загрузилась, проверьте интернет');
-const holstLoader = `(()=>{${holstLogin.split('\n').map((line) => line.trim()).filter(Boolean).join('\n')}\nholstLoginCopy()})()`;
-new Function(holstLoader);
-const holstBookmarklet = `javascript:${encodeURIComponent(holstLoader)}`;
 const escapeHtml = (text) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 const installPage = `<!doctype html>
@@ -69,16 +66,12 @@ li { margin: 4px 0; }
 <textarea readonly onclick="this.select()">${escapeHtml(bookmarklet)}</textarea>
 <h2>Бомба и розовый список в Holst</h2>
 <p>Кнопка «В Holst» в панели сама двигает бомбу дня на процент Done и раскладывает розовый список по колонкам Kaiten, потом открывает доску Holst. Итог — сверху в Kaiten.</p>
-<p>Для этого один раз на компьютере нужен вход в Holst. Перетащите на панель закладок вторую кнопку:</p>
-<p><a class="bookmarklet" href="${escapeHtml(holstBookmarklet)}">Вход в Holst</a></p>
+<p>Вторая закладка не нужна. Первый раз на компьютере панель попросит вход в Holst:</p>
 <ol>
-<li>Нажмите «В Holst» в панели — появится поле «вход Holst».</li>
-<li>Откройте любую доску Holst и нажмите закладку «Вход в Holst» — она скопирует вход.</li>
-<li>Вернитесь в Kaiten, вставьте вход в поле и нажмите «Сохранить». Дальше «В Holst» работает в одно нажатие.</li>
+<li>Нажмите в панели «Открыть Holst» — откроется доска Holst.</li>
+<li>Нажмите там ту же закладку «Ёмкость спринта» — вход сам перейдёт в Kaiten, и бомба с розовым списком запишутся.</li>
 </ol>
-<p>Вход хранится только в этом браузере. Holst перестал его принимать — панель скажет и попросит вставить заново.</p>
-<p>Код для ручной закладки:</p>
-<textarea readonly onclick="this.select()">${escapeHtml(holstBookmarklet)}</textarea>
+<p>Дальше «В Holst» работает в одно нажатие. Вход хранится только в этом браузере. Красная точка в шапке панели — входа нет или Holst его не принял, кольцо — вход сохранён.</p>
 </body>
 </html>
 `;
@@ -87,8 +80,7 @@ mkdirSync(new URL('./dist/', import.meta.url), { recursive: true });
 write('./dist/sprint-capacity.js', script);
 write('./dist/holst-sprint.js', holstScript);
 write('./dist/bookmarklet.txt', `${bookmarklet}\n`);
-write('./dist/holst-bookmarklet.txt', `${holstBookmarklet}\n`);
 write('./dist/install.html', installPage);
 mkdirSync(new URL('./dist/memes/', import.meta.url), { recursive: true });
 for (const meme of ['ok.png', 'fail.png']) copyFileSync(new URL(`./assets/memes/${meme}`, import.meta.url), new URL(`./dist/memes/${meme}`, import.meta.url));
-console.log(`Готово: панель ${Math.round(script.length / 1024)} КБ, скрипт Holst ${Math.round(holstScript.length / 1024)} КБ, закладки ${bookmarklet.length} и ${holstBookmarklet.length} знаков`);
+console.log(`Готово: панель ${Math.round(script.length / 1024)} КБ, скрипт Holst ${Math.round(holstScript.length / 1024)} КБ, закладка ${bookmarklet.length} знаков`);

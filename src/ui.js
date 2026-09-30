@@ -6,12 +6,16 @@ header b { font-size: 14px; }
 .board { max-width: 150px; padding: 3px 22px 3px 6px; margin-left: -6px; font: 600 14px/1.3 inherit; font-family: inherit; color: var(--fg); background: var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%239399a3' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 6px center; border: 1px solid transparent; border-radius: 8px; appearance: none; cursor: pointer; }
 .board:hover, .board:focus { border-color: var(--line); background-color: var(--soft); outline: none; }
 .board option { background: var(--field); color: var(--fg); }
-.time { flex: 1; margin-left: 8px; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.time { flex: 1; min-width: 0; margin-left: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 button { font: inherit; color: inherit; background: none; border: 0; border-radius: 8px; cursor: pointer; }
 .icon { width: 28px; height: 28px; font-size: 16px; line-height: 28px; color: var(--muted); }
 .icon:hover { background: var(--soft); color: var(--fg); }
 .icon:disabled { cursor: default; }
 .icon:disabled span { display: inline-block; animation: spin 1s linear infinite; }
+.key { width: 22px; }
+.key i { display: inline-block; width: 10px; height: 10px; box-sizing: border-box; border: 2px solid var(--bad); border-radius: 50%; background: var(--bad); vertical-align: middle; }
+.key.saved i { background: none; }
+.key:hover i { box-shadow: 0 0 0 3px var(--bad-soft); }
 @keyframes spin { to { transform: rotate(360deg); } }
 .geese { position: fixed; inset: 0; z-index: 2147483001; overflow: hidden; pointer-events: none; --w: clamp(40px, min(7vw, 11vh), 120px); --sw: min(max(96vw, 70vh), 125vh); --top: calc(max(12px, 12vh) + min(820px, 90vw, 110vh) / 2.2 + 3vh); --gy: calc((var(--top) + 104vh) / 2); }
 .goose { position: absolute; left: 0; width: var(--w); animation: goose-run var(--speed) cubic-bezier(.35, .05, .65, .95) var(--delay) both; }
@@ -91,12 +95,15 @@ button { font: inherit; color: inherit; background: none; border: 0; border-radi
 .over .value b { color: var(--bad); }
 .bar .limit { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--fg); }
 .holst-login { margin: 0 14px 14px; padding: 10px 12px; background: var(--soft); border-radius: 10px; font-size: 12px; }
-.holst-login ol { margin: 6px 0 0; padding-left: 18px; color: var(--muted); }
-.holst-login li { white-space: normal; }
 .holst-login input[type=password] { margin-top: 8px; text-align: left; }
 .holst-login .why { font-weight: 600; }
 .holst-login .error { margin: 0; }
 .holst-login .plan { margin-top: 8px; }
+.holst-login .note { margin-top: 6px; color: var(--muted); }
+.holst-login .note b { color: var(--fg); font-weight: 600; }
+.holst-login details { border: 0; margin-top: 8px; }
+.holst-login summary { padding: 0; font-weight: 400; color: var(--muted); }
+.holst-login summary::after { margin-left: 0; }
 .legend { margin-top: 10px; color: var(--muted); font-size: 11px; }
 .done { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin-top: 14px; padding: 10px 12px; background: var(--soft); border-radius: 10px; font-variant-numeric: tabular-nums; }
 .done b { font-size: 20px; }
@@ -141,6 +148,7 @@ const PANEL_HTML = `
   <header>
     <select class="board" data-act="board" title="Доска"></select>
     <span class="time"></span>
+    <button type="button" class="icon key" data-act="holst-login" title="Вход в Holst"><i></i></button>
     <button type="button" class="icon" data-act="refresh" title="Обновить"><span>↻</span></button>
     <button type="button" class="icon" data-act="collapse" title="Свернуть">–</button>
     <button type="button" class="icon" data-act="close" title="Закрыть">×</button>
@@ -209,6 +217,10 @@ function clockTime(date) {
 }
 
 function sprintCapacityMount(config) {
+  if (window.location.hostname === 'app.holst.so') {
+    holstHandoff();
+    return;
+  }
   if (window.__sprintCapacity) {
     window.__sprintCapacity.close();
     return;
@@ -220,6 +232,8 @@ function sprintCapacityMount(config) {
 
   const STORAGE_PREFIX = 'sprintCapacity.v1.';
   const REFRESH_MS = 60000;
+  const HOLST_WAIT_MS = 300000;
+  const HOLST_PING_MS = 500;
   let storageBroken = false;
   const readStored = (key, fallback) => {
     let raw = null;
@@ -255,6 +269,9 @@ function sprintCapacityMount(config) {
   let planEnd = null;
   let report = null;
   let closed = false;
+  let holstWait = null;
+  let holstSend = false;
+  let holstRejected = false;
   const data = { cards: null, loadedAt: null, error: null, snapshotError: null, busy: false };
   try {
     window.localStorage.removeItem(STORAGE_PREFIX + 'snapshot');
@@ -348,6 +365,7 @@ function sprintCapacityMount(config) {
     renderStatus();
     renderSummary();
     renderWarnings();
+    renderHolstKey();
   };
 
   const applyCollapsed = () => {
@@ -458,56 +476,150 @@ function sprintCapacityMount(config) {
     return typeof token === 'string' && token ? token : null;
   };
 
-  const dropHolstToken = () => {
-    try {
-      window.localStorage.removeItem(STORAGE_PREFIX + 'holstToken');
-    } catch (error) {
-      storageBroken = true;
-    }
+  const cleanHolstToken = (raw) => {
+    const token = String(raw || '').trim().replace(/^["']+|["']+$/g, '');
+    return token && token.length <= 500 && !/\s/.test(token) ? token : null;
   };
 
-  const showHolstLogin = (reason, failed) => {
+  const keepHolstToken = (token) => {
+    writeStored('holstToken', token);
+    if (readHolstToken() !== token) return false;
+    holstRejected = false;
+    renderHolstKey();
+    return true;
+  };
+
+  const renderHolstKey = () => {
+    const key = $('[data-act="holst-login"]');
+    const token = readHolstToken();
+    key.hidden = !boardConfig(boardId, config).holst;
+    key.classList.toggle('saved', Boolean(token) && !holstRejected);
+    key.title = !token ? 'Вход в Holst: нет' : holstRejected ? 'Вход в Holst: Holst не пустил' : 'Вход в Holst: сохранён';
+  };
+
+  const holstNotify = (tab, text, failed, meme) => {
+    if (tab && !tab.closed) tab.postMessage({ type: 'sprint-capacity:result', text, failed, meme }, HOLST_ORIGIN);
+  };
+
+  const showHolstLogin = (reason, failed, send) => {
+    holstSend = send;
     const box = $('.holst-login');
     box.hidden = false;
     box.innerHTML = `<div class="${failed ? 'error' : 'why'}">${escapeHtml(reason)}</div>`
-      + '<ol><li>Откройте любую доску Holst и нажмите закладку «Вход в Holst» со <a href="https://toytronic22.github.io/kaiten-sprint-capacity/" target="_blank" rel="noopener">страницы установки</a> — она скопирует вход.</li>'
-      + '<li>Вставьте его сюда и нажмите «Сохранить». Вход хранится только в этом браузере.</li></ol>'
-      + '<input type="password" autocomplete="off" data-holst-token placeholder="вход Holst"><div class="plan"><button type="button" data-act="holst-save">Сохранить</button><button type="button" data-act="holst-cancel" class="again">Отмена</button></div>';
-    box.querySelector('input').focus();
+      + '<div class="note">На доске Holst нажмите закладку <b>«Ёмкость спринта»</b> — вход перейдёт сюда сам и сохранится в этом браузере.</div>'
+      + `<div class="plan"><button type="button" data-act="holst-open"${holstWait ? ' class="again"' : ''}>${holstWait ? 'Открыть Holst ещё раз' : 'Открыть Holst'}</button><button type="button" data-act="holst-cancel" class="again">Отмена</button></div>`
+      + '<details><summary>Вставить вход вручную</summary><input type="password" autocomplete="off" data-holst-token placeholder="вход Holst"><div class="plan"><button type="button" data-act="holst-save" class="again">Сохранить</button></div></details>';
+  };
+
+  const stopHolstWait = () => {
+    if (!holstWait) return;
+    window.clearInterval(holstWait.timer);
+    holstWait = null;
   };
 
   const hideHolstLogin = () => {
+    stopHolstWait();
     const box = $('.holst-login');
     box.hidden = true;
     box.innerHTML = '';
   };
 
-  const saveHolstLogin = () => {
-    const input = $('[data-holst-token]');
-    const token = input ? input.value.trim().replace(/^["']+|["']+$/g, '') : '';
-    if (!token || /\s/.test(token)) {
-      showHolstLogin('Это не похоже на вход Holst — скопируйте его закладкой «Вход в Holst» ещё раз', true);
+  const toggleHolstLogin = () => {
+    if (!$('.holst-login').hidden) {
+      hideHolstLogin();
       return;
     }
-    writeStored('holstToken', token);
-    if (readHolstToken() !== token) {
-      showHolstLogin('Браузер не сохранил вход — проверьте, не запрещено ли хранение данных для Kaiten', true);
+    const token = readHolstToken();
+    if (!token) showHolstLogin('Вход в Holst — один раз на этом компьютере', false, false);
+    else if (holstRejected) showHolstLogin('Holst не пустил с сохранённым входом — войдите заново', true, false);
+    else showHolstLogin('Вход в Holst сохранён. Перестал пускать — войдите заново', false, false);
+  };
+
+  const openHolstLogin = () => {
+    const send = holstSend;
+    const tab = window.open(`${HOLST_ORIGIN}/board/${boardConfig(boardId, config).holst.board}`, '_blank');
+    if (!tab) {
+      showHolstLogin('Браузер не дал открыть Holst — разрешите всплывающие окна для Kaiten', true, send);
+      return;
+    }
+    stopHolstWait();
+    const started = Date.now();
+    const timer = window.setInterval(() => {
+      if (tab.closed || Date.now() - started > HOLST_WAIT_MS) {
+        const reason = tab.closed ? 'Связь с вкладкой Holst пропала (закрыли или Holst попросил войти) — откройте Holst ещё раз' : 'Вход из Holst не пришёл за 5 минут — откройте Holst ещё раз';
+        stopHolstWait();
+        showHolstLogin(reason, true, send);
+        return;
+      }
+      tab.postMessage({ type: 'sprint-capacity:ping' }, HOLST_ORIGIN);
+    }, HOLST_PING_MS);
+    holstWait = { tab, timer };
+    showHolstLogin('Жду вход: на открывшейся доске Holst нажмите закладку «Ёмкость спринта»', false, send);
+  };
+
+  const sendWhenFree = (tab) => {
+    if (closed) return;
+    if (data.busy) {
+      window.setTimeout(() => sendWhenFree(tab), HOLST_PING_MS);
+      return;
+    }
+    sendToHolst(tab, true);
+  };
+
+  const takeHolstLogin = (raw, tab) => {
+    const token = cleanHolstToken(raw);
+    if (!token) {
+      holstNotify(tab, 'Это не похоже на вход Holst — войдите в Holst заново и нажмите закладку ещё раз', true);
+      return;
+    }
+    const send = Boolean(holstWait) && holstSend;
+    if (!keepHolstToken(token)) {
+      holstNotify(tab, 'Kaiten не сохранил вход — проверьте, не запрещено ли хранение данных для Kaiten', true);
       return;
     }
     hideHolstLogin();
-    sendToHolst();
+    if (send) {
+      sendWhenFree(tab);
+      return;
+    }
+    sprintToast('Вход в Holst сохранён');
+    holstNotify(tab, 'Вход сохранён в Kaiten — эту вкладку можно закрыть', false);
   };
 
-  const sendToHolst = async () => {
+  const saveHolstLogin = async () => {
+    const input = $('[data-holst-token]');
+    const token = cleanHolstToken(input ? input.value : '');
+    const send = holstSend;
+    if (!token) {
+      showHolstLogin('Это не похоже на вход Holst — нажмите закладку «Ёмкость спринта» на доске Holst ещё раз', true, send);
+      return;
+    }
+    stopHolstWait();
+    showHolstLogin('Проверяю вход в Holst…', false, send);
+    try {
+      await holstCheck(boardConfig(boardId, config).holst.board, token);
+    } catch (error) {
+      showHolstLogin(error.auth ? `Holst не принял этот вход (${error.message})` : `Не получилось проверить вход: ${error.message || error}`, true, send);
+      return;
+    }
+    if (!keepHolstToken(token)) {
+      showHolstLogin('Браузер не сохранил вход — проверьте, не запрещено ли хранение данных для Kaiten', true, send);
+      return;
+    }
+    hideHolstLogin();
+    sprintToast(send ? 'Вход в Holst сохранён — нажмите «В Holst» ещё раз' : 'Вход в Holst сохранён');
+  };
+
+  const sendToHolst = async (openTab, fresh) => {
     const board = boardId;
     const settingsNow = boardConfig(board, config);
     if (!settingsNow.holst) return;
     const token = readHolstToken();
     if (!token) {
-      showHolstLogin('Нужен вход в Holst — один раз на этом компьютере');
+      showHolstLogin('Нужен вход в Holst — один раз на этом компьютере', false, true);
       return;
     }
-    const tab = window.open(`https://app.holst.so/board/${settingsNow.holst.board}`, '_blank');
+    const tab = openTab || window.open(`${HOLST_ORIGIN}/board/${settingsNow.holst.board}`, '_blank');
     if (!tab) {
       sprintToast('Браузер не дал открыть Holst — разрешите всплывающие окна для Kaiten', true, 'fail');
       return;
@@ -536,20 +648,32 @@ function sprintCapacityMount(config) {
       const payload = holstPayload({ cards, report: current, doneAtStart: snapshot ? snapshot.doneIds : [], histories, columns, boards, renames, sprintStart: sprint.start_date, sprintFinish: sprint.finish_date, now, config: settingsNow, holst: settingsNow.holst, kaiten: location.origin, title: boardTitle(board, config) });
       sprintToast(`${payload.title}: пишу в Holst…`);
       const result = await holstApply(payload, token);
+      holstRejected = false;
       sprintToast(result.text, !result.ok, result.ok ? 'ok' : 'fail', true);
+      holstNotify(tab, result.text, !result.ok, true);
     } catch (error) {
-      tab.close();
-      if (error.auth) {
-        dropHolstToken();
-        showHolstLogin(`Holst не принял вход — вставьте заново (${error.message})`, true);
-        sprintToast('В Holst не отправилось: Holst не принял вход — вставьте его заново в панели', true, 'fail');
+      if (error.auth) holstRejected = true;
+      if (error.auth && !fresh) {
+        tab.close();
+        showHolstLogin(`Holst не пустил (${error.message}) — войдите заново`, true, true);
+        sprintToast('В Holst не отправилось: Holst не пустил — войдите заново в панели', true, 'fail');
       } else {
-        sprintToast(`В Holst не отправилось: ${error.message || error}`, true, 'fail');
+        const text = `В Holst не отправилось: ${error.auth ? `Holst не пускает и со свежим входом (${error.message}) — проверьте, открывается ли у вас эта доска` : error.message || error}`;
+        if (!fresh) tab.close();
+        sprintToast(text, true, 'fail');
+        holstNotify(tab, text, true, true);
       }
     }
     data.busy = false;
     render();
   };
+
+  const onHolstMessage = (event) => {
+    if (event.origin !== HOLST_ORIGIN || !event.data || !event.source) return;
+    if (event.data.type === 'sprint-capacity:hello') event.source.postMessage({ type: 'sprint-capacity:ping' }, HOLST_ORIGIN);
+    if (event.data.type === 'sprint-capacity:login') takeHolstLogin(event.data.token, event.source);
+  };
+  window.addEventListener('message', onHolstMessage);
 
   const timer = window.setInterval(() => {
     if (!document.hidden) refresh();
@@ -684,6 +808,8 @@ function sprintCapacityMount(config) {
     window.clearTimeout(chaosTimer);
     window.clearInterval(chaosWords);
     document.removeEventListener('visibilitychange', onVisible);
+    window.removeEventListener('message', onHolstMessage);
+    stopHolstWait();
     host.remove();
     delete window.__sprintCapacity;
   };
@@ -696,8 +822,10 @@ function sprintCapacityMount(config) {
     if (act === 'refresh') refresh();
     if (act === 'start-planning' && !data.busy) startPlanning();
     if (act === 'end-planning' && !data.busy) endPlanning();
-    if (act === 'to-holst' && !data.busy) sendToHolst();
-    if (act === 'holst-save' && !data.busy) saveHolstLogin();
+    if (act === 'to-holst' && !data.busy) sendToHolst(null, false);
+    if (act === 'holst-login') toggleHolstLogin();
+    if (act === 'holst-open') openHolstLogin();
+    if (act === 'holst-save') saveHolstLogin();
     if (act === 'holst-cancel') hideHolstLogin();
     if (act === 'collapse') {
       collapsed = !collapsed;
@@ -736,7 +864,7 @@ function sprintCapacityMount(config) {
   });
 
   shadow.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter' && event.target.dataset.holstToken !== undefined && !data.busy) saveHolstLogin();
+    if (event.key === 'Enter' && event.target.dataset.holstToken !== undefined) saveHolstLogin();
   });
 
   for (const type of ['keydown', 'keyup', 'keypress', 'paste', 'copy', 'cut']) {
