@@ -373,6 +373,60 @@ test('беспредел: трещит тот, у кого вдвое больш
   assert.deepEqual(qaOnly, ['QA']);
 });
 
+test('конец планирования: всё, что прилетело после, считается отдельно «сверху» и остаётся в «прибавилось»', () => {
+  // Arrange
+  const start = [card(1, { size: 6, sp: 3, platforms: [BACK] }), card(4, { size: 9, sp: 5, platforms: [BACK], state: DONE })];
+  const planned = [...start, card(2, { size: 4, platforms: [FRONT] })];
+  const later = [card(1, { size: 10, sp: 5, platforms: [BACK] }), card(2, { size: 4, platforms: [FRONT], state: DONE }), card(3, { size: 2, platforms: [BACK] })];
+  const snapshot = core.takeSnapshot({ cards: start, settings: core.defaultSettings(), now: Date.parse('2026-09-29T09:00:00.000Z'), boardId: CORE_BOARD });
+  const planEnd = core.takePlanEnd({ cards: planned, snapshot, now: Date.parse('2026-09-29T11:00:00.000Z'), boardId: CORE_BOARD });
+
+  // Act
+  const report = core.buildReport({ cards: later, settings: core.defaultSettings(), snapshot, planEnd });
+  const noEnd = core.buildReport({ cards: later, settings: core.defaultSettings(), snapshot });
+
+  // Assert
+  assert.deepEqual(planEnd, { boardId: CORE_BOARD, takenAt: '2026-09-29T11:00:00.000Z', startedAt: '2026-09-29T09:00:00.000Z', totals: { back: 3, front: 4, qa: 3 } });
+  assert.deepEqual(report.rows.map(core.formatRow), ['Бэк: 3 + 4 = 7 из —, сверху +4', 'Фронт: 0 + 4 = 4 из —, сверху +0', 'QA: 3 + 2 = 5 из —, сверху +2']);
+  assert.deepEqual(noEnd.rows.map((row) => row.top), [null, null, null]);
+});
+
+test('конец планирования: пишется комментарием и действует только до нового начала планирования', () => {
+  // Arrange
+  const snapshot = { boardId: MOBILE_BOARD, takenAt: '2026-09-29T09:00:00.000Z', totals: { back: 1, front: 1, qa: 1 }, doneIds: [] };
+  const planEnd = { boardId: MOBILE_BOARD, takenAt: '2026-09-29T11:00:00.000Z', startedAt: snapshot.takenAt, totals: { back: 20, front: 6.5, qa: 12 } };
+  const comment = { text: core.planEndComment(planEnd), created: '2026-09-29T11:00:01Z', author: { full_name: 'Aleksey Martynov' } };
+  const older = { text: core.planEndComment({ ...planEnd, totals: { back: 2, front: 2, qa: 2 } }), created: '2026-09-29T10:00:00Z' };
+  const deleted = { text: core.planEndComment({ ...planEnd, totals: { back: 9, front: 9, qa: 9 } }), created: '2026-09-29T12:00:00Z', deleted: true };
+  const broken = { text: 'Конец планирования. ```json\n{"totals":\n```', created: '2026-09-29T13:00:00Z' };
+  const start = { text: core.snapshotComment(snapshot), created: '2026-09-29T09:00:01Z' };
+  const comments = [older, comment, deleted, broken, start];
+
+  // Act
+  const actual = core.planEndFromComments(comments, snapshot);
+
+  // Assert
+  assert.ok(comment.text.startsWith('Конец планирования, Staff Mobile. После планирования: Бэк 20 · Mobile 6,5 · QA 12.'));
+  assert.deepEqual(actual, { ...planEnd, author: 'Aleksey Martynov' });
+  assert.deepEqual(core.snapshotFromComments(comments, MOBILE_BOARD).totals, snapshot.totals);
+  assert.equal(core.planEndFromComments(comments, { ...snapshot, takenAt: '2026-09-30T09:00:00.000Z' }), null);
+  assert.equal(core.planEndFromComments(comments, { ...snapshot, boardId: CORE_BOARD }), null);
+  assert.equal(core.planEndFromComments(comments, null), null);
+});
+
+test('процент Done по SP: SP в Done от SP доски, баги не считаются', () => {
+  // Arrange
+  const cards = [card(1, { size: 6, sp: 3, platforms: [BACK], state: DONE }), card(2, { size: 2, platforms: [FRONT] }), card(3, { size: 1, platforms: [FRONT] }), card(4, { size: 8, state: DONE, type: WEB_BUG })];
+
+  // Act
+  const report = core.buildReport({ cards, settings: core.defaultSettings() });
+  const empty = core.buildReport({ cards: [card(5, { state: DONE })], settings: core.defaultSettings() });
+
+  // Assert
+  assert.deepEqual([report.done.percent, report.done.pointsPercent], [50, 67]);
+  assert.equal(empty.done.pointsPercent, null);
+});
+
 test('снимок: испорченный или без доски не принимается', () => {
   // Arrange
   const good = { boardId: CORE_BOARD, takenAt: '2026-09-29T09:00:00.000Z', totals: { back: '3', front: 0, qa: 1.5 }, doneIds: [4, 'x', 5] };

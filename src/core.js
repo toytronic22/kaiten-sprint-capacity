@@ -17,6 +17,8 @@ const DIRECTIONS = ['back', 'front', 'qa'];
 
 const SNAPSHOT_MARK = 'Снимок начала планирования';
 
+const PLAN_END_MARK = 'Конец планирования';
+
 const DIRECTION_LABELS = { back: 'Бэк', front: 'Фронт', qa: 'QA' };
 
 function toNumber(value) {
@@ -125,7 +127,7 @@ function percentOf(part, whole) {
   return whole > 0 ? Math.round((part / whole) * 100) : null;
 }
 
-function buildReport({ cards, settings, snapshot = null, config = SPRINT_CAPACITY }) {
+function buildReport({ cards, settings, snapshot = null, planEnd = null, config = SPRINT_CAPACITY }) {
   const sums = {};
   for (const direction of DIRECTIONS) sums[direction] = 0;
   const report = {
@@ -184,9 +186,11 @@ function buildReport({ cards, settings, snapshot = null, config = SPRINT_CAPACIT
     const capacity = people > 0 ? round1(capacityOf(settings, direction)) : null;
     const base = snapshot ? snapshot.totals[direction] : null;
     const added = base === null ? null : round1(total - base);
-    return { direction, label: labels[direction], base, added, total, capacity, over: capacity !== null && total > capacity };
+    const top = planEnd ? round1(total - planEnd.totals[direction]) : null;
+    return { direction, label: labels[direction], base, added, top, total, capacity, over: capacity !== null && total > capacity };
   });
   report.done.percent = percentOf(report.done.count, report.done.of);
+  report.done.pointsPercent = percentOf(report.done.points, report.board.points);
   report.notCounted.points = round1(report.notCounted.points);
   report.bugs.points = round1(report.bugs.points);
   report.board.points = round1(report.board.points);
@@ -213,11 +217,16 @@ function chaosNames(rows, config = SPRINT_CAPACITY) {
   return rows.filter(isChaos).map((row) => names[row.direction]);
 }
 
+function signed(value) {
+  return `${value < 0 ? '−' : '+'}${formatNumber(Math.abs(value))}`;
+}
+
 function formatRow(row) {
   const capacity = row.capacity === null ? '—' : formatNumber(row.capacity);
   const hasBase = row.base !== null && row.base !== undefined;
   const change = hasBase ? `${formatNumber(row.base)} ${row.added < 0 ? '−' : '+'} ${formatNumber(Math.abs(row.added))} = ` : '';
-  return `${row.label || DIRECTION_LABELS[row.direction]}: ${change}${formatNumber(row.total)} из ${capacity}`;
+  const top = row.top === null || row.top === undefined ? '' : `, сверху ${signed(row.top)}`;
+  return `${row.label || DIRECTION_LABELS[row.direction]}: ${change}${formatNumber(row.total)} из ${capacity}${top}`;
 }
 
 function takeSnapshot({ cards, settings, now, boardId, config = SPRINT_CAPACITY }) {
@@ -227,6 +236,13 @@ function takeSnapshot({ cards, settings, now, boardId, config = SPRINT_CAPACITY 
   for (const row of report.rows) totals[row.direction] = row.total;
   const doneIds = cards.filter((card) => card.state === config.doneState).map((card) => card.id);
   return { boardId, takenAt: new Date(now).toISOString(), totals, doneIds };
+}
+
+function takePlanEnd({ cards, snapshot, now, boardId, config = SPRINT_CAPACITY }) {
+  const report = buildReport({ cards, settings: defaultSettings(), snapshot, config });
+  const totals = {};
+  for (const row of report.rows) totals[row.direction] = row.total;
+  return { boardId, takenAt: new Date(now).toISOString(), startedAt: snapshot.takenAt, totals };
 }
 
 function normalizeSnapshot(raw) {
@@ -252,22 +268,43 @@ function snapshotComment(snapshot, config = SPRINT_CAPACITY) {
   return `${SNAPSHOT_MARK}, ${boardTitle(snapshot.boardId, config)}. Осталось: ${left}.\n\n\`\`\`json\n${JSON.stringify(snapshot)}\n\`\`\``;
 }
 
+function commentsWithJson(comments, mark) {
+  return (Array.isArray(comments) ? comments : [])
+    .filter((comment) => comment && !comment.deleted && typeof comment.text === 'string' && comment.text.startsWith(mark))
+    .sort((a, b) => Date.parse(b.created) - Date.parse(a.created))
+    .map((comment) => {
+      const match = comment.text.match(/```json\s*([\s\S]*?)```/);
+      let raw = null;
+      try {
+        raw = match ? JSON.parse(match[1]) : null;
+      } catch (error) {
+        raw = null;
+      }
+      return { raw, author: (comment.author && comment.author.full_name) || '' };
+    });
+}
+
 function snapshotFromComments(comments, boardId) {
-  const found = (Array.isArray(comments) ? comments : [])
-    .filter((comment) => comment && !comment.deleted && typeof comment.text === 'string' && comment.text.startsWith(SNAPSHOT_MARK))
-    .sort((a, b) => Date.parse(b.created) - Date.parse(a.created));
-  for (const comment of found) {
-    const match = comment.text.match(/```json\s*([\s\S]*?)```/);
-    let raw = null;
-    try {
-      raw = match ? JSON.parse(match[1]) : null;
-    } catch (error) {
-      raw = null;
-    }
+  for (const { raw, author } of commentsWithJson(comments, SNAPSHOT_MARK)) {
     const snapshot = normalizeSnapshot(raw);
-    if (snapshot && snapshot.boardId === boardId) return { ...snapshot, author: (comment.author && comment.author.full_name) || '' };
+    if (snapshot && snapshot.boardId === boardId) return { ...snapshot, author };
   }
   return null;
 }
 
-if (typeof module !== 'undefined') module.exports = { SPRINT_CAPACITY, DIRECTIONS, DIRECTION_LABELS, toNumber, round1, formatNumber, plural, readEstimate, platformOf, needsQa, isBug, splitEstimate, estimateIssues, defaultSettings, normalizeSettings, capacityOf, buildReport, boardConfig, isChaos, chaosNames, formatRow, takeSnapshot, normalizeSnapshot, boardTitle, snapshotComment, snapshotFromComments };
+function planEndComment(planEnd, config = SPRINT_CAPACITY) {
+  const { labels } = boardConfig(planEnd.boardId, config);
+  const total = DIRECTIONS.map((direction) => `${labels[direction]} ${formatNumber(planEnd.totals[direction])}`).join(' · ');
+  return `${PLAN_END_MARK}, ${boardTitle(planEnd.boardId, config)}. После планирования: ${total}.\n\n\`\`\`json\n${JSON.stringify(planEnd)}\n\`\`\``;
+}
+
+function planEndFromComments(comments, snapshot) {
+  if (!snapshot) return null;
+  for (const { raw, author } of commentsWithJson(comments, PLAN_END_MARK)) {
+    const planEnd = normalizeSnapshot(raw);
+    if (planEnd && planEnd.boardId === snapshot.boardId && raw.startedAt === snapshot.takenAt) return { boardId: planEnd.boardId, takenAt: planEnd.takenAt, startedAt: raw.startedAt, totals: planEnd.totals, author };
+  }
+  return null;
+}
+
+if (typeof module !== 'undefined') module.exports = { SPRINT_CAPACITY, DIRECTIONS, DIRECTION_LABELS, toNumber, round1, formatNumber, plural, readEstimate, platformOf, needsQa, isBug, splitEstimate, estimateIssues, defaultSettings, normalizeSettings, capacityOf, buildReport, boardConfig, isChaos, chaosNames, formatRow, takeSnapshot, takePlanEnd, normalizeSnapshot, boardTitle, snapshotComment, snapshotFromComments, planEndComment, planEndFromComments };

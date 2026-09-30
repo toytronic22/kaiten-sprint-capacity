@@ -91,15 +91,21 @@ button { font: inherit; color: inherit; background: none; border: 0; border-radi
 .over .value b { color: var(--bad); }
 .bar .limit { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--fg); }
 .legend { margin-top: 10px; color: var(--muted); font-size: 11px; }
-.done { display: flex; align-items: baseline; gap: 8px; margin-top: 14px; padding: 10px 12px; background: var(--soft); border-radius: 10px; font-variant-numeric: tabular-nums; }
+.done { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin-top: 14px; padding: 10px 12px; background: var(--soft); border-radius: 10px; font-variant-numeric: tabular-nums; }
 .done b { font-size: 20px; }
-.done .of { margin-left: auto; color: var(--muted); font-size: 12px; }
-.plan { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
-.plan button { padding: 7px 12px; border-radius: 8px; font-weight: 600; background: var(--accent); color: #10151d; }
+.done .of { flex-basis: 100%; color: var(--muted); font-size: 12px; }
+.plan { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-top: 12px; }
+.plan button { white-space: nowrap; padding: 7px 12px; border-radius: 8px; font-weight: 600; background: var(--accent); color: #10151d; }
 .plan button:hover { filter: brightness(1.08); }
 .plan button.again { background: var(--soft); color: var(--fg); font-weight: 500; }
 .plan button.again:hover { background: var(--line); }
-.plan span { color: var(--muted); font-size: 12px; }
+.plan span { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.plan + .plan { margin-top: 8px; }
+.top { margin-left: 6px; padding: 0 6px; border-radius: 9px; background: #4d3d12; color: #f3cd62; font-size: 11px; font-weight: 600; }
+.bar .over-top { background: #c9a227; }
+.done-by { display: flex; align-self: center; margin-left: auto; border-radius: 7px; background: var(--field); overflow: hidden; }
+.done-by button { padding: 2px 7px; color: var(--muted); font-size: 11px; }
+.done-by button.on { background: var(--line); color: var(--fg); font-weight: 600; }
 .panel.collapsed .body { display: none; }
 details { border-top: 1px solid var(--line); }
 summary { display: flex; align-items: center; gap: 6px; padding: 10px 14px; cursor: pointer; list-style: none; font-weight: 600; }
@@ -238,7 +244,9 @@ function sprintCapacityMount(config) {
   const loadSettings = () => normalizeSettings(readStored(settingsKey(), boardId === config.boards[0].id ? readStored('settings', null) : null));
   let settings = loadSettings();
   let collapsed = readStored('collapsed', false) === true;
+  let doneBy = readStored('doneBy', 'cards') === 'points' ? 'points' : 'cards';
   let snapshot = null;
+  let planEnd = null;
   let report = null;
   let closed = false;
   const data = { cards: null, loadedAt: null, error: null, snapshotError: null, busy: false };
@@ -258,7 +266,7 @@ function sprintCapacityMount(config) {
   const cardLink = (item) => `<a href="${window.location.origin}/${item.id}" target="_blank" rel="noopener">${escapeHtml(item.title || item.id)}</a>`;
 
   const recompute = () => {
-    report = data.cards ? buildReport({ cards: data.cards, settings, snapshot, config: boardConfig(boardId, config) }) : null;
+    report = data.cards ? buildReport({ cards: data.cards, settings, snapshot, planEnd, config: boardConfig(boardId, config) }) : null;
   };
 
   const renderStatus = () => {
@@ -279,13 +287,14 @@ function sprintCapacityMount(config) {
     const scale = Math.max(row.total, row.capacity || 0, snapshot ? row.base : 0);
     const share = (value) => (scale > 0 ? `${(Math.max(value, 0) / scale) * 100}%` : '0');
     const base = snapshot ? Math.min(row.base, row.total) : row.total;
+    const top = row.top === null ? 0 : Math.min(Math.max(row.top, 0), row.total - base);
     const limit = row.over ? `<i class="limit" style="left:${share(row.capacity)}"></i>` : '';
     const split = snapshot ? `<span class="split">${formatNumber(row.base)} ${row.added < 0 ? '−' : '+'} ${formatNumber(Math.abs(row.added))} =</span> ` : '';
     const capacity = row.capacity === null ? '—' : formatNumber(row.capacity);
     return `<div class="row${row.over ? ' over' : ''}" title="${escapeHtml(formatRow(row))}">`
-      + `<div class="row-head"><span class="name">${escapeHtml(row.label)}</span>`
+      + `<div class="row-head"><span class="name">${escapeHtml(row.label)}${row.top === null ? '' : `<span class="top" title="Прилетело после конца планирования">сверху ${signed(row.top)}</span>`}</span>`
       + `<span class="value">${split}<b>${formatNumber(row.total)}</b><span class="of"> / ${capacity}</span></span></div>`
-      + `<div class="bar"><i class="base" style="width:${share(base)}"></i><i class="add" style="width:${share(row.total - base)}"></i>${limit}</div></div>`;
+      + `<div class="bar"><i class="base" style="width:${share(base)}"></i><i class="add" style="width:${share(row.total - base - top)}"></i><i class="over-top" style="width:${share(top)}"></i>${limit}</div></div>`;
   };
 
   const renderSummary = () => {
@@ -296,12 +305,18 @@ function sprintCapacityMount(config) {
       return;
     }
     const rows = report.rows.map(renderRow).join('');
-    const legend = snapshot ? '<div class="legend">осталось + прибавилось = сейчас / можно</div>' : '';
-    const percent = report.done.percent === null ? '—' : `${report.done.percent}%`;
-    const done = `<div class="done"><span>Done</span><b>${percent}</b><span class="of">${report.done.count} из ${report.done.of} ${plural(report.done.of, ['карты', 'карт', 'карт'])} · ${formatNumber(report.done.points)} SP</span></div>`;
+    const legend = snapshot ? `<div class="legend">осталось + прибавилось = сейчас / можно${planEnd ? ' · сверху — после конца планирования' : ''}</div>` : '';
+    const value = doneBy === 'points' ? report.done.pointsPercent : report.done.percent;
+    const percent = value === null ? '—' : `${value}%`;
+    const cardsOf = `${report.done.count} из ${report.done.of} ${plural(report.done.of, ['карты', 'карт', 'карт'])}`;
+    const of = doneBy === 'points' ? `${formatNumber(report.done.points)} из ${formatNumber(report.board.points)} SP · ${cardsOf}` : `${cardsOf} · ${formatNumber(report.done.points)} SP`;
+    const switcher = `<span class="done-by" title="Процент Done">${[['cards', 'карты'], ['points', 'SP']].map(([key, name]) => `<button type="button" data-act="done-by" data-by="${key}"${doneBy === key ? ' class="on"' : ''}>${name}</button>`).join('')}</span>`;
+    const done = `<div class="done"><span>Done</span><b>${percent}</b>${switcher}<span class="of">${of}</span></div>`;
     const since = snapshot ? `<span title="${escapeHtml(snapshot.author)}">с ${snapshotTime(snapshot.takenAt)}</span>` : '';
     const plan = `<div class="plan"><button type="button" data-act="start-planning"${snapshot ? ' class="again"' : ''}${data.busy ? ' disabled' : ''}>Начать планирование</button>${since}</div>`;
-    box.innerHTML = rows + legend + done + plan;
+    const endSince = planEnd ? `<span title="${escapeHtml(planEnd.author)}">${snapshotTime(planEnd.takenAt)}</span>` : '';
+    const end = snapshot ? `<div class="plan"><button type="button" data-act="end-planning"${planEnd ? ' class="again"' : ''}${data.busy ? ' disabled' : ''}>Закончить планирование</button>${endSince}</div>` : '';
+    box.innerHTML = rows + legend + done + plan + end;
   };
 
   const renderWarnings = () => {
@@ -363,7 +378,9 @@ function sprintCapacityMount(config) {
       loaded.error = error;
     }
     try {
-      loaded.snapshot = snapshotFromComments(await kaitenCardComments(config.snapshotCardId), board);
+      const comments = await kaitenCardComments(config.snapshotCardId);
+      loaded.snapshot = snapshotFromComments(comments, board);
+      loaded.planEnd = planEndFromComments(comments, loaded.snapshot);
     } catch (error) {
       loaded.snapshotError = error;
     }
@@ -382,6 +399,7 @@ function sprintCapacityMount(config) {
     if (loaded.snapshotError) data.snapshotError = loaded.snapshotError;
     else {
       snapshot = loaded.snapshot;
+      planEnd = loaded.planEnd;
       data.snapshotError = null;
     }
     recompute();
@@ -402,6 +420,26 @@ function sprintCapacityMount(config) {
       await kaitenAddComment(config.snapshotCardId, snapshotComment(takeSnapshot({ cards, settings, now: Date.now(), boardId: board, config: boardConfig(board, config) }), config));
     } catch (error) {
       window.alert(`Снимок не сохранился: ${error.message || error}`);
+    }
+    data.busy = false;
+    await refresh();
+  };
+
+  const endPlanning = async () => {
+    if (!snapshot) return;
+    const text = planEnd
+      ? `${boardTitle(boardId, config)}: закончить планирование заново? «Сверху» будет считаться от текущей доски у всей команды, а не от ${snapshotTime(planEnd.takenAt)}.`
+      : `${boardTitle(boardId, config)}: закончить планирование для всей команды? Всё, что прилетит дальше, будет видно отдельно — «сверху».`;
+    if (!window.confirm(text)) return;
+    data.busy = true;
+    render();
+    const board = boardId;
+    const start = snapshot;
+    try {
+      const cards = await kaitenBoardCards(board);
+      await kaitenAddComment(config.snapshotCardId, planEndComment(takePlanEnd({ cards, snapshot: start, now: Date.now(), boardId: board, config: boardConfig(board, config) }), config));
+    } catch (error) {
+      window.alert(`Конец планирования не сохранился: ${error.message || error}`);
     }
     data.busy = false;
     await refresh();
@@ -551,6 +589,12 @@ function sprintCapacityMount(config) {
     if (act === 'close') close();
     if (act === 'refresh') refresh();
     if (act === 'start-planning' && !data.busy) startPlanning();
+    if (act === 'end-planning' && !data.busy) endPlanning();
+    if (act === 'done-by') {
+      doneBy = button.dataset.by === 'points' ? 'points' : 'cards';
+      writeStored('doneBy', doneBy);
+      renderSummary();
+    }
     if (act === 'collapse') {
       collapsed = !collapsed;
       writeStored('collapsed', collapsed);
@@ -564,6 +608,7 @@ function sprintCapacityMount(config) {
     writeStored('board', boardId);
     settings = loadSettings();
     snapshot = null;
+    planEnd = null;
     chaosBefore = false;
     Object.assign(data, { cards: null, loadedAt: null, error: null, snapshotError: null });
     fillSettings();
