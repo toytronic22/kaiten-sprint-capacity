@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const H = require('../src/holst-core.js');
-const { SPRINT_CAPACITY, buildReport, defaultSettings } = require('../src/core.js');
+const { SPRINT_CAPACITY, buildReport, defaultSettings, takeSnapshot } = require('../src/core.js');
 
 const url = (id) => `https://dodopizza.kaiten.ru/${id}`;
 const text = (value, marks) => (marks ? { text: value, marks } : { text: value });
@@ -348,4 +348,52 @@ test('Незнакомые колонки: называются с числом 
   assert.equal(many, 'не знаю колонки «Blocked» (карт: 2), «?» (карт: 1) — считаю как To Do, 0%');
   assert.equal(H.unknownColumnsText([]), null);
   assert.equal(H.unknownColumnsText(undefined), null);
+});
+
+test('Баг в розовом списке — с жучком в начале строки, повторный прогон его не удваивает', () => {
+  // Arrange
+  const lastRun = Date.parse('2026-09-30T06:00:00Z');
+  const cards = [
+    card(52001, 'Баг в работе', 'doing', { bug: true }),
+    card(52002, 'Баг в To Do', 'todo', { bug: true }),
+    card(52003, 'Бывший баг', 'doing'),
+    card(52004, 'Баг с ручным жуком', 'done', { bug: true }),
+  ];
+  const items = [
+    p(text('📋 To Do · 1', { bold: true })),
+    li({ text: 'Баг в To Do', link: url(52002) }),
+    p(text('🔨 Doing · 2', { bold: true })),
+    li(text('+/- '), { text: 'Баг в работе', link: url(52001) }),
+    li(text('🐞 +/- 🟡 '), { text: 'Бывший баг', link: url(52003) }),
+    p(text('✅ Done · 1', { bold: true })),
+    li(text('🐛 '), { text: 'Баг с ручным жуком', link: url(52004) }),
+  ];
+
+  // Act
+  const first = H.planSticker({ items, cards, lastRun, cardUrl: url });
+  const second = H.planSticker({ items: first.items, cards, lastRun, cardUrl: url });
+
+  // Assert
+  const expected = ['📋 To Do · 1', '🐞 Баг в To Do', '🔨 Doing · 2', '🐞 +/- Баг в работе', '+/- 🟡 Бывший баг', '✅ Done · 1', '🐞 + Баг с ручным жуком'];
+  assert.deepEqual(lineTexts(first.items), expected);
+  assert.deepEqual(lineTexts(second.items), expected);
+  assert.equal(H.stickerSignature(second.items), H.stickerSignature(first.items));
+});
+
+test('Payload для Holst: баг помечен, остальные карты — нет, бывший в Done на начало — не передаётся', () => {
+  // Arrange
+  const cards = [
+    { id: 1, title: 'Баг', state: 2, column: { title: 'Test' }, type_id: 446247, properties: {} },
+    { id: 2, title: 'Задача', state: 2, column: { title: 'Doing' }, size: 3, properties: {} },
+    { id: 3, title: 'Старый баг', state: 3, column: { title: 'Done' }, type_id: 446247, properties: {} },
+  ];
+  const snapshot = takeSnapshot({ cards, settings: defaultSettings(), now: 0, boardId: 68084 });
+  const report = buildReport({ cards, settings: defaultSettings(), snapshot });
+
+  // Act
+  const payload = H.holstPayload({ cards, report, doneAtStart: snapshot.doneIds, sprintStart: '2026-09-27T21:00:00.000Z', sprintFinish: '2026-10-11T20:59:59.999Z', now: Date.parse('2026-09-30T10:00:00Z'), config: SPRINT_CAPACITY, holst: { board: 'b', group: 'g', sticker: 's' }, kaiten: 'https://dodopizza.kaiten.ru', title: 'Staff Core' });
+
+  // Assert
+  assert.deepEqual(payload.cards.map((item) => [item.id, item.bug === true]), [[1, true], [2, false]]);
+  assert.equal('bug' in payload.cards[1], false);
 });

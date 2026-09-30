@@ -14,6 +14,7 @@ const HOLST_STYLE = {
   note: 0x8A8A8A,
   noteSize: 10,
   bomb: '💣',
+  bug: '🐞',
   weekdays: ['ВС', 'ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ'],
 };
 
@@ -140,7 +141,8 @@ function holstOldTitles(activity, title) {
   return result;
 }
 
-function holstCards({ cards, doneAtStart = [], histories = {}, columns = {}, boards = {}, renames = {}, now, config }) {
+function holstCards({ cards, doneAtStart = [], bugs = [], histories = {}, columns = {}, boards = {}, renames = {}, now, config }) {
+  const bugIds = new Set(bugs);
   const skip = new Set(doneAtStart);
   const dayStart = localDay(now).getTime();
   const title = (id) => columns[id] || `колонка ${id}`;
@@ -156,6 +158,7 @@ function holstCards({ cards, doneAtStart = [], histories = {}, columns = {}, boa
         mark: null,
         from: null,
       };
+      if (bugIds.has(card.id)) item.bug = true;
       const old = holstOldTitles(renames[card.id], card.title);
       if (old.length) item.old = old;
       const history = [...(histories[card.id] || [])].sort((a, b) => new Date(a.changed) - new Date(b.changed));
@@ -191,7 +194,7 @@ function holstPayload({ cards, report, doneAtStart = [], histories = {}, columns
     done: report.done.count,
     of: report.done.of,
     unknown: report.progress.unknown.map((item) => item.column),
-    cards: holstCards({ cards, doneAtStart, histories, columns, boards, renames, now, config }),
+    cards: holstCards({ cards, doneAtStart, bugs: report.bugs.cards.map((item) => item.id), histories, columns, boards, renames, now, config }),
   };
 }
 
@@ -260,7 +263,7 @@ function isUpdatedLine(item) {
 function stripMarker(runs) {
   const copy = runs.map((run) => ({ ...run }));
   while (copy.length && !copy[0].link) {
-    const cleaned = copy[0].text.replace(/^\s*(?:\+\s*\/\s*-|\+)(?![\p{L}\p{N}])\s*/u, '');
+    const cleaned = copy[0].text.replace(/^\s*(?:(?:[🐞🐛🪲]\uFE0F?|(?:\+\s*\/\s*-|\+)(?![\p{L}\p{N}]))\s*)+/u, '');
     if (cleaned === copy[0].text) break;
     copy[0].text = cleaned;
     if (cleaned) break;
@@ -328,6 +331,7 @@ function cardRuns(card, line, url, block = card.block) {
   const runs = [];
   const marker = HOLST_MARKERS[block];
   const prefix = line && line.prefix ? stripMarker(line.prefix) : [];
+  if (card.bug) runs.push({ text: `${HOLST_STYLE.bug} ` });
   if (marker) runs.push({ text: `${marker} ` });
   if (prefix.length) {
     runs.push(...prefix);
