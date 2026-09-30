@@ -1,6 +1,6 @@
 const PANEL_CSS = `
 :host { all: initial; }
-.panel { --bg: #26282c; --fg: #e4e6ea; --muted: #9399a3; --line: #383b41; --soft: #30333a; --field: #1e2024; --accent: #5b9cf6; --accent-soft: #34507c; --bad: #f47174; --bad-soft: #7a3438; color-scheme: dark; position: fixed; top: 72px; right: 16px; width: 300px; max-width: calc(100vw - 32px); max-height: calc(100vh - 88px); overflow: auto; z-index: 2147483000; box-sizing: border-box; background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 16px 40px rgba(0, 0, 0, .45); font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
+.panel { --bg: #26282c; --fg: #e4e6ea; --muted: #9399a3; --line: #383b41; --soft: #30333a; --field: #1e2024; --accent: #5b9cf6; --accent-soft: #34507c; --bad: #f47174; --bad-soft: #7a3438; --good: #4fc47a; --good-soft: #2d5a3c; color-scheme: dark; position: fixed; top: 72px; right: 16px; width: 300px; max-width: calc(100vw - 32px); max-height: calc(100vh - 88px); overflow: auto; z-index: 2147483000; box-sizing: border-box; background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 16px 40px rgba(0, 0, 0, .45); font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
 header { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 2px; padding: 10px 8px 10px 14px; background: var(--bg); border-bottom: 1px solid var(--line); }
 header b { font-size: 14px; }
 .board { max-width: 150px; padding: 3px 22px 3px 6px; margin-left: -6px; font: 600 14px/1.3 inherit; font-family: inherit; color: var(--fg); background: var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%239399a3' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 6px center; border: 1px solid transparent; border-radius: 8px; appearance: none; cursor: pointer; }
@@ -14,8 +14,13 @@ button { font: inherit; color: inherit; background: none; border: 0; border-radi
 .icon:disabled span { display: inline-block; animation: spin 1s linear infinite; }
 .key { width: 22px; }
 .key i { display: inline-block; width: 10px; height: 10px; box-sizing: border-box; border: 2px solid var(--bad); border-radius: 50%; background: var(--bad); vertical-align: middle; }
-.key.saved i { background: none; }
 .key:hover i { box-shadow: 0 0 0 3px var(--bad-soft); }
+.key[data-state="checking"] i, .key[data-state="error"] i { border-color: var(--muted); background: none; }
+.key[data-state="checking"] i { animation: pulse .6s ease-in-out infinite alternate; }
+.key[data-state="checking"]:hover i, .key[data-state="error"]:hover i { box-shadow: 0 0 0 3px var(--line); }
+.key[data-state="ok"] i { border-color: var(--good); background: var(--good); }
+.key[data-state="ok"]:hover i { box-shadow: 0 0 0 3px var(--good-soft); }
+@keyframes pulse { to { opacity: .3; } }
 @keyframes spin { to { transform: rotate(360deg); } }
 .geese { position: fixed; inset: 0; z-index: 2147483001; overflow: hidden; pointer-events: none; --w: clamp(40px, min(7vw, 11vh), 120px); --sw: min(max(96vw, 70vh), 125vh); --top: calc(max(12px, 12vh) + min(820px, 90vw, 110vh) / 2.2 + 3vh); --gy: calc((var(--top) + 104vh) / 2); }
 .goose { position: absolute; left: 0; width: var(--w); animation: goose-run var(--speed) cubic-bezier(.35, .05, .65, .95) var(--delay) both; }
@@ -140,6 +145,14 @@ a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
 .muted { color: var(--muted); font-size: 12px; }
 `;
+
+const HOLST_KEY_TITLES = {
+  none: 'Вход в Holst: нет',
+  checking: 'Вход в Holst: проверяю…',
+  ok: 'Вход в Holst: работает',
+  rejected: 'Вход в Holst: Holst не пустил',
+  error: 'Вход в Holst: сохранён, проверить не получилось',
+};
 
 const PANEL_INPUT = (path, placeholder) => `<input type="text" inputmode="decimal" autocomplete="off" data-set="${path}" placeholder="${placeholder}">`;
 
@@ -271,7 +284,8 @@ function sprintCapacityMount(config) {
   let closed = false;
   let holstWait = null;
   let holstSend = false;
-  let holstRejected = false;
+  let holstStatus = null;
+  let holstBoxStatus = false;
   const data = { cards: null, loadedAt: null, error: null, snapshotError: null, busy: false };
   try {
     window.localStorage.removeItem(STORAGE_PREFIX + 'snapshot');
@@ -483,18 +497,58 @@ function sprintCapacityMount(config) {
 
   const keepHolstToken = (token) => {
     writeStored('holstToken', token);
-    if (readHolstToken() !== token) return false;
-    holstRejected = false;
-    renderHolstKey();
-    return true;
+    return readHolstToken() === token;
+  };
+
+  const holstBoard = () => {
+    const holst = boardConfig(boardId, config).holst;
+    return holst ? holst.board : null;
+  };
+
+  const markHolst = (token, board, state, message) => {
+    holstStatus = { token, board, state, message: message || '', check: null };
+  };
+
+  const checkHolstLogin = (token, board) => {
+    const check = holstCheck(board, token)
+      .then(() => ['ok', ''], (error) => [error.auth ? 'rejected' : 'error', error.message || String(error)])
+      .then(([state, message]) => {
+        if (closed || !holstStatus || holstStatus.check !== check) return null;
+        markHolst(token, board, state, message);
+        renderHolstKey();
+        return state;
+      });
+    holstStatus = { token, board, state: 'checking', message: '', check };
+    return check;
+  };
+
+  const holstState = () => {
+    const token = readHolstToken();
+    const board = holstBoard();
+    if (!token || !board) return 'none';
+    if (!holstStatus || holstStatus.token !== token || holstStatus.board !== board) checkHolstLogin(token, board);
+    return holstStatus.state;
+  };
+
+  const holstReason = (state) => {
+    if (state === 'none') return ['Вход в Holst — один раз на этом компьютере', false];
+    if (state === 'checking') return ['Вход в Holst сохранён, проверяю…', false];
+    if (state === 'ok') return ['Вход в Holst работает — входить заново не нужно', false];
+    if (state === 'rejected') return [`Holst не пустил с сохранённым входом — войдите заново. Не помогло — проверьте, открывается ли у вас эта доска (${holstStatus.message})`, true];
+    return [`Вход в Holst сохранён, но проверить не получилось: ${holstStatus.message}`, false];
   };
 
   const renderHolstKey = () => {
     const key = $('[data-act="holst-login"]');
-    const token = readHolstToken();
-    key.hidden = !boardConfig(boardId, config).holst;
-    key.classList.toggle('saved', Boolean(token) && !holstRejected);
-    key.title = !token ? 'Вход в Holst: нет' : holstRejected ? 'Вход в Holst: Holst не пустил' : 'Вход в Holst: сохранён';
+    const state = holstState();
+    key.hidden = !holstBoard();
+    key.dataset.state = state;
+    key.title = HOLST_KEY_TITLES[state];
+    const line = holstBoxStatus && !$('.holst-login').hidden ? $('.holst-login').querySelector('[data-holst-reason]') : null;
+    if (!line) return;
+    const [text, failed] = holstReason(state);
+    line.className = failed ? 'error' : 'why';
+    line.textContent = text;
   };
 
   const holstNotify = (tab, text, failed, meme) => {
@@ -503,9 +557,10 @@ function sprintCapacityMount(config) {
 
   const showHolstLogin = (reason, failed, send) => {
     holstSend = send;
+    holstBoxStatus = false;
     const box = $('.holst-login');
     box.hidden = false;
-    box.innerHTML = `<div class="${failed ? 'error' : 'why'}">${escapeHtml(reason)}</div>`
+    box.innerHTML = `<div class="${failed ? 'error' : 'why'}" data-holst-reason>${escapeHtml(reason)}</div>`
       + '<div class="note">На доске Holst нажмите закладку <b>«Ёмкость спринта»</b> — вход перейдёт сюда сам и сохранится в этом браузере.</div>'
       + `<div class="plan"><button type="button" data-act="holst-open"${holstWait ? ' class="again"' : ''}>${holstWait ? 'Открыть Holst ещё раз' : 'Открыть Holst'}</button><button type="button" data-act="holst-cancel" class="again">Отмена</button></div>`
       + '<details><summary>Вставить вход вручную</summary><input type="password" autocomplete="off" data-holst-token placeholder="вход Holst"><div class="plan"><button type="button" data-act="holst-save" class="again">Сохранить</button></div></details>';
@@ -529,10 +584,11 @@ function sprintCapacityMount(config) {
       hideHolstLogin();
       return;
     }
-    const token = readHolstToken();
-    if (!token) showHolstLogin('Вход в Holst — один раз на этом компьютере', false, false);
-    else if (holstRejected) showHolstLogin('Holst не пустил с сохранённым входом — войдите заново', true, false);
-    else showHolstLogin('Вход в Holst сохранён. Перестал пускать — войдите заново', false, false);
+    if (holstState() === 'error') checkHolstLogin(readHolstToken(), holstBoard());
+    const [text, failed] = holstReason(holstState());
+    showHolstLogin(text, failed, false);
+    holstBoxStatus = true;
+    renderHolstKey();
   };
 
   const openHolstLogin = () => {
@@ -566,7 +622,7 @@ function sprintCapacityMount(config) {
     sendToHolst(tab, true);
   };
 
-  const takeHolstLogin = (raw, tab) => {
+  const takeHolstLogin = async (raw, tab) => {
     const token = cleanHolstToken(raw);
     if (!token) {
       holstNotify(tab, 'Это не похоже на вход Holst — войдите в Holst заново и нажмите закладку ещё раз', true);
@@ -579,11 +635,26 @@ function sprintCapacityMount(config) {
     }
     hideHolstLogin();
     if (send) {
+      renderHolstKey();
       sendWhenFree(tab);
       return;
     }
-    sprintToast('Вход в Holst сохранён');
-    holstNotify(tab, 'Вход сохранён в Kaiten — эту вкладку можно закрыть', false);
+    const board = holstBoard();
+    const check = board ? checkHolstLogin(token, board) : Promise.resolve(null);
+    renderHolstKey();
+    const state = await check;
+    if (!state) {
+      holstNotify(tab, 'Вход сохранён в Kaiten — эту вкладку можно закрыть', false);
+      return;
+    }
+    if (state === 'ok') {
+      sprintToast('Вход в Holst работает');
+      holstNotify(tab, 'Вход работает — эту вкладку можно закрыть', false);
+      return;
+    }
+    const text = state === 'rejected' ? `Holst не пускает и со свежим входом (${holstStatus.message}) — проверьте, открывается ли у вас эта доска` : `Вход в Holst сохранён, но проверить не получилось: ${holstStatus.message}`;
+    sprintToast(text, true);
+    holstNotify(tab, text, true);
   };
 
   const saveHolstLogin = async () => {
@@ -596,8 +667,9 @@ function sprintCapacityMount(config) {
     }
     stopHolstWait();
     showHolstLogin('Проверяю вход в Holst…', false, send);
+    const board = holstBoard();
     try {
-      await holstCheck(boardConfig(boardId, config).holst.board, token);
+      await holstCheck(board, token);
     } catch (error) {
       showHolstLogin(error.auth ? `Holst не принял этот вход (${error.message})` : `Не получилось проверить вход: ${error.message || error}`, true, send);
       return;
@@ -606,8 +678,10 @@ function sprintCapacityMount(config) {
       showHolstLogin('Браузер не сохранил вход — проверьте, не запрещено ли хранение данных для Kaiten', true, send);
       return;
     }
+    markHolst(token, board, 'ok');
     hideHolstLogin();
-    sprintToast(send ? 'Вход в Holst сохранён — нажмите «В Holst» ещё раз' : 'Вход в Holst сохранён');
+    renderHolstKey();
+    sprintToast(send ? 'Вход в Holst работает — нажмите «В Holst» ещё раз' : 'Вход в Holst работает');
   };
 
   const sendToHolst = async (openTab, fresh) => {
@@ -648,11 +722,11 @@ function sprintCapacityMount(config) {
       const payload = holstPayload({ cards, report: current, doneAtStart: snapshot ? snapshot.doneIds : [], histories, columns, boards, renames, sprintStart: sprint.start_date, sprintFinish: sprint.finish_date, now, config: settingsNow, holst: settingsNow.holst, kaiten: location.origin, title: boardTitle(board, config) });
       sprintToast(`${payload.title}: пишу в Holst…`);
       const result = await holstApply(payload, token);
-      holstRejected = false;
+      markHolst(token, settingsNow.holst.board, 'ok');
       sprintToast(result.text, !result.ok, result.ok ? 'ok' : 'fail', true);
       holstNotify(tab, result.text, !result.ok, true);
     } catch (error) {
-      if (error.auth) holstRejected = true;
+      if (error.auth) markHolst(token, settingsNow.holst.board, 'rejected', error.message);
       if (error.auth && !fresh) {
         tab.close();
         showHolstLogin(`Holst не пустил (${error.message}) — войдите заново`, true, true);
