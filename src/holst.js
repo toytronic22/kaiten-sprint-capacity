@@ -290,8 +290,8 @@ async function holstSprintWork() {
     const bomb = !weekend && bombsMatch && day >= 1 && payload.percent !== null ? chart.bombs[day - 1] || null : null;
     const listRun = sticker.get('sprintcap') || {};
     const lastRun = listRun.t || null;
-    const since = holstMarkWindow({ stored: listRun, sprintStart: payload.sprintStart, now });
-    const cards = holstMarkSince(payload.cards, since, now);
+    const since = payload.since;
+    const cards = payload.cards;
     const root = documents.get(sticker.get('documentId'));
     const before = holstDocItems(Y, root);
     const plan = planSticker({ items: before, cards, lastRun, cardUrl: (id) => `${payload.kaiten}/${id}` });
@@ -313,20 +313,16 @@ async function holstSprintWork() {
       const label = stored.label ? objects.get(stored.label) : null;
       const labelAlive = Boolean(label && documents.get(label.get('documentId')));
       const previous = day >= 2 && chart.bombs[day - 2] ? percentOf(chart.bombs[day - 2]) : 0;
-      const manual = typeof stored.percent === 'number' && stored.t && sameDay(stored.t, now) && !bombStoredTrusted(stored, position.y, topOf(stored.percent, size));
-      bombPlan = manual
-        ? { size, x: position.x, y: position.y, previous, manual: percentOf(bomb), changed: false }
-        : { size, x: position.x, y, previous, delta: payload.percent - previous, label: labelAlive ? label : null, changed: y !== position.y || !labelAlive || stored.percent !== payload.percent };
+      bombPlan = { size, x: position.x, y, previous, delta: payload.percent - previous, label: labelAlive ? label : null, changed: y !== position.y || !labelAlive || stored.percent !== payload.percent };
     }
     const weekday = HOLST_STYLE.weekdays[new Date(now).getDay()];
     const marked = cards.filter((item) => item.mark);
     const movedSince = lastRun === null ? null : marked.filter((item) => item.movedAt > lastRun).length;
-    const markedText = `Подсвечено карт: ${marked.length} — подвинулись ${sameDay(since, now) ? 'сегодня' : `с ${shortTime(since)}`}${movedSince === null ? '' : `, из них с прошлого обновления: ${movedSince}`}`;
+    const markedText = `Подсвечено карт: ${marked.length} — подвинулись с ${HOLST_STYLE.weekdays[new Date(since).getDay()]} ${shortTime(since).slice(0, 5)}${movedSince === null ? '' : `, из них с прошлого обновления: ${movedSince}`}`;
     const unknown = unknownColumnsText(payload.unknown);
     if (!listChanged && !(bombPlan && bombPlan.changed)) {
       history.replaceState(null, '', location.pathname + location.search);
       const why = !bombPlan ? 'список как в Kaiten'
-        : bombPlan.manual !== undefined ? `бомбу ${weekday} подвинули вручную на ${bombPlan.manual}%, её не трогаю; список как в Kaiten`
         : `бомба ${weekday} уже на ${payload.percent}%, список как в Kaiten`;
       sprintToast(`${payload.title}: обновлять нечего — ${why}${unknown ? `\nПрогресс: ${unknown}` : ''}`, true, 'fail');
       return;
@@ -358,7 +354,7 @@ async function holstSprintWork() {
       root.delete(0, root.length);
       root.applyDelta(nodes.map((node) => ({ insert: node })), { sanitize: false });
       sticker.set('horizontalAlign', 'left');
-      sticker.set('sprintcap', { t: payload.generatedAt, since });
+      sticker.set('sprintcap', { t: payload.generatedAt });
       sticker.set('updated', { a: author, t: now });
     }, 'local');
     doc.off('updateV2', listen);
@@ -366,7 +362,6 @@ async function holstSprintWork() {
     history.replaceState(null, '', location.pathname + location.search);
     const lines = [`${payload.title}: готово`];
     if (bombPlan && bombPlan.changed) lines.push(`Спринт: ${bombPlan.previous}% → ${payload.percent}% (${signed(bombPlan.delta)} за день), бомба ${weekday}, в Done ${payload.done} из ${payload.of}`);
-    else if (bombPlan && bombPlan.manual !== undefined) lines.push(`Спринт: бомбу ${weekday} подвинули вручную на ${bombPlan.manual}% — её не трогаю (по Kaiten ${payload.percent}%, в Done ${payload.done} из ${payload.of})`);
     else if (bombPlan) lines.push(`Спринт: ${payload.percent}%, бомба ${weekday} уже на месте`);
     else if (weekend) lines.push('Бомбу не двигал: выходной');
     else if (payload.percent === null) lines.push('Бомбу не двигал: в спринте нет карт');

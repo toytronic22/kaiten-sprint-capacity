@@ -139,38 +139,16 @@ function holstOldTitles(activity, title) {
   return result;
 }
 
-function holstLookback(sprintStart, now) {
-  const dayStart = localDay(now).getTime();
-  return sprintStart ? Math.min(sprintFirstDay(sprintStart).getTime(), dayStart) : dayStart;
+function holstLookback(now) {
+  const day = localDay(now);
+  do day.setDate(day.getDate() - 1); while (day.getDay() === 0 || day.getDay() === 6);
+  return day.getTime();
 }
 
-function holstMarkWindow({ stored, sprintStart, now }) {
-  const dayStart = localDay(now).getTime();
-  let since = dayStart;
-  if (stored && typeof stored.t === 'number') {
-    if (stored.t < dayStart) since = stored.t;
-    else if (typeof stored.since === 'number') since = Math.min(stored.since, dayStart);
-  }
-  return Math.max(since, holstLookback(sprintStart, now));
-}
-
-function holstMarkAt(item, since) {
-  if (!item.moves) return item.mark || null;
-  let column = null;
-  for (const [time, id] of item.moves) if (time < since) column = id;
-  return column === item.column ? null : item.kind;
-}
-
-function holstMarkSince(cards, since, now) {
-  const dayStart = localDay(now).getTime();
-  return cards.map((card) => (card.moves ? { ...card, mark: holstMarkAt(card, dayStart) || holstMarkAt(card, since) } : card));
-}
-
-function holstCards({ cards, doneAtStart = [], bugs = [], histories = {}, columns = {}, boards = {}, renames = {}, since = null, now, config }) {
+function holstCards({ cards, doneAtStart = [], bugs = [], histories = {}, columns = {}, boards = {}, renames = {}, now, config }) {
   const bugIds = new Set(bugs);
   const skip = new Set(doneAtStart);
-  const dayStart = localDay(now).getTime();
-  const lookback = since === null ? dayStart : Math.min(since, dayStart);
+  const since = holstLookback(now);
   const title = (id) => columns[id] || `колонка ${id}`;
   return cards
     .filter((card) => !(card.state === config.doneState && skip.has(card.id)))
@@ -188,18 +166,15 @@ function holstCards({ cards, doneAtStart = [], bugs = [], histories = {}, column
       const old = holstOldTitles(renames[card.id], card.title);
       if (old.length) item.old = old;
       const history = [...(histories[card.id] || [])].sort((a, b) => new Date(a.changed) - new Date(b.changed));
-      if (movedAt !== null && movedAt >= lookback && history.length) {
-        const start = columnAt(history, lookback - 1);
-        item.moves = start === null ? [] : [[lookback - 1, start]];
+      if (movedAt !== null && movedAt >= since && history.length) {
+        let column = columnAt(history, since - 1);
         for (const entry of history) {
-          const time = new Date(entry.changed).getTime();
-          if (time >= lookback) item.moves.push([time, entry.column_id]);
+          if (new Date(entry.changed).getTime() < since) continue;
+          if (entry.column_id !== column) item.mark = card.state === config.doneState ? 'done' : 'work';
+          column = entry.column_id;
         }
-        item.column = card.column_id;
-        item.kind = card.state === config.doneState ? 'done' : 'work';
         const previous = history.filter((entry) => entry.column_id !== card.column_id).pop();
-        if (previous) item.from = previous.board_id && previous.board_id !== card.board_id && boards[previous.board_id] ? boards[previous.board_id] : title(previous.column_id);
-        item.mark = holstMarkAt(item, dayStart);
+        if (item.mark && previous) item.from = previous.board_id && previous.board_id !== card.board_id && boards[previous.board_id] ? boards[previous.board_id] : title(previous.column_id);
       }
       return item;
     });
@@ -209,7 +184,7 @@ function holstHistoryIds(cards, since) {
   return cards.filter((card) => card.column_changed_at && new Date(card.column_changed_at).getTime() >= since).map((card) => card.id);
 }
 
-function holstPayload({ cards, report, doneAtStart = [], histories = {}, columns = {}, boards = {}, renames = {}, since = null, sprintStart, sprintFinish, now, config, holst, kaiten, title }) {
+function holstPayload({ cards, report, doneAtStart = [], histories = {}, columns = {}, boards = {}, renames = {}, sprintStart, sprintFinish, now, config, holst, kaiten, title }) {
   return {
     v: 1,
     board: holst.board,
@@ -220,11 +195,12 @@ function holstPayload({ cards, report, doneAtStart = [], histories = {}, columns
     sprintStart,
     sprintFinish,
     generatedAt: now,
+    since: holstLookback(now),
     percent: report.progress.percent,
     done: report.done.count,
     of: report.done.of,
     unknown: report.progress.unknown.map((item) => item.column),
-    cards: holstCards({ cards, doneAtStart, bugs: report.bugs.cards.map((item) => item.id), histories, columns, boards, renames, since, now, config }),
+    cards: holstCards({ cards, doneAtStart, bugs: report.bugs.cards.map((item) => item.id), histories, columns, boards, renames, now, config }),
   };
 }
 
@@ -532,4 +508,4 @@ function holstSprintId(cards) {
   return best;
 }
 
-if (typeof module !== 'undefined') module.exports = { HOLST_BLOCKS, HOLST_STYLE, HOLST_HASH, normalizeTitle, blockOfColumn, blockInfo, blockOrder, encodeHolstPayload, decodeHolstPayload, workingDayIndex, sprintBombCount, shortTime, bombTop, columnAt, holstLookback, holstMarkWindow, holstMarkAt, holstMarkSince, holstCards, holstHistoryIds, holstPayload, unknownColumnsText, holstForeignBoards, holstColumns, holstSprintId, holstPayloadStale, holstOldTitles, readStickerLines, planSticker, kaitenCardId, stripMarker, updatedLine, stickerSignature, bombPercent, isWeekend, signed, bombLabelItems, bombStoredTrusted, sameDay };
+if (typeof module !== 'undefined') module.exports = { HOLST_BLOCKS, HOLST_STYLE, HOLST_HASH, normalizeTitle, blockOfColumn, blockInfo, blockOrder, encodeHolstPayload, decodeHolstPayload, workingDayIndex, sprintBombCount, shortTime, bombTop, columnAt, holstLookback, holstCards, holstHistoryIds, holstPayload, unknownColumnsText, holstForeignBoards, holstColumns, holstSprintId, holstPayloadStale, holstOldTitles, readStickerLines, planSticker, kaitenCardId, stripMarker, updatedLine, stickerSignature, bombPercent, isWeekend, signed, bombLabelItems, bombStoredTrusted, sameDay };
