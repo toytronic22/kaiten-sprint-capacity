@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const H = require('../src/holst-core.js');
-const { SPRINT_CAPACITY } = require('../src/core.js');
+const { SPRINT_CAPACITY, buildReport, defaultSettings } = require('../src/core.js');
 
 const url = (id) => `https://dodopizza.kaiten.ru/${id}`;
 const text = (value, marks) => (marks ? { text: value, marks } : { text: value });
@@ -320,4 +320,32 @@ test('бомба, подвинутая руками, важнее записи �
   assert.equal(H.bombStoredTrusted(null, 1000, 1000), false);
   assert.equal(H.sameDay(new Date(2026, 8, 30, 0, 5).getTime(), new Date(2026, 8, 30, 23, 55).getTime()), true);
   assert.equal(H.sameDay(new Date(2026, 8, 29, 23, 55).getTime(), new Date(2026, 8, 30, 0, 5).getTime()), false);
+});
+
+test('Payload для Holst: процент — прогресс по стадиям и SP, Done — число карт, незнакомые колонки передаются', () => {
+  // Arrange
+  const cards = [
+    { id: 1, title: 'Первая', state: 2, column: { title: 'Review' }, size: 4, properties: {} },
+    { id: 2, title: 'Вторая', state: 3, column: { title: 'Done' }, size: 1, properties: {} },
+    { id: 3, title: 'Третья', state: 1, column: { title: 'Blocked' }, size: 1, properties: {} },
+  ];
+  const report = buildReport({ cards, settings: defaultSettings() });
+
+  // Act
+  const payload = H.holstPayload({ cards, report, sprintStart: '2026-09-27T21:00:00.000Z', sprintFinish: '2026-10-11T20:59:59.999Z', now: Date.parse('2026-09-30T10:00:00Z'), config: SPRINT_CAPACITY, holst: { board: 'b', group: 'g', sticker: 's' }, kaiten: 'https://dodopizza.kaiten.ru', title: 'Staff Core' });
+
+  // Assert
+  assert.deepEqual([payload.percent, payload.done, payload.of, payload.unknown], [60, 1, 3, ['Blocked']]);
+});
+
+test('Незнакомые колонки: называются с числом карт, пусто — без текста', () => {
+  // Act
+  const one = H.unknownColumnsText(['Blocked', 'Blocked']);
+  const many = H.unknownColumnsText(['Blocked', '', 'Blocked']);
+
+  // Assert
+  assert.equal(one, 'не знаю колонку «Blocked» (карт: 2) — считаю как To Do, 0%');
+  assert.equal(many, 'не знаю колонки «Blocked» (карт: 2), «?» (карт: 1) — считаю как To Do, 0%');
+  assert.equal(H.unknownColumnsText([]), null);
+  assert.equal(H.unknownColumnsText(undefined), null);
 });

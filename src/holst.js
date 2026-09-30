@@ -318,12 +318,13 @@ async function holstSprintWork() {
     const weekday = HOLST_STYLE.weekdays[new Date(now).getDay()];
     const movedToday = payload.cards.filter((item) => item.mark).length;
     const movedSince = lastRun === null ? null : payload.cards.filter((item) => item.mark && item.movedAt > lastRun).length;
+    const unknown = unknownColumnsText(payload.unknown);
     if (!listChanged && !(bombPlan && bombPlan.changed)) {
       history.replaceState(null, '', location.pathname + location.search);
       const why = !bombPlan ? 'список как в Kaiten'
         : bombPlan.manual !== undefined ? `бомбу ${weekday} подвинули вручную на ${bombPlan.manual}%, её не трогаю; список как в Kaiten`
         : `бомба ${weekday} уже на ${payload.percent}%, список как в Kaiten`;
-      sprintToast(`${payload.title}: обновлять нечего — ${why}`, true, 'fail');
+      sprintToast(`${payload.title}: обновлять нечего — ${why}${unknown ? `\nПрогресс: ${unknown}` : ''}`, true, 'fail');
       return;
     }
     const author = (sticker.get('updated') || sticker.get('created')).a;
@@ -360,8 +361,8 @@ async function holstSprintWork() {
     for (const update of updates) await send(update);
     history.replaceState(null, '', location.pathname + location.search);
     const lines = [`${payload.title}: готово`];
-    if (bombPlan && bombPlan.changed) lines.push(`Спринт: ${bombPlan.previous}% → ${payload.percent}% (${signed(bombPlan.delta)} за день), бомба ${weekday}, ${payload.done} из ${payload.of}`);
-    else if (bombPlan && bombPlan.manual !== undefined) lines.push(`Спринт: бомбу ${weekday} подвинули вручную на ${bombPlan.manual}% — её не трогаю (по Kaiten ${payload.percent}%, ${payload.done} из ${payload.of})`);
+    if (bombPlan && bombPlan.changed) lines.push(`Спринт: ${bombPlan.previous}% → ${payload.percent}% (${signed(bombPlan.delta)} за день), бомба ${weekday}, в Done ${payload.done} из ${payload.of}`);
+    else if (bombPlan && bombPlan.manual !== undefined) lines.push(`Спринт: бомбу ${weekday} подвинули вручную на ${bombPlan.manual}% — её не трогаю (по Kaiten ${payload.percent}%, в Done ${payload.done} из ${payload.of})`);
     else if (bombPlan) lines.push(`Спринт: ${payload.percent}%, бомба ${weekday} уже на месте`);
     else if (weekend) lines.push('Бомбу не двигал: выходной');
     else if (payload.percent === null) lines.push('Бомбу не двигал: в спринте нет карт');
@@ -370,6 +371,7 @@ async function holstSprintWork() {
     else lines.push(`Бомбу не двигал: на графике ${chart.bombs.length} бомб, а сегодня ${day}-й рабочий день`);
     lines.push(movedSince === null ? `Карт подвинулось сегодня: ${movedToday}` : `Карт подвинулось сегодня: ${movedToday}, с прошлого обновления: ${movedSince}`);
     lines.push(`Список: ${plan.stats.cards} карт, оставил на месте ${plan.stats.kept}`);
+    if (unknown) lines.push(`Прогресс: ${unknown}`);
     if (plan.stats.renamed) lines.push(`Обновил названия: ${plan.stats.renamed}`);
     if (plan.stats.gone) lines.push(`Убрал карт не из спринта: ${plan.stats.gone}`);
     if (plan.stats.manual) lines.push(`Строк без карты не тронул: ${plan.stats.manual}`);

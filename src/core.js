@@ -11,6 +11,7 @@ const SPRINT_CAPACITY = {
   doneState: 3,
   bugTypeIds: [446247],
   bugTypeName: /bug|баг/i,
+  progress: { stages: { 'to do': 0, doing: 0.3, review: 0.65, 'design review': 0.8, test: 0.8, 'waiting for release': 0.97, done: 1 }, bugWeight: 1, emptyWeight: 1 },
 };
 
 const DIRECTIONS = ['back', 'front', 'qa'];
@@ -82,6 +83,22 @@ function splitEstimate({ size, sp }) {
   return { dev: Math.min(size, sp), qa: Math.abs(size - sp) };
 }
 
+function columnTitle(card) {
+  return String((card.column && card.column.title) || '').trim();
+}
+
+function progressStage(card, config = SPRINT_CAPACITY) {
+  if (card.state === config.doneState) return 1;
+  const name = columnTitle(card).toLowerCase().replace(/\s+/g, ' ');
+  return Object.prototype.hasOwnProperty.call(config.progress.stages, name) ? config.progress.stages[name] : null;
+}
+
+function progressWeight(card, config = SPRINT_CAPACITY) {
+  if (isBug(card, config)) return config.progress.bugWeight;
+  const parts = splitEstimate(readEstimate(card, config));
+  return parts.dev === null ? config.progress.emptyWeight : Math.max(0, parts.dev + parts.qa);
+}
+
 function estimateIssues(estimate, platform, needQa) {
   const parts = splitEstimate(estimate);
   if (parts.dev === null) return ['noEstimate'];
@@ -136,6 +153,7 @@ function buildReport({ cards, settings, snapshot = null, planEnd = null, config 
     bugs: { cards: [], points: 0 },
     board: { cards: [], points: 0 },
     done: { cards: [], points: 0, count: 0, of: 0, percent: null },
+    progress: { points: 0, done: 0, percent: null, unknown: [] },
     problems: [],
   };
   let hasDevField = false;
@@ -153,6 +171,11 @@ function buildReport({ cards, settings, snapshot = null, planEnd = null, config 
     const item = { id: card.id, title: card.title || '', platform, estimate, parts };
     report.done.of += 1;
     if (card.state === config.doneState) report.done.count += 1;
+    const weight = progressWeight(card, config);
+    const stage = progressStage(card, config);
+    report.progress.points += weight;
+    report.progress.done += weight * (stage || 0);
+    if (stage === null) report.progress.unknown.push({ id: card.id, title: item.title, column: columnTitle(card) });
     if (isBug(card, config)) {
       report.bugs.cards.push(item);
       report.bugs.points += total;
@@ -191,6 +214,9 @@ function buildReport({ cards, settings, snapshot = null, planEnd = null, config 
   });
   report.done.percent = percentOf(report.done.count, report.done.of);
   report.done.pointsPercent = percentOf(report.done.points, report.board.points);
+  report.progress.percent = percentOf(report.progress.done, report.progress.points);
+  report.progress.points = round1(report.progress.points);
+  report.progress.done = round1(report.progress.done);
   report.notCounted.points = round1(report.notCounted.points);
   report.bugs.points = round1(report.bugs.points);
   report.board.points = round1(report.board.points);
@@ -308,4 +334,4 @@ function planEndFromComments(comments, snapshot) {
   return null;
 }
 
-if (typeof module !== 'undefined') module.exports = { SPRINT_CAPACITY, DIRECTIONS, DIRECTION_LABELS, toNumber, round1, formatNumber, plural, readEstimate, platformOf, needsQa, isBug, splitEstimate, estimateIssues, defaultSettings, normalizeSettings, capacityOf, buildReport, boardConfig, isChaos, chaosNames, formatRow, takeSnapshot, takePlanEnd, normalizeSnapshot, boardTitle, snapshotComment, snapshotFromComments, planEndComment, planEndFromComments };
+if (typeof module !== 'undefined') module.exports = { SPRINT_CAPACITY, DIRECTIONS, DIRECTION_LABELS, toNumber, round1, formatNumber, plural, readEstimate, platformOf, needsQa, isBug, splitEstimate, progressStage, progressWeight, estimateIssues, defaultSettings, normalizeSettings, capacityOf, buildReport, boardConfig, isChaos, chaosNames, formatRow, takeSnapshot, takePlanEnd, normalizeSnapshot, boardTitle, snapshotComment, snapshotFromComments, planEndComment, planEndFromComments };

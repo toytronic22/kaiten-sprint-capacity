@@ -509,3 +509,131 @@ test('склонение слова «карта»', () => {
   // Assert
   assert.deepEqual(actual, ['карта', 'карты', 'карт', 'карт', 'карта', 'карты', 'карт']);
 });
+
+function inColumn(item, title) {
+  return { ...item, column: { title } };
+}
+
+function progressOf(cards, options = {}) {
+  return core.buildReport({ cards, settings: core.defaultSettings(), ...options }).progress;
+}
+
+test('прогресс спринта: вес карты — её SP, готовность — по колонке', () => {
+  // Arrange
+  const cards = [
+    inColumn(card(1, { size: 2, sp: 2 }), 'To Do'),
+    inColumn(card(2, { size: 10, sp: 5 }), 'Doing'),
+    inColumn(card(3, { size: 4 }), 'Review'),
+    inColumn(card(4, { sp: 5 }), 'Test'),
+    inColumn(card(5, { size: 3, sp: 3 }), 'Waiting for release'),
+    inColumn(card(6, { size: 6, sp: 6, state: DONE }), 'Done'),
+  ];
+
+  // Act
+  const progress = progressOf(cards);
+
+  // Assert
+  assert.deepEqual([progress.points, progress.done, progress.percent], [30, 18.5, 62]);
+  assert.deepEqual(progress.unknown, []);
+});
+
+test('прогресс спринта: Design Review готова, как Test, на 80%', () => {
+  // Arrange
+  const cards = [inColumn(card(1, { size: 5 }), 'Design Review'), inColumn(card(2, { size: 5 }), 'To Do')];
+
+  // Act
+  const progress = progressOf(cards);
+
+  // Assert
+  assert.equal(progress.percent, 40);
+});
+
+test('прогресс спринта: любой баг весит 1 SP, даже с оценкой; карта без оценки — тоже 1 SP', () => {
+  // Arrange
+  const cards = [
+    inColumn(card(1, { size: 8, sp: 5, type: WEB_BUG }), 'Doing'),
+    inColumn(card(2, { type: WEB_BUG }), 'Done'),
+    inColumn(card(3), 'Review'),
+    inColumn(card(4, { size: 1, sp: 1 }), 'To Do'),
+  ];
+
+  // Act
+  const progress = progressOf(cards);
+
+  // Assert
+  assert.deepEqual([progress.points, progress.percent], [4, 49]);
+});
+
+test('прогресс спринта: изменились SP — прогресс пересчитан', () => {
+  // Arrange
+  const done = inColumn(card(1, { size: 2, sp: 2, state: DONE }), 'Done');
+  const before = inColumn(card(2, { size: 2, sp: 2 }), 'To Do');
+  const after = inColumn(card(2, { size: 6, sp: 3 }), 'To Do');
+
+  // Act
+  const was = progressOf([done, before]);
+  const now = progressOf([done, after]);
+
+  // Assert
+  assert.deepEqual([was.percent, now.percent], [50, 25]);
+});
+
+test('прогресс спринта: незнакомая колонка считается как To Do и называется; регистр и пробелы не мешают', () => {
+  // Arrange
+  const cards = [
+    inColumn(card(1, { size: 3 }), 'Blocked'),
+    inColumn(card(2, { size: 1 }), '  waiting   for  RELEASE '),
+    inColumn(card(3, { size: 1 }), ''),
+    card(4, { size: 1, state: DONE }),
+  ];
+
+  // Act
+  const progress = progressOf(cards);
+
+  // Assert
+  assert.equal(progress.percent, 33);
+  assert.deepEqual(progress.unknown, [{ id: 1, title: 'Карта 1', column: 'Blocked' }, { id: 3, title: 'Карта 3', column: '' }]);
+});
+
+test('прогресс спринта: карта в Done считается готовой по состоянию, бывшие в Done на начало спринта не считаются', () => {
+  // Arrange
+  const old = inColumn(card(1, { size: 20, state: DONE }), 'Done');
+  const finished = inColumn(card(2, { size: 2, state: DONE }), 'Архив');
+  const open = inColumn(card(3, { size: 2 }), 'To Do');
+  const snapshot = core.takeSnapshot({ cards: [old, open], settings: core.defaultSettings(), now: 0, boardId: CORE_BOARD });
+
+  // Act
+  const progress = progressOf([old, finished, open], { snapshot });
+
+  // Assert
+  assert.deepEqual([progress.points, progress.percent, progress.unknown], [4, 50, []]);
+});
+
+test('прогресс спринта: без карт процента нет, карты с оценкой 0 не весят', () => {
+  // Act
+  const empty = progressOf([]);
+  const zero = progressOf([inColumn(card(1, { size: 0, sp: 0 }), 'Done')]);
+
+  // Assert
+  assert.equal(empty.percent, null);
+  assert.deepEqual([zero.points, zero.percent], [0, null]);
+});
+
+test('прогресс спринта 28.09–11.10 на доске Staff Core 30.09: 32%', () => {
+  // Arrange
+  const rows = [
+    ['Doing', 13, 8, 0], ['Doing', null, null, 1], ['Doing', 2, 2, 0], ['To Do', 2, 2, 0], ['Review', 2, null, 0], ['To Do', 3, 3, 0],
+    ['Done', null, null, 1], ['To Do', 3, 2, 0], ['Review', 6, 3, 0], ['Waiting for release', 5, 3, 0], ['Review', 5, 2, 0],
+    ['Waiting for release', 2, 3, 0], ['Doing', 10, 5, 0], ['Test', null, null, 1], ['To Do', 8, 5, 0], ['To Do', 7, 5, 0],
+    ['To Do', 5, 5, 0], ['To Do', 1, 1, 0], ['To Do', null, null, 1], ['To Do', 1, 1, 0], ['Test', null, null, 1], ['Test', null, null, 1],
+    ['Waiting for release', null, null, 1], ['Waiting for release', null, null, 1], ['To Do', 3, 3, 0], ['Doing', 2, 1, 0],
+    ['To Do', 2, 1, 0], ['Test', null, null, 1], ['To Do', 2, 1, 0], ['To Do', 1, 1, 0],
+  ];
+  const cards = rows.map(([column, size, sp, bug], index) => inColumn(card(index + 1, { size, sp, state: column === 'Done' ? DONE : 2, type: bug ? WEB_BUG : null }), column));
+
+  // Act
+  const progress = progressOf(cards);
+
+  // Assert
+  assert.deepEqual([progress.points, progress.percent], [95, 32]);
+});

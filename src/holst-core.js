@@ -187,11 +187,20 @@ function holstPayload({ cards, report, doneAtStart = [], histories = {}, columns
     sprintStart,
     sprintFinish,
     generatedAt: now,
-    percent: report.done.percent,
+    percent: report.progress.percent,
     done: report.done.count,
     of: report.done.of,
+    unknown: report.progress.unknown.map((item) => item.column),
     cards: holstCards({ cards, doneAtStart, histories, columns, boards, renames, now, config }),
   };
+}
+
+function unknownColumnsText(columns) {
+  const counts = new Map();
+  for (const column of columns || []) counts.set(column || '?', (counts.get(column || '?') || 0) + 1);
+  if (!counts.size) return null;
+  const list = [...counts].map(([column, count]) => `«${column}» (карт: ${count})`).join(', ');
+  return `не знаю ${counts.size > 1 ? 'колонки' : 'колонку'} ${list} — считаю как To Do, 0%`;
 }
 
 function runsText(runs) {
@@ -491,4 +500,4 @@ function holstSprintId(cards) {
   return best;
 }
 
-if (typeof module !== 'undefined') module.exports = { HOLST_BLOCKS, HOLST_STYLE, HOLST_HASH, normalizeTitle, blockOfColumn, blockInfo, blockOrder, encodeHolstPayload, decodeHolstPayload, workingDayIndex, sprintBombCount, shortTime, bombTop, columnAt, holstCards, holstHistoryIds, holstPayload, holstForeignBoards, holstColumns, holstSprintId, holstPayloadStale, holstOldTitles, readStickerLines, planSticker, kaitenCardId, stripMarker, updatedLine, stickerSignature, bombPercent, isWeekend, signed, bombLabelItems, bombStoredTrusted, sameDay };
+if (typeof module !== 'undefined') module.exports = { HOLST_BLOCKS, HOLST_STYLE, HOLST_HASH, normalizeTitle, blockOfColumn, blockInfo, blockOrder, encodeHolstPayload, decodeHolstPayload, workingDayIndex, sprintBombCount, shortTime, bombTop, columnAt, holstCards, holstHistoryIds, holstPayload, unknownColumnsText, holstForeignBoards, holstColumns, holstSprintId, holstPayloadStale, holstOldTitles, readStickerLines, planSticker, kaitenCardId, stripMarker, updatedLine, stickerSignature, bombPercent, isWeekend, signed, bombLabelItems, bombStoredTrusted, sameDay };

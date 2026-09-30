@@ -188,6 +188,8 @@ const ISSUE_LABELS = {
   noEstimate: 'Без оценки',
 };
 
+const PROGRESS_HINT = 'Прогресс спринта: карта весит свои SP, баг и карта без оценки — 1 SP. Готовность по колонке: To Do 0%, Doing 30%, Review 65%, Design Review и Test 80%, Waiting for release 97%, Done 100%';
+
 function escapeHtml(value) {
   const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
   return String(value).replace(/[&<>"']/g, (char) => map[char]);
@@ -278,6 +280,8 @@ function sprintCapacityMount(config) {
     if (data.error) messages.push(`${data.error.message || data.error}${data.loadedAt ? ` — цифры на ${clockTime(data.loadedAt)}` : ''}`);
     if (data.snapshotError) messages.push(`Общий снимок: ${data.snapshotError.message || data.snapshotError}`);
     if (report) messages.push(...report.problems);
+    const unknown = report ? unknownColumnsText(report.progress.unknown.map((item) => item.column)) : null;
+    if (unknown) messages.push(`Прогресс: ${unknown}`);
     if (storageBroken) messages.push('Браузер не сохраняет вписанное');
     $('.status').innerHTML = messages.map((message) => `<div class="error">${escapeHtml(message)}</div>`).join('');
     $('[data-act="refresh"]').disabled = data.busy;
@@ -316,7 +320,10 @@ function sprintCapacityMount(config) {
     const plan = `<div class="plan"><button type="button" data-act="start-planning"${snapshot ? ' class="again"' : ''}${data.busy ? ' disabled' : ''}>Начать планирование</button>${since}</div>`;
     const endSince = planEnd ? `<span title="${escapeHtml(planEnd.author)}">${snapshotTime(planEnd.takenAt)}</span>` : '';
     const end = snapshot ? `<div class="plan"><button type="button" data-act="end-planning"${planEnd ? ' class="again"' : ''}${data.busy ? ' disabled' : ''}>Закончить планирование</button>${endSince}</div>` : '';
-    const holst = boardConfig(boardId, config).holst ? `<div class="plan"><button type="button" data-act="to-holst" class="again"${data.busy ? ' disabled' : ''}>В Holst</button><span>бомба и розовый список</span></div>` : '';
+    const progress = `<b>${report.progress.percent === null ? '—' : `${report.progress.percent}%`}</b>`;
+    const holst = boardConfig(boardId, config).holst
+      ? `<div class="plan"><button type="button" data-act="to-holst" class="again"${data.busy ? ' disabled' : ''}>В Holst</button><span title="${escapeHtml(PROGRESS_HINT)}">прогресс ${progress} · бомба и розовый список</span></div>`
+      : `<div class="plan"><span title="${escapeHtml(PROGRESS_HINT)}">Прогресс спринта ${progress}</span></div>`;
     box.innerHTML = rows + legend + done + plan + end + holst;
   };
 
