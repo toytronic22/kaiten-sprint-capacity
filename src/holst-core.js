@@ -13,10 +13,9 @@ const HOLST_STYLE = {
   done: 0xBFEBC4,
   note: 0x8A8A8A,
   noteSize: 10,
-  bomb: '💣',
   bug: '🐞',
-  line: 'red8',
-  lineWidth: 8,
+  percentSize: 22,
+  percentNoteSize: 12,
   weekdays: ['ВС', 'ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ'],
 };
 
@@ -54,47 +53,10 @@ function localDay(value) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
-function sprintFirstDay(start) {
-  return localDay(new Date(start).getTime() + 12 * 3600000);
-}
-
-function workingDayIndex(start, now) {
-  const first = sprintFirstDay(start);
-  const today = localDay(now);
-  if (today < first) return -1;
-  let index = 0;
-  for (let day = new Date(first); day < today; day.setDate(day.getDate() + 1)) {
-    const next = new Date(day);
-    next.setDate(next.getDate() + 1);
-    if (next.getDay() !== 0 && next.getDay() !== 6) index += 1;
-  }
-  return index;
-}
-
-function sprintBombCount(start, finish) {
-  if (!start || !finish) return null;
-  const length = Math.round((new Date(finish) - new Date(start)) / 86400000);
-  const day = sprintFirstDay(start);
-  let count = 0;
-  for (let index = 1; index < length; index += 1) {
-    day.setDate(day.getDate() + 1);
-    if (day.getDay() !== 0 && day.getDay() !== 6) count += 1;
-  }
-  return count;
-}
-
 function shortTime(value) {
   const date = new Date(value);
   const pad = (number) => String(number).padStart(2, '0');
   return `${pad(date.getDate())}.${pad(date.getMonth() + 1)} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
-
-function bombTop({ percent, labels, axisY, size }) {
-  const rows = labels.lines;
-  const row = ((100 - Math.min(Math.max(percent, 0), 100)) / 100) * (rows - 1);
-  const center = labels.top + ((row + 0.5) * labels.height) / rows;
-  const lowest = axisY - 21;
-  return Math.round(Math.min(center, lowest) - size / 2);
 }
 
 function columnAt(history, time) {
@@ -164,17 +126,15 @@ function holstHistoryIds(cards, since) {
   return cards.filter((card) => card.column_changed_at && new Date(card.column_changed_at).getTime() >= since).map((card) => card.id);
 }
 
-function holstPayload({ cards, report, doneAtStart = [], histories = {}, columns = {}, boards = {}, renames = {}, sprintStart, sprintFinish, now, config, holst, kaiten, title }) {
+function holstPayload({ cards, report, doneAtStart = [], histories = {}, columns = {}, boards = {}, renames = {}, now, config, holst, kaiten, title }) {
   return {
     v: 1,
     board: holst.board,
     group: holst.group,
     sticker: holst.sticker,
-    chart: { labels: holst.labels || null, axis: holst.axis || null, bombs: holst.bombs || [] },
+    chart: { labels: holst.labels || null, axis: holst.axis || null },
     title,
     kaiten,
-    sprintStart,
-    sprintFinish,
     generatedAt: now,
     since: holstLookback(now),
     percent: report.progress.percent,
@@ -424,36 +384,16 @@ function stickerSignature(items) {
   }));
 }
 
-function bombPercent({ top, labels, axisY, size }) {
-  const lowest = axisY - 21;
-  const center = top + size / 2;
-  if (center >= lowest - 1) return 0;
-  const row = ((center - labels.top) * labels.lines) / labels.height - 0.5;
-  return Math.round(Math.min(Math.max(100 - (row / (labels.lines - 1)) * 100, 0), 100));
-}
-
-function isWeekend(now) {
-  const day = new Date(now).getDay();
-  return day === 0 || day === 6;
-}
-
-function bombStoredTrusted(stored, top, storedTop) {
-  return Boolean(stored && typeof stored.percent === 'number' && Math.abs(top - storedTop) <= 2);
-}
-
-function sameDay(a, b) {
-  return localDay(a).getTime() === localDay(b).getTime();
-}
-
-function signed(number) {
-  return number > 0 ? `+${number}` : String(number);
-}
-
-function bombLabelItems({ previous, percent, now }) {
+function percentLabelItems({ percent, now }) {
   return [
-    { type: 'paragraph', runs: [{ text: `${previous}% → ${percent}% (${signed(percent - previous)})`, marks: { bold: true } }] },
-    { type: 'paragraph', runs: [{ text: shortTime(now), marks: { color: HOLST_STYLE.note } }] },
+    { type: 'paragraph', runs: [{ text: `${percent}%`, marks: { bold: true, fontSize: HOLST_STYLE.percentSize } }] },
+    { type: 'paragraph', runs: [{ text: `Обновлено ${shortTime(now)}`, marks: { color: HOLST_STYLE.note, fontSize: HOLST_STYLE.percentNoteSize } }] },
   ];
+}
+
+function percentLabelPlace({ top, left, textScale, zIndex = 0 }) {
+  const height = (HOLST_STYLE.percentSize + HOLST_STYLE.percentNoteSize) * 1.5 * textScale;
+  return { x: Math.round(left + 7 * textScale), y: Math.round(top - height - 5 * textScale), textScale, zIndex: zIndex + 0.5 };
 }
 
 function holstForeignBoards(cards, histories) {
@@ -472,14 +412,6 @@ function holstColumns(board) {
     for (const sub of column.subcolumns || []) columns[sub.id] = sub.title;
   }
   return columns;
-}
-
-function holstSprintId(cards) {
-  const counts = new Map();
-  for (const card of cards) if (card.sprint_id) counts.set(card.sprint_id, (counts.get(card.sprint_id) || 0) + 1);
-  let best = null;
-  for (const [id, count] of counts) if (best === null || count > counts.get(best)) best = id;
-  return best;
 }
 
 function holstReadMessages(dec, bytes, board) {
@@ -546,46 +478,17 @@ function holstSyncQueue({ apply, fetchLink, onResponse, onAck, onSynced, onError
   };
 }
 
-function isBombText(text) {
-  return String(text || '').replace(/️/g, '') === HOLST_STYLE.bomb;
-}
-
 function holstChart({ objects, group, chart = {} }) {
   const byId = new Map(objects.map((item) => [item.id, item]));
   const inGroup = (item) => Boolean(group) && item.parentId === group;
   const isScale = (item) => Boolean(item && item.type === 'simple-text' && item.position && item.lines && item.lines.length > 1);
   const span = (item) => Math.abs(item.end.x - item.start.x);
   const isAxis = (item) => Boolean(item && item.type === 'arrow' && !item.mine && item.start && item.end && Math.abs(item.start.y - item.end.y) <= Math.max(2, 0.02 * span(item)));
-  const isBomb = (item) => Boolean(item && item.type === 'stamp' && item.position && isBombText(item.text));
   const scale = isScale(byId.get(chart.labels)) ? byId.get(chart.labels) : objects.find((item) => inGroup(item) && isScale(item) && item.lines[0].trim() === '100') || null;
   const axis = isAxis(byId.get(chart.axis)) ? byId.get(chart.axis) : objects.filter((item) => inGroup(item) && isAxis(item)).sort((a, b) => span(b) - span(a))[0] || null;
-  if (!scale) return { problem: 'не нашёл на доске шкалу графика «100 … 0»', bombs: [], notes: [] };
-  if (!axis) return { problem: 'не нашёл на доске ось графика', bombs: [], notes: [] };
-  const lineHeight = parseFloat(scale.lineHeight || '150') / 100;
-  const labels = { top: scale.position.y, height: scale.lines.length * 14 * (scale.textScale || 1) * lineHeight, lines: scale.lines.length };
-  const axisY = (axis.start.y + axis.end.y) / 2;
-  const left = Math.min(axis.start.x, axis.end.x);
-  const right = Math.max(axis.start.x, axis.end.x);
-  const wanted = chart.bombs || [];
-  const found = wanted.map((id) => byId.get(id)).filter(isBomb);
-  if (wanted.length && found.length === wanted.length) return { labels, axisY, bombs: found, notes: [], problem: null };
-  const near = (item) => item.position.x >= left - 100 && item.position.x <= right + 100 && item.position.y >= labels.top - 400 && item.position.y <= axisY + 100;
-  const bombs = objects.filter((item) => isBomb(item) && near(item)).sort((a, b) => a.position.x - b.position.x);
-  const notes = wanted.length ? [`Не все бомбы из настроек нашлись на доске (есть ${found.length} из ${wanted.length}) — искал по месту на графике`] : [];
-  return { labels, axisY, bombs, notes, problem: null };
-}
-
-function bombLinePlan({ bombs, upTo }) {
-  const create = [];
-  const remove = [];
-  bombs.forEach((bomb, index) => {
-    const wanted = index >= 1 && index <= upTo;
-    const from = index >= 1 ? bombs[index - 1].id : null;
-    const good = Boolean(wanted && bomb.line && bomb.line.from === from && bomb.line.to === bomb.id);
-    if (bomb.line && !good) remove.push({ index, id: bomb.line.id });
-    if (wanted && !good) create.push({ index, from, to: bomb.id });
-  });
-  return { create, remove };
+  if (!scale) return { problem: 'не нашёл на доске шкалу графика «100 … 0»' };
+  if (!axis) return { problem: 'не нашёл на доске ось графика' };
+  return { top: scale.position.y, left: Math.min(axis.start.x, axis.end.x), textScale: scale.textScale || 1, zIndex: scale.zIndex || 0, problem: null };
 }
 
 function charEm(char) {
@@ -638,4 +541,4 @@ function stickerFit({ items, width, height, textScale = 1, k = 1 }) {
 }
 
 
-if (typeof module !== 'undefined') module.exports = { HOLST_BLOCKS, HOLST_STYLE, normalizeTitle, blockOfColumn, blockInfo, blockOrder, workingDayIndex, sprintBombCount, shortTime, bombTop, columnAt, holstLookback, holstCards, holstHistoryIds, holstPayload, unknownColumnsText, holstForeignBoards, holstColumns, holstSprintId, holstOldTitles, readStickerLines, planSticker, kaitenCardId, stripMarker, updatedLine, stickerSignature, bombPercent, isWeekend, signed, bombLabelItems, bombStoredTrusted, sameDay, HOLST_NULL_DOC, HOLST_FIT, holstReadMessages, holstSyncQueue, isBombText, holstChart, bombLinePlan, runsEm, stickerFont, stickerScale, stickerFit, runsText };
+if (typeof module !== 'undefined') module.exports = { HOLST_BLOCKS, HOLST_STYLE, normalizeTitle, blockOfColumn, blockInfo, blockOrder, shortTime, columnAt, holstLookback, holstCards, holstHistoryIds, holstPayload, unknownColumnsText, holstForeignBoards, holstColumns, holstOldTitles, readStickerLines, planSticker, kaitenCardId, stripMarker, updatedLine, stickerSignature, HOLST_NULL_DOC, HOLST_FIT, holstReadMessages, holstSyncQueue, holstChart, percentLabelItems, percentLabelPlace, runsEm, stickerFont, stickerScale, stickerFit, runsText };

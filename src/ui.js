@@ -706,9 +706,6 @@ function sprintCapacityMount(config) {
       const now = Date.now();
       const current = buildReport({ cards, settings, snapshot, planEnd, config: settingsNow });
       const columns = holstColumns(boardJson);
-      const sprintId = holstSprintId(cards);
-      if (!sprintId) throw new Error('у карт доски нет спринта');
-      const sprint = await kaitenSprint(sprintId);
       const since = holstLookback(now);
       const historyIds = holstHistoryIds(cards, since);
       const [historyList, activityList] = await Promise.all([
@@ -720,7 +717,7 @@ function sprintCapacityMount(config) {
       const foreignIds = holstForeignBoards(cards, histories);
       const foreignList = await Promise.all(foreignIds.map((id) => kaitenBoard(id)));
       const boards = Object.fromEntries(foreignIds.map((id, index) => [id, foreignList[index].title]));
-      const payload = holstPayload({ cards, report: current, doneAtStart: snapshot ? snapshot.doneIds : [], histories, columns, boards, renames, sprintStart: sprint.start_date, sprintFinish: sprint.finish_date, now, config: settingsNow, holst: settingsNow.holst, kaiten: location.origin, title: boardTitle(board, config) });
+      const payload = holstPayload({ cards, report: current, doneAtStart: snapshot ? snapshot.doneIds : [], histories, columns, boards, renames, now, config: settingsNow, holst: settingsNow.holst, kaiten: location.origin, title: boardTitle(board, config) });
       sprintToast(`${payload.title}: пишу в Holst…`);
       const result = await holstApply(payload, token);
       markHolst(token, settingsNow.holst.board, 'ok');

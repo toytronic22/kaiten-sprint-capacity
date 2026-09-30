@@ -11,29 +11,6 @@ const lineTexts = (items) => items.map((item) => item.runs.map((run) => run.text
 
 const card = (id, title, block, extra = {}) => ({ id, title, block, movedAt: Date.parse('2026-09-29T10:00:00Z'), mark: null, from: null, ...extra });
 
-test('Рабочий день спринта: понедельник старта — ноль, выходные пропускаются', () => {
-  const start = new Date(2026, 8, 28, 2, 0);
-  assert.equal(H.workingDayIndex(start, new Date(2026, 8, 28, 18)), 0);
-  assert.equal(H.workingDayIndex(start, new Date(2026, 8, 29, 9)), 1);
-  assert.equal(H.workingDayIndex(start, new Date(2026, 8, 30, 23, 59)), 2);
-  assert.equal(H.workingDayIndex(start, new Date(2026, 9, 2, 12)), 4);
-  assert.equal(H.workingDayIndex(start, new Date(2026, 9, 3, 12)), 4);
-  assert.equal(H.workingDayIndex(start, new Date(2026, 9, 5, 12)), 5);
-  assert.equal(H.workingDayIndex(start, new Date(2026, 9, 9, 12)), 9);
-  assert.equal(H.workingDayIndex(start, new Date(2026, 8, 27, 12)), -1);
-});
-
-test('Бомба встаёт центром на строку процента, ноль — не ниже оси', () => {
-  const labels = { top: -917, height: 2044, lines: 25 };
-  const at = (percent) => H.bombTop({ percent, labels, axisY: 976, size: 169 }) + 169 / 2;
-  assert.ok(Math.abs(at(100) - (-876)) < 1);
-  assert.ok(Math.abs(at(75) - (-917 + 6.5 * 2044 / 25)) < 1);
-  assert.ok(Math.abs(at(50) - (-917 + 12.5 * 2044 / 25)) < 1);
-  assert.ok(Math.abs(at(0) - 955) < 1);
-  assert.ok(Math.abs(at(-5) - 955) < 1);
-  assert.ok(Math.abs(at(120) - (-876)) < 1);
-});
-
 test('Колонки Kaiten раскладываются по блокам, Design Review и Test вместе', () => {
   assert.equal(H.blockOfColumn('Design Review'), 'test');
   assert.equal(H.blockOfColumn('Test'), 'test');
@@ -306,22 +283,15 @@ test('Строка «Обновлено» не копится и не счита
   assert.notEqual(H.stickerSignature(written), H.stickerSignature([...first.slice(0, 1)]));
 });
 
-test('Процент по положению бомбы — обратный к расстановке', () => {
-  const labels = { top: -917, height: 2044, lines: 25 };
-  for (const percent of [100, 75, 50, 33, 10]) {
-    const top = H.bombTop({ percent, labels, axisY: 976, size: 169 });
-    assert.ok(Math.abs(H.bombPercent({ top, labels, axisY: 976, size: 169 }) - percent) <= 2, `${percent}`);
-  }
-  assert.equal(H.bombPercent({ top: 976, labels, axisY: 976, size: 169 }), 0);
-});
+test('Процент над графиком: крупно процент, под ним дата и время', () => {
+  // Act
+  const items = H.percentLabelItems({ percent: 33, now: new Date(2026, 8, 30, 14, 5).getTime() });
 
-test('Выходные и подпись у бомбы', () => {
-  assert.equal(H.isWeekend(new Date(2026, 9, 3, 12)), true);
-  assert.equal(H.isWeekend(new Date(2026, 9, 4, 12)), true);
-  assert.equal(H.isWeekend(new Date(2026, 9, 5, 12)), false);
-  assert.deepEqual(lineTexts(H.bombLabelItems({ previous: 1, percent: 3, now: new Date(2026, 8, 30, 14, 5).getTime() })), ['1% → 3% (+2)', '30.09 14:05']);
-  assert.deepEqual(lineTexts(H.bombLabelItems({ previous: 48, percent: 3, now: new Date(2026, 8, 30, 14, 5).getTime() })), ['48% → 3% (-45)', '30.09 14:05']);
-  assert.deepEqual(lineTexts(H.bombLabelItems({ previous: 3, percent: 3, now: new Date(2026, 8, 30, 14, 5).getTime() })), ['3% → 3% (0)', '30.09 14:05']);
+  // Assert
+  assert.deepEqual(lineTexts(items), ['33%', 'Обновлено 30.09 14:05']);
+  assert.equal(items[0].runs[0].marks.bold, true);
+  assert.ok(items[0].runs[0].marks.fontSize > items[1].runs[0].marks.fontSize);
+  assert.deepEqual(lineTexts(H.percentLabelItems({ percent: 0, now: new Date(2026, 9, 5, 9, 0).getTime() })), ['0%', 'Обновлено 05.10 09:00']);
 });
 
 test('Номер карты берётся из разных видов ссылки Kaiten', () => {
@@ -343,33 +313,10 @@ test('Карта пришла с другой доски — в приписке
   assert.deepEqual([item.block, item.mark, item.from], ['todo', 'work', 'Inbox(P2P)']);
 });
 
-test('Колонки доски вместе с подколонками, спринт — тот, где больше карт', () => {
+test('Колонки доски вместе с подколонками', () => {
   const board = { columns: [{ id: 1, title: 'To Do' }, { id: 2, title: 'Doing', subcolumns: [{ id: 21, title: 'Review' }] }] };
   assert.deepEqual(H.holstColumns(board), { 1: 'To Do', 2: 'Doing', 21: 'Review' });
   assert.deepEqual(H.holstColumns(null), {});
-  assert.equal(H.holstSprintId([{ sprint_id: 5 }, { sprint_id: 7 }, { sprint_id: 7 }, {}]), 7);
-  assert.equal(H.holstSprintId([{}]), null);
-});
-
-test('бомб на графике — по одной на каждый рабочий день спринта, кроме первого', () => {
-  assert.equal(H.sprintBombCount('2026-09-27T21:00:00.000Z', '2026-10-11T20:59:59.999Z'), 9);
-  assert.equal(H.sprintBombCount('2026-09-27T21:00:00.000Z', '2026-10-04T20:59:59.999Z'), 4);
-  assert.equal(H.sprintBombCount('2026-09-27T21:00:00.000Z', undefined), null);
-  const start = '2026-09-27T21:00:00.000Z';
-  assert.equal(H.workingDayIndex(start, new Date(2026, 8, 28, 12).getTime()), 0);
-  assert.equal(H.workingDayIndex(start, new Date(2026, 8, 30, 12).getTime()), 2);
-  assert.equal(H.workingDayIndex(start, new Date(2026, 9, 5, 12).getTime()), 5);
-  assert.equal(H.workingDayIndex(start, new Date(2026, 9, 9, 12).getTime()), 9);
-});
-
-test('бомба, подвинутая руками, важнее записи скрипта', () => {
-  assert.equal(H.bombStoredTrusted({ percent: 30 }, 1000, 1000), true);
-  assert.equal(H.bombStoredTrusted({ percent: 30 }, 1002, 1000), true);
-  assert.equal(H.bombStoredTrusted({ percent: 30 }, 900, 1000), false);
-  assert.equal(H.bombStoredTrusted({}, 1000, 1000), false);
-  assert.equal(H.bombStoredTrusted(null, 1000, 1000), false);
-  assert.equal(H.sameDay(new Date(2026, 8, 30, 0, 5).getTime(), new Date(2026, 8, 30, 23, 55).getTime()), true);
-  assert.equal(H.sameDay(new Date(2026, 8, 29, 23, 55).getTime(), new Date(2026, 8, 30, 0, 5).getTime()), false);
 });
 
 test('Payload для Holst: процент — прогресс по стадиям и SP, Done — число карт, незнакомые колонки передаются', () => {
@@ -382,7 +329,7 @@ test('Payload для Holst: процент — прогресс по стади�
   const report = buildReport({ cards, settings: defaultSettings() });
 
   // Act
-  const payload = H.holstPayload({ cards, report, sprintStart: '2026-09-27T21:00:00.000Z', sprintFinish: '2026-10-11T20:59:59.999Z', now: Date.parse('2026-09-30T10:00:00Z'), config: SPRINT_CAPACITY, holst: { board: 'b', group: 'g', sticker: 's' }, kaiten: 'https://dodopizza.kaiten.ru', title: 'Staff Core' });
+  const payload = H.holstPayload({ cards, report, now: Date.parse('2026-09-30T10:00:00Z'), config: SPRINT_CAPACITY, holst: { board: 'b', group: 'g', sticker: 's' }, kaiten: 'https://dodopizza.kaiten.ru', title: 'Staff Core' });
 
   // Assert
   assert.deepEqual([payload.percent, payload.done, payload.of, payload.unknown], [60, 1, 3, ['Blocked']]);
@@ -441,7 +388,7 @@ test('Payload для Holst: баг помечен, остальные карты
   const report = buildReport({ cards, settings: defaultSettings(), snapshot });
 
   // Act
-  const payload = H.holstPayload({ cards, report, doneAtStart: snapshot.doneIds, sprintStart: '2026-09-27T21:00:00.000Z', sprintFinish: '2026-10-11T20:59:59.999Z', now: Date.parse('2026-09-30T10:00:00Z'), config: SPRINT_CAPACITY, holst: { board: 'b', group: 'g', sticker: 's' }, kaiten: 'https://dodopizza.kaiten.ru', title: 'Staff Core' });
+  const payload = H.holstPayload({ cards, report, doneAtStart: snapshot.doneIds, now: Date.parse('2026-09-30T10:00:00Z'), config: SPRINT_CAPACITY, holst: { board: 'b', group: 'g', sticker: 's' }, kaiten: 'https://dodopizza.kaiten.ru', title: 'Staff Core' });
 
   // Assert
   assert.deepEqual(payload.cards.map((item) => [item.id, item.bug === true]), [[1, true], [2, false]]);
@@ -457,7 +404,7 @@ test('Первый понедельник спринта: подсвечены �
   const report = buildReport({ cards, settings: defaultSettings() });
 
   // Act
-  const payload = H.holstPayload({ cards, report, histories, columns: { 10: 'To Do', 20: 'Doing' }, sprintStart: new Date(2026, 8, 28).toISOString(), sprintFinish: new Date(2026, 9, 11, 23, 59).toISOString(), now: new Date(2026, 8, 28, 11).getTime(), config: SPRINT_CAPACITY, holst: { board: 'b', group: 'g', sticker: 's' }, kaiten: 'https://dodopizza.kaiten.ru', title: 'Staff Core' });
+  const payload = H.holstPayload({ cards, report, histories, columns: { 10: 'To Do', 20: 'Doing' }, now: new Date(2026, 8, 28, 11).getTime(), config: SPRINT_CAPACITY, holst: { board: 'b', group: 'g', sticker: 's' }, kaiten: 'https://dodopizza.kaiten.ru', title: 'Staff Core' });
 
   // Assert
   assert.equal(payload.since, new Date(2026, 8, 25).getTime());
@@ -545,67 +492,42 @@ test('Очередь Holst: после ошибки дальше ничего н
 });
 
 const chartObjects = () => [
-  { id: 'scale', type: 'simple-text', parentId: 'g', position: { x: 0, y: 100 }, lines: ['100', '75', '50', '25', '0'], textScale: 2, lineHeight: '150%' },
+  { id: 'scale', type: 'simple-text', parentId: 'g', position: { x: 0, y: 100 }, lines: ['100', '75', '50', '25', '0'], textScale: 2, lineHeight: '150%', zIndex: 3 },
   { id: 'axis', type: 'arrow', parentId: 'g', position: { x: 0, y: 0 }, start: { x: 100, y: 400 }, end: { x: 1100, y: 402 }, mine: false },
   { id: 'tilted', type: 'arrow', parentId: 'g', position: { x: 0, y: 0 }, start: { x: 100, y: 100 }, end: { x: 1100, y: 400 }, mine: false },
-  { id: 'b2', type: 'stamp', parentId: null, position: { x: 400, y: 300 }, width: 50, height: 50, text: '💣' },
-  { id: 'b1', type: 'stamp', parentId: null, position: { x: 200, y: 300 }, width: 50, height: 50, text: '💣️' },
-  { id: 'far', type: 'stamp', parentId: null, position: { x: 5000, y: 300 }, width: 50, height: 50, text: '💣' },
-  { id: 'star', type: 'stamp', parentId: null, position: { x: 300, y: 300 }, width: 50, height: 50, text: '⭐' },
 ];
 
-test('График по номерам из настроек: бомбы в порядке настроек, даже если их растащили', () => {
+test('График по номерам из настроек: место для процента — над шкалой, от левого края оси', () => {
   // Arrange
   const objects = chartObjects();
 
   // Act
-  const chart = H.holstChart({ objects, group: 'g', chart: { labels: 'scale', axis: 'axis', bombs: ['b2', 'far', 'b1'] } });
+  const chart = H.holstChart({ objects, group: 'g', chart: { labels: 'scale', axis: 'axis' } });
+  const place = H.percentLabelPlace(chart);
 
   // Assert
-  assert.equal(chart.problem, null);
-  assert.deepEqual(chart.bombs.map((item) => item.id), ['b2', 'far', 'b1']);
-  assert.deepEqual(chart.notes, []);
-  assert.equal(chart.axisY, 401);
-  assert.deepEqual(chart.labels, { top: 100, height: 5 * 14 * 2 * 1.5, lines: 5 });
+  assert.deepEqual(chart, { top: 100, left: 100, textScale: 2, zIndex: 3, problem: null });
+  assert.equal(place.x, 114);
+  assert.equal(place.y + (22 + 12) * 1.5 * 2 < 100, true);
+  assert.equal(place.textScale, 2);
+  assert.equal(place.zIndex, 3.5);
 });
 
-test('График: бомбы из настроек пропали — ищу по месту и пишу об этом, наклонная линия не ось', () => {
+test('График: номера из настроек не нашлись — шкала и ось ищутся в группе, наклонная линия не ось', () => {
   // Arrange
   const objects = chartObjects();
 
   // Act
-  const chart = H.holstChart({ objects, group: 'g', chart: { labels: 'scale', axis: 'tilted', bombs: ['b1', 'gone'] } });
+  const chart = H.holstChart({ objects, group: 'g', chart: { labels: 'gone', axis: 'tilted' } });
 
   // Assert
-  assert.deepEqual(chart.bombs.map((item) => item.id), ['b1', 'b2']);
-  assert.equal(chart.axisY, 401);
-  assert.match(chart.notes[0], /есть 1 из 2/);
+  assert.deepEqual([chart.problem, chart.top, chart.left], [null, 100, 100]);
 });
 
-test('График: нет шкалы или оси — бомбу не двигаю и говорю, чего не нашёл', () => {
+test('График: нет шкалы или оси — процент не пишу и говорю, чего не нашёл', () => {
   const objects = chartObjects();
   assert.match(H.holstChart({ objects, group: 'other', chart: {} }).problem, /шкалу/);
   assert.match(H.holstChart({ objects: objects.filter((item) => item.type !== 'arrow'), group: 'g', chart: { labels: 'scale' } }).problem, /ось/);
-});
-
-test('Линии между бомбами: до сегодняшней, лишние и привязанные не к тем бомбам убираются', () => {
-  // Arrange
-  const bombs = [
-    { id: 'a', line: null },
-    { id: 'b', line: { id: 'l1', from: 'a', to: 'b' } },
-    { id: 'c', line: { id: 'l2', from: 'x', to: 'c' } },
-    { id: 'd', line: null },
-    { id: 'e', line: { id: 'l4', from: 'd', to: 'e' } },
-  ];
-
-  // Act
-  const plan = H.bombLinePlan({ bombs, upTo: 3 });
-
-  // Assert
-  assert.deepEqual(plan.create, [{ index: 2, from: 'b', to: 'c' }, { index: 3, from: 'c', to: 'd' }]);
-  assert.deepEqual(plan.remove, [{ index: 2, id: 'l2' }, { index: 4, id: 'l4' }]);
-  assert.deepEqual(H.bombLinePlan({ bombs, upTo: -2 }).create, []);
-  assert.deepEqual(H.bombLinePlan({ bombs, upTo: -2 }).remove.map((item) => item.id), ['l1', 'l2', 'l4']);
 });
 
 test('Стикер: длинный список — шрифт мельче, место на доске то же; короткий — не трогаю', () => {
@@ -663,9 +585,9 @@ test('Стикер: во сколько раз уже увеличен — из 
   assert.equal(broken, 1);
 });
 
-test('Payload для Holst: номера шкалы, оси и бомб берутся из настроек доски', () => {
+test('Payload для Holst: номера шкалы и оси берутся из настроек доски', () => {
   const report = buildReport({ cards: [], settings: defaultSettings(), config: SPRINT_CAPACITY });
-  const payload = H.holstPayload({ cards: [], report, sprintStart: '2026-09-27T21:00:00.000Z', sprintFinish: '2026-10-11T20:59:59.999Z', now: Date.parse('2026-09-30T10:00:00Z'), config: SPRINT_CAPACITY, holst: { board: 'b', group: 'g', sticker: 's', labels: 'l', axis: 'a', bombs: ['x', 'y'] }, kaiten: 'https://dodopizza.kaiten.ru', title: 'Staff Core' });
-  assert.deepEqual(payload.chart, { labels: 'l', axis: 'a', bombs: ['x', 'y'] });
-  assert.deepEqual(H.holstPayload({ cards: [], report, sprintStart: '2026-09-27T21:00:00.000Z', sprintFinish: '2026-10-11T20:59:59.999Z', now: Date.parse('2026-09-30T10:00:00Z'), config: SPRINT_CAPACITY, holst: { board: 'b', group: 'g', sticker: 's' }, kaiten: 'https://dodopizza.kaiten.ru', title: 'Staff Core' }).chart, { labels: null, axis: null, bombs: [] });
+  const payload = H.holstPayload({ cards: [], report, now: Date.parse('2026-09-30T10:00:00Z'), config: SPRINT_CAPACITY, holst: { board: 'b', group: 'g', sticker: 's', labels: 'l', axis: 'a' }, kaiten: 'https://dodopizza.kaiten.ru', title: 'Staff Core' });
+  assert.deepEqual(payload.chart, { labels: 'l', axis: 'a' });
+  assert.deepEqual(H.holstPayload({ cards: [], report, now: Date.parse('2026-09-30T10:00:00Z'), config: SPRINT_CAPACITY, holst: { board: 'b', group: 'g', sticker: 's' }, kaiten: 'https://dodopizza.kaiten.ru', title: 'Staff Core' }).chart, { labels: null, axis: null });
 });

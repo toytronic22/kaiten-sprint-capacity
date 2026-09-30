@@ -179,15 +179,14 @@ function holstLines(Y, documents, object) {
 
 function holstChartObjects({ Y, objects, documents, payload }) {
   const chart = payload.chart || {};
-  const wanted = new Set([chart.labels, chart.axis, ...(chart.bombs || [])].filter(Boolean));
+  const wanted = new Set([chart.labels, chart.axis].filter(Boolean));
   const list = [];
   objects.forEach((object, id) => {
     if (!(object instanceof Y.Map)) return;
     const type = object.get('type');
     const parentId = object.get('parentId') || null;
-    if (type !== 'stamp' && !wanted.has(id) && (!payload.group || parentId !== payload.group)) return;
+    if (!wanted.has(id) && (!payload.group || parentId !== payload.group)) return;
     const item = { id, type, parentId, position: object.get('position') || null, width: object.get('width') || null, height: object.get('height') || null, zIndex: object.get('zIndex') || 0 };
-    if (type === 'stamp') item.text = (object.get('data') || {}).text || null;
     if (type === 'arrow') {
       item.start = (object.get('start') || {}).point || null;
       item.end = (object.get('end') || {}).point || null;
@@ -203,49 +202,18 @@ function holstChartObjects({ Y, objects, documents, payload }) {
   return list;
 }
 
-function holstCenter(object) {
-  const position = object.get('position') || { x: 0, y: 0 };
-  const width = object.get('width') || object.get('height') || 169;
-  const height = object.get('height') || width;
-  return { x: Math.round(position.x + width / 2), y: Math.round(position.y + height / 2) };
-}
-
-function holstBombLine(Y, objects, object) {
-  const stored = object.get('sprintcap') || {};
-  const line = stored.line ? objects.get(stored.line) : null;
-  if (!(line instanceof Y.Map)) return null;
-  return { id: stored.line, from: (line.get('start') || {}).objectId || null, to: (line.get('end') || {}).objectId || null };
-}
-
-function holstCreateLine({ Y, objects, from, to, author, now }) {
-  const id = crypto.randomUUID();
-  const object = new Y.Map();
-  objects.set(id, object);
-  const fields = {
-    id,
-    type: 'arrow',
-    position: { x: 0, y: 0 },
-    arrowType: 'straight',
-    arrowheadStart: 'none',
-    arrowheadEnd: 'none',
-    strokeWidth: HOLST_STYLE.lineWidth,
-    strokeColor: { color: HOLST_STYLE.line, opacity: 1 },
-    start: { point: holstCenter(from), objectId: from.get('id') },
-    end: { point: holstCenter(to), objectId: to.get('id') },
-    zIndex: Math.min(from.get('zIndex') || 0, to.get('zIndex') || 0) - 0.5,
-    created: { a: author, t: now },
-    updated: { a: author, t: now },
-    sprintcap: { line: true },
-  };
-  if (from.get('parentId')) fields.parentId = from.get('parentId');
-  for (const [key, value] of Object.entries(fields)) object.set(key, value);
-  return id;
-}
-
-function holstSetStored(object, changes) {
-  const stored = { ...(object.get('sprintcap') || {}), ...changes };
-  for (const key of Object.keys(stored)) if (stored[key] === undefined) delete stored[key];
-  object.set('sprintcap', stored);
+function holstLeftovers(Y, objects) {
+  const found = { lines: [], labels: [], bombs: [] };
+  objects.forEach((object, id) => {
+    if (!(object instanceof Y.Map)) return;
+    const stored = object.get('sprintcap');
+    if (!stored) return;
+    if (object.get('type') === 'arrow' && stored.line) found.lines.push(id);
+    if (object.get('type') !== 'stamp') return;
+    found.bombs.push(object);
+    if (stored.label && objects.get(stored.label) instanceof Y.Map) found.labels.push(stored.label);
+  });
+  return found;
 }
 
 function holstCreateText({ Y, objects, documents, x, y, scale, zIndex, author, now, items }) {
@@ -261,11 +229,9 @@ function holstCreateText({ Y, objects, documents, x, y, scale, zIndex, author, n
   return id;
 }
 
-function holstReplaceText({ Y, object, documents, items, x, y, author, now }) {
-  const root = documents.get(object.get('documentId'));
+function holstReplaceText({ Y, object, root, items, author, now }) {
   root.delete(0, root.length);
   root.applyDelta(items.map((item) => ({ insert: holstItemNode(Y, item) })), { sanitize: false });
-  object.set('position', { x, y });
   object.set('updated', { a: author, t: now });
 }
 
@@ -278,15 +244,7 @@ async function holstApply(payload, token) {
     const documents = doc.getMap('documents');
     const sticker = objects.get(payload.sticker);
     if (!sticker || !documents.get(sticker.get('documentId'))) throw new Error('На доске нет розового стикера — проверьте его номер в настройках калькулятора');
-    const chart = holstChart({ objects: holstChartObjects({ Y, objects, documents, payload }), group: payload.group, chart: payload.chart });
     const now = Date.now();
-    const weekend = isWeekend(now);
-    const day = workingDayIndex(payload.sprintStart, now);
-    const expectedBombs = sprintBombCount(payload.sprintStart, payload.sprintFinish);
-    const bombsMatch = !chart.problem && (expectedBombs === null || chart.bombs.length === expectedBombs);
-    const bombObjects = chart.bombs.map((item) => objects.get(item.id));
-    const target = !weekend && bombsMatch && day >= 1 && payload.percent !== null ? chart.bombs[day - 1] || null : null;
-    const bomb = target ? { id: target.id, object: objects.get(target.id) } : null;
     const listRun = sticker.get('sprintcap') || {};
     const lastRun = listRun.t || null;
     const since = payload.since;
@@ -299,114 +257,71 @@ async function holstApply(payload, token) {
     const stickerSize = { width: sticker.get('width') || HOLST_FIT.base[0], height: sticker.get('height') || HOLST_FIT.base[1] };
     const scale = stickerScale({ ...stickerSize, stored: listRun });
     const fit = stickerFit({ items: finalItems, ...stickerSize, textScale: sticker.get('textScale') || 1, k: scale });
-    const topOf = (percent, size) => bombTop({ percent, labels: chart.labels, axisY: chart.axisY, size });
-    const percentOf = (object) => {
-      const stored = object.get('sprintcap');
-      const size = object.get('height') || 169;
-      const top = object.get('position').y;
-      if (stored && bombStoredTrusted(stored, top, topOf(stored.percent, size))) return stored.percent;
-      return bombPercent({ top, labels: chart.labels, axisY: chart.axisY, size });
-    };
-    let bombPlan = null;
-    if (bomb) {
-      const size = bomb.object.get('height') || 169;
-      const position = bomb.object.get('position');
-      const y = topOf(payload.percent, size);
-      const stored = bomb.object.get('sprintcap') || {};
-      const label = stored.label ? objects.get(stored.label) : null;
-      const labelAlive = Boolean(label && documents.get(label.get('documentId')));
-      const previous = day >= 2 && bombObjects[day - 2] ? percentOf(bombObjects[day - 2]) : 0;
-      bombPlan = { size, x: position.x, y, previous, delta: payload.percent - previous, label: labelAlive ? label : null, changed: y !== position.y || !labelAlive || stored.percent !== payload.percent };
-    }
-    const upTo = bombsMatch ? day - 1 - (bombPlan || weekend ? 0 : 1) : null;
-    const lines = upTo === null ? { create: [], remove: [] } : bombLinePlan({ bombs: chart.bombs.map((item, index) => ({ id: item.id, line: holstBombLine(Y, objects, bombObjects[index]) })), upTo });
-    const linesChanged = lines.create.length > 0 || lines.remove.length > 0;
-    const weekday = HOLST_STYLE.weekdays[new Date(now).getDay()];
+    const forcedFont = sticker.get('fontSize') !== undefined;
+    const label = listRun.label ? objects.get(listRun.label) : null;
+    const labelRoot = label instanceof Y.Map ? documents.get(label.get('documentId')) || null : null;
+    const labelItems = payload.percent === null ? null : percentLabelItems({ percent: payload.percent, now });
+    const labelChanged = Boolean(labelItems) && (!labelRoot || runsText((holstDocItems(Y, labelRoot)[0] || { runs: [] }).runs) !== runsText(labelItems[0].runs));
+    const chart = labelChanged && !labelRoot ? holstChart({ objects: holstChartObjects({ Y, objects, documents, payload }), group: payload.group, chart: payload.chart }) : null;
+    const place = chart && !chart.problem ? percentLabelPlace(chart) : null;
+    const percentProblem = chart && chart.problem ? chart.problem : null;
+    const labelWrite = labelChanged && !percentProblem;
+    const leftovers = holstLeftovers(Y, objects);
+    const cleanup = leftovers.lines.length + leftovers.labels.length + leftovers.bombs.length > 0;
     const marked = cards.filter((item) => item.mark);
     const movedSince = lastRun === null ? null : marked.filter((item) => item.movedAt > lastRun).length;
     const markedText = `Подсвечено карт: ${marked.length} — подвинулись с ${HOLST_STYLE.weekdays[new Date(since).getDay()]} ${shortTime(since).slice(0, 5)}${movedSince === null ? '' : `, из них с прошлого обновления: ${movedSince}`}`;
     const unknown = unknownColumnsText(payload.unknown);
-    const chartLines = [...(chart.problem ? [`Бомбу не двигал: ${chart.problem}`] : []), ...chart.notes];
-    if (!listChanged && !(bombPlan && bombPlan.changed) && !linesChanged && !fit) {
-      const why = !bombPlan ? 'список как в Kaiten'
-        : `бомба ${weekday} уже на ${payload.percent}%, список как в Kaiten`;
-      return { ok: !chart.problem, calm: !chart.problem, text: [`${payload.title}: обновлять нечего — ${why}`, ...chartLines, ...(unknown ? [`Прогресс: ${unknown}`] : [])].join('\n') };
+    const percentLine = payload.percent === null ? 'Процент не написал: в спринте нет карт'
+      : percentProblem ? `Процент не написал: ${percentProblem}`
+      : `Спринт: ${payload.percent}%${labelWrite ? ' — написал над графиком' : ''}, в Done ${payload.done} из ${payload.of}`;
+    if (!listChanged && !labelWrite && !cleanup && !fit && !forcedFont) {
+      const why = payload.percent === null ? 'список как в Kaiten' : `над графиком уже ${payload.percent}%, список как в Kaiten`;
+      return { ok: !percentProblem, calm: !percentProblem, text: [`${payload.title}: обновлять нечего — ${why}`, ...(percentProblem ? [percentLine] : []), ...(unknown ? [`Прогресс: ${unknown}`] : [])].join('\n') };
     }
     const author = (sticker.get('updated') || sticker.get('created')).a;
     const updates = [];
     const listen = (update, origin) => {
       if (origin !== 'server') updates.push(update);
     };
+    let labelId = labelRoot ? listRun.label : null;
     doc.on('updateV2', listen);
     doc.transact(() => {
-      if (bombPlan && bombPlan.changed) {
-        bomb.object.set('position', { x: bombPlan.x, y: bombPlan.y });
-        const items = bombLabelItems({ previous: bombPlan.previous, percent: payload.percent, now });
-        const scale = 2;
-        const labelX = bombPlan.x + bombPlan.size + 12;
-        const labelY = Math.round(bombPlan.y + bombPlan.size / 2 - 2 * 14 * scale * 1.5 / 2);
-        let labelId;
-        if (bombPlan.label) {
-          holstReplaceText({ Y, object: bombPlan.label, documents, items, x: labelX, y: labelY, author, now });
-          labelId = bombPlan.label.get('id');
-        } else {
-          labelId = holstCreateText({ Y, objects, documents, x: labelX, y: labelY, scale, zIndex: (bomb.object.get('zIndex') || 0) + 0.5, author, now, items });
-        }
-        holstSetStored(bomb.object, { percent: payload.percent, t: now, label: labelId });
-        bomb.object.set('updated', { a: (bomb.object.get('updated') || bomb.object.get('created')).a, t: now });
+      if (labelWrite && labelRoot) holstReplaceText({ Y, object: label, root: labelRoot, items: labelItems, author, now });
+      else if (labelWrite) labelId = holstCreateText({ Y, objects, documents, x: place.x, y: place.y, scale: place.textScale, zIndex: place.zIndex, author, now, items: labelItems });
+      for (const id of leftovers.lines) objects.delete(id);
+      for (const id of leftovers.labels) {
+        const documentId = objects.get(id).get('documentId');
+        objects.delete(id);
+        if (documentId) documents.delete(documentId);
       }
-      for (const item of lines.remove) {
-        objects.delete(item.id);
-        holstSetStored(bombObjects[item.index], { line: undefined });
-      }
-      for (const item of lines.create) {
-        const id = holstCreateLine({ Y, objects, from: bombObjects[item.index - 1], to: bombObjects[item.index], author, now });
-        holstSetStored(bombObjects[item.index], { line: id });
-      }
-      if (bombPlan && bombPlan.changed) {
-        bombObjects.forEach((object, index) => {
-          const line = index >= 1 ? holstBombLine(Y, objects, object) : null;
-          if (!line || (line.from !== bomb.id && line.to !== bomb.id)) return;
-          const arrow = objects.get(line.id);
-          arrow.set('start', { ...arrow.get('start'), point: holstCenter(bombObjects[index - 1]) });
-          arrow.set('end', { ...arrow.get('end'), point: holstCenter(object) });
-        });
-      }
+      for (const bomb of leftovers.bombs) bomb.delete('sprintcap');
       const nodes = finalItems.map((item) => holstItemNode(Y, item));
       root.delete(0, root.length);
       root.applyDelta(nodes.map((node) => ({ insert: node })), { sanitize: false });
       sticker.set('horizontalAlign', 'left');
+      if (forcedFont) sticker.delete('fontSize');
       if (fit) {
         sticker.set('width', fit.width);
         sticker.set('height', fit.height);
         sticker.set('textScale', fit.textScale);
       }
-      sticker.set('sprintcap', { t: payload.generatedAt, k: fit ? fit.k : scale });
+      sticker.set('sprintcap', { t: payload.generatedAt, k: fit ? fit.k : scale, ...(labelId ? { label: labelId } : {}) });
       sticker.set('updated', { a: author, t: now });
     }, 'local');
     doc.off('updateV2', listen);
     for (const update of updates) await send(update);
-    const result = [`${payload.title}: готово`];
-    if (chart.problem) result.push(`Бомбу не двигал: ${chart.problem}`);
-    else if (bombPlan && bombPlan.changed) result.push(`Спринт: ${bombPlan.previous}% → ${payload.percent}% (${signed(bombPlan.delta)} за день), бомба ${weekday}, в Done ${payload.done} из ${payload.of}`);
-    else if (bombPlan) result.push(`Спринт: ${payload.percent}%, бомба ${weekday} уже на месте`);
-    else if (weekend) result.push('Бомбу не двигал: выходной');
-    else if (payload.percent === null) result.push('Бомбу не двигал: в спринте нет карт');
-    else if (day < 1) result.push('Бомбу не двигал: сегодня первый день спринта');
-    else if (!bombsMatch) result.push(`Бомбу не двигал: на графике ${chart.bombs.length} бомб, а должно быть ${expectedBombs} — по одной на каждый рабочий день спринта, кроме первого. Проверьте, не удалена ли бомба или не добавлена ли лишняя`);
-    else result.push(`Бомбу не двигал: на графике ${chart.bombs.length} бомб, а сегодня ${day}-й рабочий день`);
-    result.push(...chart.notes);
-    if (lines.create.length === 1 && lines.create[0].index === day - 1) result.push('Провёл линию от вчерашней бомбы');
-    else if (lines.create.length) result.push(`Провёл линий между бомбами: ${lines.create.length}`);
-    if (lines.remove.length) result.push(`Убрал старых линий между бомбами: ${lines.remove.length}`);
+    const result = [`${payload.title}: готово`, percentLine];
+    if (leftovers.lines.length || leftovers.labels.length) result.push(`Бомбы больше не двигаю — убрал свои линии между бомбами (${leftovers.lines.length}) и подписи у бомб (${leftovers.labels.length})`);
     result.push(markedText);
     result.push(`Список: ${plan.stats.cards} карт, оставил на месте ${plan.stats.kept}`);
+    if (forcedFont) result.push('У стикера стоял шрифт, выбранный вручную, — вернул подбор под размер стикера');
     if (fit) result.push(fit.grow ? 'Список стал короче — сделал шрифт крупнее, стикер тот же' : 'Список не влезал в стикер — сделал шрифт мельче, стикер тот же');
     if (unknown) result.push(`Прогресс: ${unknown}`);
     if (plan.stats.renamed) result.push(`Обновил названия: ${plan.stats.renamed}`);
     if (plan.stats.gone) result.push(`Убрал карт не из спринта: ${plan.stats.gone}`);
     if (plan.stats.manual) result.push(`Строк без карты не тронул: ${plan.stats.manual}`);
-    return { ok: !chart.problem, text: result.join('\n') };
+    return { ok: !percentProblem, text: result.join('\n') };
   } finally {
     connection.ws.close();
   }

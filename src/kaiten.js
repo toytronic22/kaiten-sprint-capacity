@@ -55,7 +55,3 @@ async function kaitenCardActivity(cardId) {
   if (!Array.isArray(activity)) throw new Error('Kaiten вернул историю изменений карты не списком');
   return activity;
 }
-
-async function kaitenSprint(sprintId) {
-  return kaitenJson(`/api/sprints/${sprintId}`);
-}
