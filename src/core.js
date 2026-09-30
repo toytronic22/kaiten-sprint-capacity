@@ -1,7 +1,7 @@
 const SPRINT_CAPACITY = {
   boards: [
-    { id: 68084, title: 'Staff Core', holst: { board: '67165a75-56cd-40d4-aeb8-c6f05ae5c057', group: '8686c163-2c4c-4dd4-b86a-9272dde08876', sticker: '48d1ad3f-be39-4601-9680-fca941dbf8cb', labels: '5011ab61-2907-426f-ad03-04bc4e62d43b', axis: '70dcaa6a-697f-4ab5-b35b-f12c9f0d14c1' } },
-    { id: 1321013, title: 'Staff Mobile', platform: { back: 16232407, front: 16237830 }, platformTags: { back: 'Backend', front: 'Mobile' }, labels: { front: 'Mobile' }, holst: { board: '67165a75-56cd-40d4-aeb8-c6f05ae5c057', group: '5e307012-f88c-4d6e-ab3f-559114026ebd', sticker: 'f78f383c-1b8a-4adf-be02-b9971043f4d0', labels: 'a607f507-027d-41b9-aa7d-6f791a52f052', axis: '50ecefe2-7afb-4f64-9a67-51fd41583333' } },
+    { id: 68084, title: 'Staff Core', holst: { board: '67165a75-56cd-40d4-aeb8-c6f05ae5c057', group: '8686c163-2c4c-4dd4-b86a-9272dde08876', sticker: '48d1ad3f-be39-4601-9680-fca941dbf8cb', labels: '5011ab61-2907-426f-ad03-04bc4e62d43b' } },
+    { id: 1321013, title: 'Staff Mobile', platform: { back: 16232407, front: 16237830 }, platformTags: { back: 'Backend', front: 'Mobile' }, labels: { front: 'Mobile' }, holst: { board: '67165a75-56cd-40d4-aeb8-c6f05ae5c057', group: '5e307012-f88c-4d6e-ab3f-559114026ebd', sticker: 'f78f383c-1b8a-4adf-be02-b9971043f4d0', labels: 'a607f507-027d-41b9-aa7d-6f791a52f052' } },
   ],
   snapshotCardId: 71238243,
   fields: { devEstimate: 'id_396449', platform: 'id_499149', testType: 'id_505017' },

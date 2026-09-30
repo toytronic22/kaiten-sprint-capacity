@@ -179,7 +179,7 @@ function holstLines(Y, documents, object) {
 
 function holstChartObjects({ Y, objects, documents, payload }) {
   const chart = payload.chart || {};
-  const wanted = new Set([chart.labels, chart.axis].filter(Boolean));
+  const wanted = new Set([chart.labels].filter(Boolean));
   const list = [];
   objects.forEach((object, id) => {
     if (!(object instanceof Y.Map)) return;
@@ -187,11 +187,6 @@ function holstChartObjects({ Y, objects, documents, payload }) {
     const parentId = object.get('parentId') || null;
     if (!wanted.has(id) && (!payload.group || parentId !== payload.group)) return;
     const item = { id, type, parentId, position: object.get('position') || null, width: object.get('width') || null, height: object.get('height') || null, zIndex: object.get('zIndex') || 0 };
-    if (type === 'arrow') {
-      item.start = (object.get('start') || {}).point || null;
-      item.end = (object.get('end') || {}).point || null;
-      item.mine = Boolean(object.get('sprintcap'));
-    }
     if (type === 'simple-text') {
       item.lines = holstLines(Y, documents, object).map((line) => runsText(line.runs));
       item.textScale = object.get('textScale') || 1;

@@ -492,54 +492,43 @@ test('Очередь Holst: после ошибки дальше ничего н
 });
 
 const chartObjects = () => [
+  { id: 'title', type: 'simple-text', parentId: 'g', position: { x: 30, y: -200 }, lines: ['Достижение цели спринта'], textScale: 3, zIndex: 1 },
   { id: 'scale', type: 'simple-text', parentId: 'g', position: { x: 0, y: 100 }, lines: ['100', '75', '50', '25', '0'], textScale: 2, lineHeight: '150%', zIndex: 3 },
-  { id: 'axis', type: 'arrow', parentId: 'g', position: { x: 0, y: 0 }, start: { x: 100, y: 400 }, end: { x: 1100, y: 402 }, mine: false },
-  { id: 'tilted', type: 'arrow', parentId: 'g', position: { x: 0, y: 0 }, start: { x: 100, y: 100 }, end: { x: 1100, y: 400 }, mine: false },
+  { id: 'days', type: 'simple-text', parentId: 'g', position: { x: 40, y: 400 }, lines: ['ПН            ВТ'], textScale: 2, zIndex: 2 },
+  { id: 'far', type: 'simple-text', parentId: 'other', position: { x: 9000, y: 50 }, lines: ['Чужой текст'], textScale: 2, zIndex: 2 },
 ];
 
-test('График по номерам из настроек: место для процента — над шкалой, от левого края оси', () => {
+test('График по номеру шкалы из настроек: процент — над шкалой, по левому краю заголовка', () => {
   // Arrange
   const objects = chartObjects();
 
   // Act
-  const chart = H.holstChart({ objects, group: 'g', chart: { labels: 'scale', axis: 'axis' } });
+  const chart = H.holstChart({ objects, group: 'g', chart: { labels: 'scale' } });
   const place = H.percentLabelPlace(chart);
 
   // Assert
-  assert.deepEqual(chart, { top: 100, left: 100, textScale: 2, zIndex: 3, problem: null });
-  assert.equal(place.x, 114);
+  assert.deepEqual(chart, { top: 100, left: 30, textScale: 2, zIndex: 3, problem: null });
+  assert.equal(place.x, 30);
   assert.equal(place.y + (22 + 12) * 1.5 * 2 < 100, true);
   assert.equal(place.textScale, 2);
   assert.equal(place.zIndex, 3.5);
 });
 
-test('График: номера из настроек не нашлись — шкала и ось ищутся в группе, наклонная линия не ось', () => {
+test('График: номер шкалы из настроек не нашёлся — шкала ищется в группе, заголовок — ближайший текст над ней', () => {
   // Arrange
-  const objects = chartObjects();
+  const objects = [...chartObjects(), { id: 'note', type: 'simple-text', parentId: 'g', position: { x: 60, y: -900 }, lines: ['Старая заметка'], textScale: 2 }];
 
   // Act
-  const chart = H.holstChart({ objects, group: 'g', chart: { labels: 'gone', axis: 'tilted' } });
+  const chart = H.holstChart({ objects, group: 'g', chart: { labels: 'gone' } });
 
   // Assert
-  assert.deepEqual([chart.problem, chart.top, chart.left], [null, 100, 100]);
+  assert.deepEqual([chart.problem, chart.top, chart.left], [null, 100, 30]);
 });
 
-test('График: у оси, нарисованной руками, точки записаны от её position — левый край считаю на доске', () => {
-  // Arrange
-  const objects = chartObjects().map((item) => (item.id === 'axis' ? { ...item, position: { x: -3611, y: 976 }, start: { x: 0, y: 0 }, end: { x: 4313, y: 1 } } : item));
-
-  // Act
-  const chart = H.holstChart({ objects, group: 'g', chart: { labels: 'scale', axis: 'axis' } });
-
-  // Assert
-  assert.equal(chart.left, -3611);
-  assert.equal(H.percentLabelPlace(chart).x, -3597);
-});
-
-test('График: нет шкалы или оси — процент не пишу и говорю, чего не нашёл', () => {
-  const objects = chartObjects();
+test('График: заголовка нет — процент по левому краю шкалы; шкалы нет — процент не пишу', () => {
+  const objects = chartObjects().filter((item) => item.id !== 'title');
+  assert.equal(H.holstChart({ objects, group: 'g', chart: { labels: 'scale' } }).left, 0);
   assert.match(H.holstChart({ objects, group: 'other', chart: {} }).problem, /шкалу/);
-  assert.match(H.holstChart({ objects: objects.filter((item) => item.type !== 'arrow'), group: 'g', chart: { labels: 'scale' } }).problem, /ось/);
 });
 
 test('Стикер: длинный список — шрифт мельче, место на доске то же; короткий — не трогаю', () => {
@@ -599,7 +588,7 @@ test('Стикер: во сколько раз уже увеличен — из 
 
 test('Payload для Holst: номера шкалы и оси берутся из настроек доски', () => {
   const report = buildReport({ cards: [], settings: defaultSettings(), config: SPRINT_CAPACITY });
-  const payload = H.holstPayload({ cards: [], report, now: Date.parse('2026-09-30T10:00:00Z'), config: SPRINT_CAPACITY, holst: { board: 'b', group: 'g', sticker: 's', labels: 'l', axis: 'a' }, kaiten: 'https://dodopizza.kaiten.ru', title: 'Staff Core' });
-  assert.deepEqual(payload.chart, { labels: 'l', axis: 'a' });
-  assert.deepEqual(H.holstPayload({ cards: [], report, now: Date.parse('2026-09-30T10:00:00Z'), config: SPRINT_CAPACITY, holst: { board: 'b', group: 'g', sticker: 's' }, kaiten: 'https://dodopizza.kaiten.ru', title: 'Staff Core' }).chart, { labels: null, axis: null });
+  const payload = H.holstPayload({ cards: [], report, now: Date.parse('2026-09-30T10:00:00Z'), config: SPRINT_CAPACITY, holst: { board: 'b', group: 'g', sticker: 's', labels: 'l' }, kaiten: 'https://dodopizza.kaiten.ru', title: 'Staff Core' });
+  assert.deepEqual(payload.chart, { labels: 'l' });
+  assert.deepEqual(H.holstPayload({ cards: [], report, now: Date.parse('2026-09-30T10:00:00Z'), config: SPRINT_CAPACITY, holst: { board: 'b', group: 'g', sticker: 's' }, kaiten: 'https://dodopizza.kaiten.ru', title: 'Staff Core' }).chart, { labels: null });
 });

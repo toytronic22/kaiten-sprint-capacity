@@ -132,7 +132,7 @@ function holstPayload({ cards, report, doneAtStart = [], histories = {}, columns
     board: holst.board,
     group: holst.group,
     sticker: holst.sticker,
-    chart: { labels: holst.labels || null, axis: holst.axis || null },
+    chart: { labels: holst.labels || null },
     title,
     kaiten,
     generatedAt: now,
@@ -393,7 +393,7 @@ function percentLabelItems({ percent, now }) {
 
 function percentLabelPlace({ top, left, textScale, zIndex = 0 }) {
   const height = (HOLST_STYLE.percentSize + HOLST_STYLE.percentNoteSize) * 1.5 * textScale;
-  return { x: Math.round(left + 7 * textScale), y: Math.round(top - height - 5 * textScale), textScale, zIndex: zIndex + 0.5 };
+  return { x: Math.round(left), y: Math.round(top - height - 5 * textScale), textScale, zIndex: zIndex + 0.5 };
 }
 
 function holstForeignBoards(cards, histories) {
@@ -478,25 +478,15 @@ function holstSyncQueue({ apply, fetchLink, onResponse, onAck, onSynced, onError
   };
 }
 
-function arrowOnBoard(item) {
-  if (item.type !== 'arrow' || !item.start || !item.end) return item;
-  const at = item.position || { x: 0, y: 0 };
-  const shift = (point) => ({ x: point.x + (at.x || 0), y: point.y + (at.y || 0) });
-  return { ...item, start: shift(item.start), end: shift(item.end) };
-}
-
-function holstChart({ objects: raw, group, chart = {} }) {
-  const objects = raw.map(arrowOnBoard);
+function holstChart({ objects, group, chart = {} }) {
   const byId = new Map(objects.map((item) => [item.id, item]));
-  const inGroup = (item) => Boolean(group) && item.parentId === group;
-  const isScale = (item) => Boolean(item && item.type === 'simple-text' && item.position && item.lines && item.lines.length > 1);
-  const span = (item) => Math.abs(item.end.x - item.start.x);
-  const isAxis = (item) => Boolean(item && item.type === 'arrow' && !item.mine && item.start && item.end && Math.abs(item.start.y - item.end.y) <= Math.max(2, 0.02 * span(item)));
-  const scale = isScale(byId.get(chart.labels)) ? byId.get(chart.labels) : objects.find((item) => inGroup(item) && isScale(item) && item.lines[0].trim() === '100') || null;
-  const axis = isAxis(byId.get(chart.axis)) ? byId.get(chart.axis) : objects.filter((item) => inGroup(item) && isAxis(item)).sort((a, b) => span(b) - span(a))[0] || null;
+  const isText = (item) => Boolean(item && item.type === 'simple-text' && item.position && item.lines);
+  const isScale = (item) => isText(item) && item.lines.length > 1;
+  const scale = isScale(byId.get(chart.labels)) ? byId.get(chart.labels) : objects.find((item) => Boolean(group) && item.parentId === group && isScale(item) && item.lines[0].trim() === '100') || null;
   if (!scale) return { problem: 'не нашёл на доске шкалу графика «100 … 0»' };
-  if (!axis) return { problem: 'не нашёл на доске ось графика' };
-  return { top: scale.position.y, left: Math.min(axis.start.x, axis.end.x), textScale: scale.textScale || 1, zIndex: scale.zIndex || 0, problem: null };
+  const home = scale.parentId || group;
+  const title = objects.filter((item) => item !== scale && isText(item) && Boolean(home) && item.parentId === home && item.position.y < scale.position.y).sort((a, b) => b.position.y - a.position.y)[0] || null;
+  return { top: scale.position.y, left: title ? title.position.x : scale.position.x, textScale: scale.textScale || 1, zIndex: scale.zIndex || 0, problem: null };
 }
 
 function charEm(char) {
