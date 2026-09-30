@@ -20,8 +20,6 @@ const HOLST_STYLE = {
 
 const HOLST_HASH = 'sprintcap';
 
-const HOLST_MARKERS = { doing: '+/-', review: '+/-', test: '+/-', release: '+/-', done: '+' };
-
 const HOLST_UPDATED = /^\s*Обновлено\s+\d{2}\.\d{2}/;
 
 function normalizeTitle(text) {
@@ -325,14 +323,12 @@ function readStickerLines(items, cards) {
   return result;
 }
 
-function cardRuns(card, line, url, block = card.block) {
+function cardRuns(card, line, url) {
   const marks = { color: HOLST_STYLE.link };
   if (card.mark) marks.backgroundColor = HOLST_STYLE[card.mark];
   const runs = [];
-  const marker = HOLST_MARKERS[block];
   const prefix = line && line.prefix ? stripMarker(line.prefix) : [];
   if (card.bug) runs.push({ text: `${HOLST_STYLE.bug} ` });
-  if (marker) runs.push({ text: `${marker} ` });
   if (prefix.length) {
     runs.push(...prefix);
     runs.push({ text: ' ' });
@@ -385,7 +381,7 @@ function planSticker({ items, cards, lastRun = null, cardUrl }) {
     if (!stays) continue;
     seen.add(card.id);
     stats.kept += 1;
-    put(line.block, { card, runs: cardRuns(card, line, cardUrl(card.id), line.block) });
+    put(line.block, { card, runs: cardRuns(card, line, cardUrl(card.id)) });
   }
   const lineOf = new Map();
   for (const line of parsed.lines) {

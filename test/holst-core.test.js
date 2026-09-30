@@ -76,7 +76,7 @@ test('Подсветка: сдвинулась сегодня — жёлтая, 
   ]);
 });
 
-test('Старый розовый стикер: заголовок остаётся, 🔴 переезжает к ссылке, «+/-» ставится по колонке', () => {
+test('Старый розовый стикер: заголовок остаётся, 🔴 переезжает к ссылке, старый «+/-» снимается', () => {
   const items = [
     p(text('Как поймём, что задача выполнена:', { bold: true })),
     p(),
@@ -97,16 +97,16 @@ test('Старый розовый стикер: заголовок остаёт�
     '📋 To Do · 1',
     '🔴 [AI] Баннер «Подтвердить график» пропадает',
     '🔨 Doing · 1',
-    '+/- Новая карта  ← из To Do, 30.09 11:20',
+    'Новая карта  ← из To Do, 30.09 11:20',
     '🚀 Waiting for release · 1',
-    '+/- Шаг 2в Заполнить признак внешнего курьера',
+    'Шаг 2в Заполнить признак внешнего курьера',
   ]);
   const release = out[8].runs.find((run) => run.link);
   assert.equal(release.link, url(11));
   assert.equal(release.marks.color, H.HOLST_STYLE.link);
   const moved = out[6].runs;
-  assert.equal(moved[1].marks.backgroundColor, H.HOLST_STYLE.work);
-  assert.equal(moved[3].marks.color, H.HOLST_STYLE.note);
+  assert.equal(moved[0].marks.backgroundColor, H.HOLST_STYLE.work);
+  assert.equal(moved[2].marks.color, H.HOLST_STYLE.note);
   assert.deepEqual(stats, { cards: 3, kept: 0, marked: 1, manual: 1, gone: 0, renamed: 0 });
 });
 
@@ -129,7 +129,7 @@ test('Ручной перенос строки держится, пока кар
     'Перенесли руками в To Do',
     'заметка команды',
     '👀 Review · 1',
-    '+/- Сдвинулась после прогона',
+    'Сдвинулась после прогона',
   ]);
   assert.equal(stats.kept, 1);
 });
@@ -140,8 +140,8 @@ test('Первый прогон без отметки времени раскл�
     li({ text: 'Карта', link: url(31001) }),
   ];
   const { items: out } = H.planSticker({ items, cards: [card(31001, 'Карта', 'done', { mark: 'done', from: 'Test' })], cardUrl: url });
-  assert.deepEqual(lineTexts(out), ['✅ Done · 1', `+ Карта  ← из Test, ${H.shortTime(Date.parse('2026-09-29T10:00:00Z'))}`]);
-  assert.equal(out[1].runs[1].marks.backgroundColor, H.HOLST_STYLE.done);
+  assert.deepEqual(lineTexts(out), ['✅ Done · 1', `Карта  ← из Test, ${H.shortTime(Date.parse('2026-09-29T10:00:00Z'))}`]);
+  assert.equal(out[1].runs[0].marks.backgroundColor, H.HOLST_STYLE.done);
 });
 
 test('Карта, которой больше нет в спринте, удаляется из списка, а ссылка над списком остаётся', () => {
@@ -153,12 +153,12 @@ test('Карта, которой больше нет в спринте, удал
     li(text('заметка команды')),
   ];
   const { items: out, stats } = H.planSticker({ items, cards: [card(41002, 'Осталась', 'doing')], lastRun: Date.parse('2026-09-30T06:00:00Z'), cardUrl: url });
-  assert.deepEqual(lineTexts(out), ['Эпик над списком', '🔨 Doing · 1', '+/- Осталась', 'заметка команды']);
+  assert.deepEqual(lineTexts(out), ['Эпик над списком', '🔨 Doing · 1', 'Осталась', 'заметка команды']);
   assert.equal(stats.gone, 1);
   assert.equal(stats.manual, 1);
 });
 
-test('Пометки: To Do — без пометки, в работе — «+/-», Done — «+», старые ручные пересчитываются', () => {
+test('Пометок «+/-» и «+» больше нет: старые снимаются, «+2 часа» и остальной текст остаются', () => {
   const lastRun = Date.parse('2026-09-30T06:00:00Z');
   const items = [
     p(text('📋 To Do · 1', { bold: true })),
@@ -182,11 +182,11 @@ test('Пометки: To Do — без пометки, в работе — «+/-
     '📋 To Do · 1',
     'Вернулась в To Do',
     '🔨 Doing · 3',
-    '+/- 🟡 Кривая пометка',
-    '+/- Без пометки',
-    '+/- Строка текстом',
+    '🟡 Кривая пометка',
+    'Без пометки',
+    'Строка текстом',
     '✅ Done · 1',
-    '+ Готова',
+    'Готова',
   ]);
   assert.deepEqual(lineTexts([{ runs: H.stripMarker([text('+2 часа')]) }]), ['+2 часа']);
   assert.deepEqual(lineTexts([{ runs: H.stripMarker([text('+/-🔥 ')]) }]), ['🔥 ']);
@@ -374,7 +374,7 @@ test('Баг в розовом списке — с жучком в начале 
   const second = H.planSticker({ items: first.items, cards, lastRun, cardUrl: url });
 
   // Assert
-  const expected = ['📋 To Do · 1', '🐞 Баг в To Do', '🔨 Doing · 2', '🐞 +/- Баг в работе', '+/- 🟡 Бывший баг', '✅ Done · 1', '🐞 + Баг с ручным жуком'];
+  const expected = ['📋 To Do · 1', '🐞 Баг в To Do', '🔨 Doing · 2', '🐞 Баг в работе', '🟡 Бывший баг', '✅ Done · 1', '🐞 Баг с ручным жуком'];
   assert.deepEqual(lineTexts(first.items), expected);
   assert.deepEqual(lineTexts(second.items), expected);
   assert.equal(H.stickerSignature(second.items), H.stickerSignature(first.items));
