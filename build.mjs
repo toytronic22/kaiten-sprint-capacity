@@ -48,30 +48,25 @@ const installPage = `<!doctype html>
 <title>Ёмкость спринта — закладка</title>
 <style>
 body { font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; max-width: 720px; margin: 32px auto; padding: 0 16px; color: #1f2328; background: #fff; }
-.bookmarklet { display: inline-block; padding: 8px 14px; border-radius: 8px; background: #0969da; color: #fff; font-weight: 600; text-decoration: none; }
+.bookmarklet { display: inline-block; margin: 8px 0 4px; padding: 8px 14px; border-radius: 8px; background: #0969da; color: #fff; font-weight: 600; text-decoration: none; }
 textarea { width: 100%; height: 120px; font: 12px/1.4 ui-monospace, Menlo, monospace; }
 li { margin: 4px 0; }
 </style>
 </head>
 <body>
 <h1>Ёмкость спринта</h1>
-<p>Перетащите кнопку на панель закладок:</p>
-<p><a class="bookmarklet" href="${escapeHtml(bookmarklet)}">Ёмкость спринта</a></p>
 <ol>
-<li>Откройте доску Development(P2P) в Kaiten.</li>
-<li>Нажмите закладку — справа появится панель. Нажмите ещё раз — панель закроется.</li>
+<li>Перетащите синюю кнопку на панель закладок. Панели закладок не видно — нажмите Cmd+Shift+B (на Windows — Ctrl+Shift+B).<br><a class="bookmarklet" href="${escapeHtml(bookmarklet)}">Ёмкость спринта</a></li>
+<li>Откройте Kaiten и нажмите эту закладку — справа появится панель. Вверху панели нажмите на название доски и выберите свою: Staff Core или Staff Mobile.</li>
+<li>Нажмите «Команда и дни» и заполните поля. «нет, чел.-дн» — сколько дней за спринт люди в отпуске, на отгуле или дежурстве. «SP в день» — сколько SP один человек делает за день. Серые числа — то, что будет, если поле не заполнять.</li>
+<li>Войдите в Holst в этом же браузере.</li>
+<li>Вернитесь в Kaiten. Вверху панели, левее ↻, нажмите красную точку — ниже появится кнопка «Открыть Holst», нажмите её.</li>
+<li>Holst откроется в новой вкладке. Нажмите там закладку «Ёмкость спринта». Holst напишет «Вход работает — эту вкладку можно закрыть», а точка в панели станет зелёной. Готово.</li>
 </ol>
-<p>Закладка при каждом нажатии берёт свежую версию панели с этой страницы — перетаскивать заново после обновлений не нужно.</p>
+<p>Шаги 4–6 — один раз на браузер.</p>
+<p><a href="https://github.com/toytronic22/kaiten-sprint-capacity#readme">Как пользоваться и как считает</a></p>
 <p>Не перетаскивается — создайте закладку вручную и вставьте в поле адреса этот код:</p>
 <textarea readonly onclick="this.select()">${escapeHtml(bookmarklet)}</textarea>
-<h2>Бомба и розовый список в Holst</h2>
-<p>Кнопка «В Holst» в панели сама двигает бомбу дня на процент Done и раскладывает розовый список по колонкам Kaiten, потом открывает доску Holst. Итог — сверху в Kaiten.</p>
-<p>Вторая закладка не нужна. Первый раз на компьютере панель попросит вход в Holst:</p>
-<ol>
-<li>Нажмите в панели «Открыть Holst» — откроется доска Holst.</li>
-<li>Нажмите там ту же закладку «Ёмкость спринта» — вход сам перейдёт в Kaiten, и бомба с розовым списком запишутся.</li>
-</ol>
-<p>Дальше «В Holst» работает в одно нажатие. Вход хранится только в этом браузере. Красная точка в шапке панели — входа нет или Holst его не принял, кольцо — вход сохранён.</p>
 </body>
 </html>
 `;
