@@ -22,7 +22,7 @@ const HOLST_STYLE = {
 
 const HOLST_NULL_DOC = '00000000-0000-0000-0000-000000000000';
 
-const HOLST_FIT = { pad: 32, bottom: 36, fill: 0.9, line: 1.25, wrap: 0.92, indent: 2, bold: 1.05, min: 4, max: 64, fine: 5, target: 8, steps: [1.25, 1.5, 2, 2.5, 3, 3.5, 4] };
+const HOLST_FIT = { base: [384, 192], pad: 32, bottom: 36, fill: 0.9, line: 1.25, wrap: 0.92, indent: 2, bold: 1.05, min: 4, max: 64, fine: 5, target: 8, steps: [1.25, 1.5, 2, 2.5, 3, 3.5, 4] };
 
 const HOLST_UPDATED = /^\s*Обновлено\s+\d{2}\.\d{2}/;
 
@@ -623,13 +623,19 @@ function stickerFont({ items, width, height }) {
   return null;
 }
 
-function stickerFit({ items, width, height, textScale = 1 }) {
-  const font = stickerFont({ items, width, height });
-  if (font !== null && font >= HOLST_FIT.fine) return null;
+function stickerScale({ width, height, stored }) {
+  if (stored && HOLST_FIT.steps.concat(1).includes(stored.k)) return stored.k;
+  return HOLST_FIT.steps.find((step) => Math.abs(width - HOLST_FIT.base[0] * step) <= 1 && Math.abs(height - HOLST_FIT.base[1] * step) <= 1) || 1;
+}
+
+function stickerFit({ items, width, height, textScale = 1, k = 1 }) {
+  const base = { width: width / k, height: height / k };
+  const font = stickerFont({ items, ...base });
   const steps = HOLST_FIT.steps;
-  const step = steps.find((k) => (stickerFont({ items, width: width * k, height: height * k }) || 0) >= HOLST_FIT.target) || steps[steps.length - 1];
-  return { width: Math.round(width * step), height: Math.round(height * step), textScale: textScale / step };
+  const want = font !== null && font >= HOLST_FIT.fine ? 1 : steps.find((step) => (stickerFont({ items, width: base.width * step, height: base.height * step }) || 0) >= HOLST_FIT.target) || steps[steps.length - 1];
+  if (want === k) return null;
+  return { k: want, grow: want < k, width: Math.round(base.width * want), height: Math.round(base.height * want), textScale: (textScale * k) / want };
 }
 
 
-if (typeof module !== 'undefined') module.exports = { HOLST_BLOCKS, HOLST_STYLE, normalizeTitle, blockOfColumn, blockInfo, blockOrder, workingDayIndex, sprintBombCount, shortTime, bombTop, columnAt, holstLookback, holstCards, holstHistoryIds, holstPayload, unknownColumnsText, holstForeignBoards, holstColumns, holstSprintId, holstOldTitles, readStickerLines, planSticker, kaitenCardId, stripMarker, updatedLine, stickerSignature, bombPercent, isWeekend, signed, bombLabelItems, bombStoredTrusted, sameDay, HOLST_NULL_DOC, HOLST_FIT, holstReadMessages, holstSyncQueue, isBombText, holstChart, bombLinePlan, runsEm, stickerFont, stickerFit, runsText };
+if (typeof module !== 'undefined') module.exports = { HOLST_BLOCKS, HOLST_STYLE, normalizeTitle, blockOfColumn, blockInfo, blockOrder, workingDayIndex, sprintBombCount, shortTime, bombTop, columnAt, holstLookback, holstCards, holstHistoryIds, holstPayload, unknownColumnsText, holstForeignBoards, holstColumns, holstSprintId, holstOldTitles, readStickerLines, planSticker, kaitenCardId, stripMarker, updatedLine, stickerSignature, bombPercent, isWeekend, signed, bombLabelItems, bombStoredTrusted, sameDay, HOLST_NULL_DOC, HOLST_FIT, holstReadMessages, holstSyncQueue, isBombText, holstChart, bombLinePlan, runsEm, stickerFont, stickerScale, stickerFit, runsText };

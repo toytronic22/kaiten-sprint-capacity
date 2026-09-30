@@ -724,8 +724,8 @@ function sprintCapacityMount(config) {
       sprintToast(`${payload.title}: пишу в Holst…`);
       const result = await holstApply(payload, token);
       markHolst(token, settingsNow.holst.board, 'ok');
-      sprintToast(result.text, !result.ok, result.ok ? 'ok' : 'fail', true);
-      holstNotify(tab, result.text, !result.ok, true);
+      sprintToast(result.text, !result.ok, result.calm ? null : result.ok ? 'ok' : 'fail', !result.calm);
+      holstNotify(tab, result.text, !result.ok, !result.calm);
     } catch (error) {
       if (error.auth) markHolst(token, settingsNow.holst.board, 'rejected', error.message, error.readOnly);
       if (error.auth && !error.readOnly && !fresh) {

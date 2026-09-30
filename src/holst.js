@@ -296,7 +296,9 @@ async function holstApply(payload, token) {
     const plan = planSticker({ items: before, cards, lastRun, cardUrl: (id) => `${payload.kaiten}/${id}` });
     const listChanged = stickerSignature(plan.items) !== stickerSignature(before);
     const finalItems = [...plan.items, updatedLine(now)];
-    const fit = stickerFit({ items: finalItems, width: sticker.get('width') || 384, height: sticker.get('height') || 192, textScale: sticker.get('textScale') || 1 });
+    const stickerSize = { width: sticker.get('width') || HOLST_FIT.base[0], height: sticker.get('height') || HOLST_FIT.base[1] };
+    const scale = stickerScale({ ...stickerSize, stored: listRun });
+    const fit = stickerFit({ items: finalItems, ...stickerSize, textScale: sticker.get('textScale') || 1, k: scale });
     const topOf = (percent, size) => bombTop({ percent, labels: chart.labels, axisY: chart.axisY, size });
     const percentOf = (object) => {
       const stored = object.get('sprintcap');
@@ -328,7 +330,7 @@ async function holstApply(payload, token) {
     if (!listChanged && !(bombPlan && bombPlan.changed) && !linesChanged && !fit) {
       const why = !bombPlan ? 'список как в Kaiten'
         : `бомба ${weekday} уже на ${payload.percent}%, список как в Kaiten`;
-      return { ok: false, text: [`${payload.title}: обновлять нечего — ${why}`, ...chartLines, ...(unknown ? [`Прогресс: ${unknown}`] : [])].join('\n') };
+      return { ok: !chart.problem, calm: !chart.problem, text: [`${payload.title}: обновлять нечего — ${why}`, ...chartLines, ...(unknown ? [`Прогресс: ${unknown}`] : [])].join('\n') };
     }
     const author = (sticker.get('updated') || sticker.get('created')).a;
     const updates = [];
@@ -379,7 +381,7 @@ async function holstApply(payload, token) {
         sticker.set('height', fit.height);
         sticker.set('textScale', fit.textScale);
       }
-      sticker.set('sprintcap', { t: payload.generatedAt });
+      sticker.set('sprintcap', { t: payload.generatedAt, k: fit ? fit.k : scale });
       sticker.set('updated', { a: author, t: now });
     }, 'local');
     doc.off('updateV2', listen);
@@ -399,7 +401,7 @@ async function holstApply(payload, token) {
     if (lines.remove.length) result.push(`Убрал старых линий между бомбами: ${lines.remove.length}`);
     result.push(markedText);
     result.push(`Список: ${plan.stats.cards} карт, оставил на месте ${plan.stats.kept}`);
-    if (fit) result.push('Список не влезал в стикер — сделал шрифт мельче, стикер тот же');
+    if (fit) result.push(fit.grow ? 'Список стал короче — сделал шрифт крупнее, стикер тот же' : 'Список не влезал в стикер — сделал шрифт мельче, стикер тот же');
     if (unknown) result.push(`Прогресс: ${unknown}`);
     if (plan.stats.renamed) result.push(`Обновил названия: ${plan.stats.renamed}`);
     if (plan.stats.gone) result.push(`Убрал карт не из спринта: ${plan.stats.gone}`);

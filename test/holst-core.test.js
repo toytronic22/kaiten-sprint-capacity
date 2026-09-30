@@ -618,11 +618,49 @@ test('Стикер: длинный список — шрифт мельче, м�
 
   // Assert
   assert.ok(fit.width > 384);
+  assert.equal(fit.grow, false);
   assert.ok(Math.abs(fit.width * fit.textScale - 384 * 4) < 4);
   assert.ok(Math.abs(fit.height * fit.textScale - 192 * 4) < 4);
   assert.ok(H.stickerFont({ items: long, width: fit.width, height: fit.height }) >= H.HOLST_FIT.fine);
-  assert.equal(H.stickerFit({ items: long, width: fit.width, height: fit.height, textScale: fit.textScale }), null);
+  assert.equal(H.stickerFit({ items: long, width: fit.width, height: fit.height, textScale: fit.textScale, k: fit.k }), null);
   assert.equal(H.stickerFit({ items: short, width: 384, height: 192, textScale: 4 }), null);
+});
+
+test('Стикер: список стал короче — шрифт снова крупнее, место на доске то же', () => {
+  // Arrange
+  const long = Array.from({ length: 40 }, (_, index) => li(text(`Задача номер ${index} про длинное название карты в спринте`)));
+  const medium = long.slice(0, 20);
+  const short = long.slice(0, 3);
+  const small = H.stickerFit({ items: long, width: 384, height: 192, textScale: 4 });
+
+  // Act
+  const middle = H.stickerFit({ items: medium, width: small.width, height: small.height, textScale: small.textScale, k: small.k });
+  const back = H.stickerFit({ items: short, width: small.width, height: small.height, textScale: small.textScale, k: small.k });
+
+  // Assert
+  assert.ok(middle.grow);
+  assert.ok(middle.k > 1 && middle.k < small.k);
+  assert.ok(Math.abs(middle.width * middle.textScale - 384 * 4) < 4);
+  assert.deepEqual(back, { k: 1, grow: true, width: 384, height: 192, textScale: 4 });
+});
+
+test('Стикер: во сколько раз уже увеличен — из своей пометки, у старых — по размеру', () => {
+  // Arrange
+  const stored = { t: 1, k: 2.5 };
+
+  // Act
+  const fromStored = H.stickerScale({ width: 1000, height: 480, stored });
+  const fromSize = H.stickerScale({ width: 1344, height: 672, stored: { t: 1 } });
+  const untouched = H.stickerScale({ width: 384, height: 192, stored: null });
+  const dragged = H.stickerScale({ width: 1500, height: 672, stored: {} });
+  const broken = H.stickerScale({ width: 384, height: 192, stored: { k: 7 } });
+
+  // Assert
+  assert.equal(fromStored, 2.5);
+  assert.equal(fromSize, 3.5);
+  assert.equal(untouched, 1);
+  assert.equal(dragged, 1);
+  assert.equal(broken, 1);
 });
 
 test('Payload для Holst: номера шкалы, оси и бомб берутся из настроек доски', () => {
