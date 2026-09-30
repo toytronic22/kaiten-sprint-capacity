@@ -353,7 +353,7 @@ function sprintCapacityMount(config) {
     const endSince = planEnd ? `<span title="${escapeHtml(planEnd.author)}">${snapshotTime(planEnd.takenAt)}</span>` : '';
     const end = snapshot ? `<div class="plan"><button type="button" data-act="end-planning"${planEnd ? ' class="again"' : ''}${data.busy ? ' disabled' : ''}>Закончить планирование</button>${endSince}</div>` : '';
     const holst = boardConfig(boardId, config).holst
-      ? `<div class="plan"><button type="button" data-act="to-holst" class="again"${data.busy ? ' disabled' : ''}>В Holst</button><span>бомба и розовый список</span></div>`
+      ? `<div class="plan"><button type="button" data-act="to-holst" class="again"${data.busy ? ' disabled' : ''}>В Holst</button><span>процент и розовый список</span></div>`
       : '';
     box.innerHTML = rows + legend + done + plan + end + holst;
   };

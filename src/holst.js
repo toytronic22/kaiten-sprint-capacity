@@ -312,7 +312,6 @@ async function holstApply(payload, token) {
     doc.off('updateV2', listen);
     for (const update of updates) await send(update);
     const result = [`${payload.title}: готово`, percentLine];
-    if (leftovers.lines.length || leftovers.labels.length) result.push(`Бомбы больше не двигаю — убрал свои линии между бомбами (${leftovers.lines.length}) и подписи у бомб (${leftovers.labels.length})`);
     result.push(markedText);
     result.push(`Список: ${plan.stats.cards} карт, оставил на месте ${plan.stats.kept}`);
     if (forcedFont) result.push('У стикера стоял шрифт, выбранный вручную, — вернул подбор под размер стикера');
