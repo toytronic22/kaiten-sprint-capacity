@@ -103,9 +103,6 @@ button { font: inherit; color: inherit; background: none; border: 0; border-radi
 .plan + .plan { margin-top: 8px; }
 .top { margin-left: 6px; padding: 0 6px; border-radius: 9px; background: #4d3d12; color: #f3cd62; font-size: 11px; font-weight: 600; }
 .bar .over-top { background: #c9a227; }
-.done-by { display: flex; align-self: center; margin-left: auto; border-radius: 7px; background: var(--field); overflow: hidden; }
-.done-by button { padding: 2px 7px; color: var(--muted); font-size: 11px; }
-.done-by button.on { background: var(--line); color: var(--fg); font-weight: 600; }
 .panel.collapsed .body { display: none; }
 details { border-top: 1px solid var(--line); }
 summary { display: flex; align-items: center; gap: 6px; padding: 10px 14px; cursor: pointer; list-style: none; font-weight: 600; }
@@ -246,7 +243,6 @@ function sprintCapacityMount(config) {
   const loadSettings = () => normalizeSettings(readStored(settingsKey(), boardId === config.boards[0].id ? readStored('settings', null) : null));
   let settings = loadSettings();
   let collapsed = readStored('collapsed', false) === true;
-  let doneBy = readStored('doneBy', 'cards') === 'points' ? 'points' : 'cards';
   let snapshot = null;
   let planEnd = null;
   let report = null;
@@ -310,20 +306,16 @@ function sprintCapacityMount(config) {
     }
     const rows = report.rows.map(renderRow).join('');
     const legend = snapshot ? `<div class="legend">осталось + прибавилось = сейчас / можно${planEnd ? ' · сверху — после конца планирования' : ''}</div>` : '';
-    const value = doneBy === 'points' ? report.done.pointsPercent : report.done.percent;
-    const percent = value === null ? '—' : `${value}%`;
-    const cardsOf = `${report.done.count} из ${report.done.of} ${plural(report.done.of, ['карты', 'карт', 'карт'])}`;
-    const of = doneBy === 'points' ? `${formatNumber(report.done.points)} из ${formatNumber(report.board.points)} SP · ${cardsOf}` : `${cardsOf} · ${formatNumber(report.done.points)} SP`;
-    const switcher = `<span class="done-by" title="Процент Done">${[['cards', 'карты'], ['points', 'SP']].map(([key, name]) => `<button type="button" data-act="done-by" data-by="${key}"${doneBy === key ? ' class="on"' : ''}>${name}</button>`).join('')}</span>`;
-    const done = `<div class="done"><span>Done</span><b>${percent}</b>${switcher}<span class="of">${of}</span></div>`;
+    const percent = report.progress.percent === null ? '—' : `${report.progress.percent}%`;
+    const of = `${report.done.count} из ${report.done.of} ${plural(report.done.of, ['карты', 'карт', 'карт'])} · ${formatNumber(report.done.points)} SP`;
+    const done = `<div class="done" title="${escapeHtml(PROGRESS_HINT)}"><span>Done</span><b>${percent}</b><span class="of">${of}</span></div>`;
     const since = snapshot ? `<span title="${escapeHtml(snapshot.author)}">с ${snapshotTime(snapshot.takenAt)}</span>` : '';
     const plan = `<div class="plan"><button type="button" data-act="start-planning"${snapshot ? ' class="again"' : ''}${data.busy ? ' disabled' : ''}>Начать планирование</button>${since}</div>`;
     const endSince = planEnd ? `<span title="${escapeHtml(planEnd.author)}">${snapshotTime(planEnd.takenAt)}</span>` : '';
     const end = snapshot ? `<div class="plan"><button type="button" data-act="end-planning"${planEnd ? ' class="again"' : ''}${data.busy ? ' disabled' : ''}>Закончить планирование</button>${endSince}</div>` : '';
-    const progress = `<b>${report.progress.percent === null ? '—' : `${report.progress.percent}%`}</b>`;
     const holst = boardConfig(boardId, config).holst
-      ? `<div class="plan"><button type="button" data-act="to-holst" class="again"${data.busy ? ' disabled' : ''}>В Holst</button><span title="${escapeHtml(PROGRESS_HINT)}">прогресс ${progress} · бомба и розовый список</span></div>`
-      : `<div class="plan"><span title="${escapeHtml(PROGRESS_HINT)}">Прогресс спринта ${progress}</span></div>`;
+      ? `<div class="plan"><button type="button" data-act="to-holst" class="again"${data.busy ? ' disabled' : ''}>В Holst</button><span>бомба и розовый список</span></div>`
+      : '';
     box.innerHTML = rows + legend + done + plan + end + holst;
   };
 
@@ -641,11 +633,6 @@ function sprintCapacityMount(config) {
     if (act === 'start-planning' && !data.busy) startPlanning();
     if (act === 'end-planning' && !data.busy) endPlanning();
     if (act === 'to-holst' && !data.busy) sendToHolst();
-    if (act === 'done-by') {
-      doneBy = button.dataset.by === 'points' ? 'points' : 'cards';
-      writeStored('doneBy', doneBy);
-      renderSummary();
-    }
     if (act === 'collapse') {
       collapsed = !collapsed;
       writeStored('collapsed', collapsed);
