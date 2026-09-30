@@ -93,7 +93,9 @@ button { font: inherit; color: inherit; background: none; border: 0; border-radi
 .holst-login { margin: 0 14px 14px; padding: 10px 12px; background: var(--soft); border-radius: 10px; font-size: 12px; }
 .holst-login ol { margin: 6px 0 0; padding-left: 18px; color: var(--muted); }
 .holst-login li { white-space: normal; }
-.holst-login input { text-align: left; }
+.holst-login input { flex: 1 1 auto; min-width: 90px; width: auto; text-align: left; }
+.holst-login .why { font-weight: 600; }
+.holst-login .error { margin: 0; }
 .holst-login .plan { flex-wrap: nowrap; margin-top: 8px; }
 .legend { margin-top: 10px; color: var(--muted); font-size: 11px; }
 .done { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin-top: 14px; padding: 10px 12px; background: var(--soft); border-radius: 10px; font-variant-numeric: tabular-nums; }
@@ -464,10 +466,10 @@ function sprintCapacityMount(config) {
     }
   };
 
-  const showHolstLogin = (reason) => {
+  const showHolstLogin = (reason, failed) => {
     const box = $('.holst-login');
     box.hidden = false;
-    box.innerHTML = `<div class="error">${escapeHtml(reason)}</div>`
+    box.innerHTML = `<div class="${failed ? 'error' : 'why'}">${escapeHtml(reason)}</div>`
       + '<ol><li>Откройте любую доску Holst и нажмите закладку «Вход в Holst» со <a href="https://toytronic22.github.io/kaiten-sprint-capacity/" target="_blank" rel="noopener">страницы установки</a> — она скопирует вход.</li>'
       + '<li>Вставьте его сюда и нажмите «Сохранить». Вход хранится только в этом браузере.</li></ol>'
       + '<div class="plan"><input type="password" autocomplete="off" data-holst-token placeholder="вход Holst"><button type="button" data-act="holst-save">Сохранить</button><button type="button" data-act="holst-cancel" class="again">Отмена</button></div>';
@@ -484,12 +486,12 @@ function sprintCapacityMount(config) {
     const input = $('[data-holst-token]');
     const token = input ? input.value.trim().replace(/^["']+|["']+$/g, '') : '';
     if (!token || /\s/.test(token)) {
-      showHolstLogin('Это не похоже на вход Holst — скопируйте его закладкой «Вход в Holst» ещё раз');
+      showHolstLogin('Это не похоже на вход Holst — скопируйте его закладкой «Вход в Holst» ещё раз', true);
       return;
     }
     writeStored('holstToken', token);
     if (readHolstToken() !== token) {
-      showHolstLogin('Браузер не сохранил вход — проверьте, не запрещено ли хранение данных для Kaiten');
+      showHolstLogin('Браузер не сохранил вход — проверьте, не запрещено ли хранение данных для Kaiten', true);
       return;
     }
     hideHolstLogin();
@@ -539,7 +541,7 @@ function sprintCapacityMount(config) {
       tab.close();
       if (error.auth) {
         dropHolstToken();
-        showHolstLogin(`Holst не принял вход — вставьте заново (${error.message})`);
+        showHolstLogin(`Holst не принял вход — вставьте заново (${error.message})`, true);
         sprintToast('В Holst не отправилось: Holst не принял вход — вставьте его заново в панели', true, 'fail');
       } else {
         sprintToast(`В Holst не отправилось: ${error.message || error}`, true, 'fail');
