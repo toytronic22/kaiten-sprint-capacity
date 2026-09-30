@@ -463,3 +463,171 @@ test('Первый понедельник спринта: подсвечены �
   assert.equal(payload.since, new Date(2026, 8, 25).getTime());
   assert.deepEqual(Object.fromEntries(payload.cards.map((item) => [item.id, item.mark])), { 1: 'work', 2: null });
 });
+
+const tokens = {
+  createDecoder: (items) => ({ items, index: 0 }),
+  hasContent: (decoder) => decoder.index < decoder.items.length,
+  readVarString: (decoder) => decoder.items[decoder.index++],
+  readVarUint: (decoder) => decoder.items[decoder.index++],
+  readVarInt: (decoder) => decoder.items[decoder.index++],
+  readVarUint8Array: (decoder) => decoder.items[decoder.index++],
+};
+
+test('Сообщения Holst: ответ, подтверждение, обновление байтами и ссылкой, V2 и пустое имя доски', () => {
+  // Arrange
+  const bytes = [
+    'b', 3, '{"status":"ok","readOnly":false}',
+    'b', 2, 7,
+    'b', 0, 11, 1, 5, 0, [1, 2],
+    'encV2', H.HOLST_NULL_DOC, 0, 11, 0, 5, [9], 1, 'https://cdn/board',
+  ];
+
+  // Act
+  const messages = H.holstReadMessages(tokens, bytes, 'b');
+
+  // Assert
+  assert.deepEqual(messages, [
+    { type: 'response', response: { status: 'ok', readOnly: false } },
+    { type: 'ack' },
+    { type: 'update', left: 1, data: [1, 2] },
+    { type: 'update', left: 0, link: 'https://cdn/board' },
+  ]);
+});
+
+test('Сообщения Holst: чужая доска обрывает разбор, незнакомый тип — ошибка', () => {
+  assert.deepEqual(H.holstReadMessages(tokens, ['b', 2, 1, 'other', 2, 1, 'b', 2, 1], 'b'), [{ type: 'ack' }]);
+  assert.throws(() => H.holstReadMessages(tokens, ['b', 9], 'b'), /непонятное сообщение \(9\)/);
+  assert.throws(() => H.holstReadMessages(tokens, ['b', 0, 1, 0, 1, 4], 'b'), /непонятное обновление доски \(4\)/);
+});
+
+test('Очередь Holst: доска по ссылке применяется до «готово», даже если ссылка грузится дольше', async () => {
+  // Arrange
+  const log = [];
+  let release;
+  const slow = new Promise((resolve) => { release = resolve; });
+  const push = H.holstSyncQueue({
+    apply: (bytes) => log.push(`apply ${bytes.join('')}`),
+    fetchLink: () => slow,
+    onResponse: (response) => log.push(`response ${response.status}`),
+    onAck: () => log.push('ack'),
+    onSynced: () => log.push('synced'),
+    onError: (error) => log.push(`error ${error.message}`),
+  });
+
+  // Act
+  push([{ type: 'response', response: { status: 'ok' } }, { type: 'update', left: 0, link: 'x' }]);
+  const last = push([{ type: 'ack' }]);
+  release([4, 2]);
+  await last;
+
+  // Assert
+  assert.deepEqual(log, ['response ok', 'apply 42', 'synced', 'ack']);
+});
+
+test('Очередь Holst: после ошибки дальше ничего не применяется', async () => {
+  // Arrange
+  const log = [];
+  const push = H.holstSyncQueue({
+    apply: () => log.push('apply'),
+    fetchLink: () => Promise.reject(new Error('нет сети')),
+    onResponse: () => log.push('response'),
+    onAck: () => log.push('ack'),
+    onSynced: () => log.push('synced'),
+    onError: (error) => log.push(`error ${error.message}`),
+  });
+
+  // Act
+  push([{ type: 'update', left: 0, link: 'x' }, { type: 'ack' }]);
+  await push([{ type: 'update', left: 0, data: [1] }]);
+
+  // Assert
+  assert.deepEqual(log, ['error нет сети']);
+});
+
+const chartObjects = () => [
+  { id: 'scale', type: 'simple-text', parentId: 'g', position: { x: 0, y: 100 }, lines: ['100', '75', '50', '25', '0'], textScale: 2, lineHeight: '150%' },
+  { id: 'axis', type: 'arrow', parentId: 'g', position: { x: 0, y: 0 }, start: { x: 100, y: 400 }, end: { x: 1100, y: 402 }, mine: false },
+  { id: 'tilted', type: 'arrow', parentId: 'g', position: { x: 0, y: 0 }, start: { x: 100, y: 100 }, end: { x: 1100, y: 400 }, mine: false },
+  { id: 'b2', type: 'stamp', parentId: null, position: { x: 400, y: 300 }, width: 50, height: 50, text: '💣' },
+  { id: 'b1', type: 'stamp', parentId: null, position: { x: 200, y: 300 }, width: 50, height: 50, text: '💣️' },
+  { id: 'far', type: 'stamp', parentId: null, position: { x: 5000, y: 300 }, width: 50, height: 50, text: '💣' },
+  { id: 'star', type: 'stamp', parentId: null, position: { x: 300, y: 300 }, width: 50, height: 50, text: '⭐' },
+];
+
+test('График по номерам из настроек: бомбы в порядке настроек, даже если их растащили', () => {
+  // Arrange
+  const objects = chartObjects();
+
+  // Act
+  const chart = H.holstChart({ objects, group: 'g', chart: { labels: 'scale', axis: 'axis', bombs: ['b2', 'far', 'b1'] } });
+
+  // Assert
+  assert.equal(chart.problem, null);
+  assert.deepEqual(chart.bombs.map((item) => item.id), ['b2', 'far', 'b1']);
+  assert.deepEqual(chart.notes, []);
+  assert.equal(chart.axisY, 401);
+  assert.deepEqual(chart.labels, { top: 100, height: 5 * 14 * 2 * 1.5, lines: 5 });
+});
+
+test('График: бомбы из настроек пропали — ищу по месту и пишу об этом, наклонная линия не ось', () => {
+  // Arrange
+  const objects = chartObjects();
+
+  // Act
+  const chart = H.holstChart({ objects, group: 'g', chart: { labels: 'scale', axis: 'tilted', bombs: ['b1', 'gone'] } });
+
+  // Assert
+  assert.deepEqual(chart.bombs.map((item) => item.id), ['b1', 'b2']);
+  assert.equal(chart.axisY, 401);
+  assert.match(chart.notes[0], /есть 1 из 2/);
+});
+
+test('График: нет шкалы или оси — бомбу не двигаю и говорю, чего не нашёл', () => {
+  const objects = chartObjects();
+  assert.match(H.holstChart({ objects, group: 'other', chart: {} }).problem, /шкалу/);
+  assert.match(H.holstChart({ objects: objects.filter((item) => item.type !== 'arrow'), group: 'g', chart: { labels: 'scale' } }).problem, /ось/);
+});
+
+test('Линии между бомбами: до сегодняшней, лишние и привязанные не к тем бомбам убираются', () => {
+  // Arrange
+  const bombs = [
+    { id: 'a', line: null },
+    { id: 'b', line: { id: 'l1', from: 'a', to: 'b' } },
+    { id: 'c', line: { id: 'l2', from: 'x', to: 'c' } },
+    { id: 'd', line: null },
+    { id: 'e', line: { id: 'l4', from: 'd', to: 'e' } },
+  ];
+
+  // Act
+  const plan = H.bombLinePlan({ bombs, upTo: 3 });
+
+  // Assert
+  assert.deepEqual(plan.create, [{ index: 2, from: 'b', to: 'c' }, { index: 3, from: 'c', to: 'd' }]);
+  assert.deepEqual(plan.remove, [{ index: 2, id: 'l2' }, { index: 4, id: 'l4' }]);
+  assert.deepEqual(H.bombLinePlan({ bombs, upTo: -2 }).create, []);
+  assert.deepEqual(H.bombLinePlan({ bombs, upTo: -2 }).remove.map((item) => item.id), ['l1', 'l2', 'l4']);
+});
+
+test('Стикер: длинный список — шрифт мельче, место на доске то же; короткий — не трогаю', () => {
+  // Arrange
+  const long = Array.from({ length: 30 }, (_, index) => li(text(`Задача номер ${index} про длинное название карты в спринте`)));
+  const short = [p(text('To Do')), li(text('Короткая карта'))];
+
+  // Act
+  const fit = H.stickerFit({ items: long, width: 384, height: 192, textScale: 4 });
+
+  // Assert
+  assert.ok(fit.width > 384);
+  assert.ok(Math.abs(fit.width * fit.textScale - 384 * 4) < 4);
+  assert.ok(Math.abs(fit.height * fit.textScale - 192 * 4) < 4);
+  assert.ok(H.stickerFont({ items: long, width: fit.width, height: fit.height }) >= H.HOLST_FIT.fine);
+  assert.equal(H.stickerFit({ items: long, width: fit.width, height: fit.height, textScale: fit.textScale }), null);
+  assert.equal(H.stickerFit({ items: short, width: 384, height: 192, textScale: 4 }), null);
+});
+
+test('Payload для Holst: номера шкалы, оси и бомб берутся из настроек доски', () => {
+  const report = buildReport({ cards: [], settings: defaultSettings(), config: SPRINT_CAPACITY });
+  const payload = H.holstPayload({ cards: [], report, sprintStart: '2026-09-27T21:00:00.000Z', sprintFinish: '2026-10-11T20:59:59.999Z', now: Date.parse('2026-09-30T10:00:00Z'), config: SPRINT_CAPACITY, holst: { board: 'b', group: 'g', sticker: 's', labels: 'l', axis: 'a', bombs: ['x', 'y'] }, kaiten: 'https://dodopizza.kaiten.ru', title: 'Staff Core' });
+  assert.deepEqual(payload.chart, { labels: 'l', axis: 'a', bombs: ['x', 'y'] });
+  assert.deepEqual(H.holstPayload({ cards: [], report, sprintStart: '2026-09-27T21:00:00.000Z', sprintFinish: '2026-10-11T20:59:59.999Z', now: Date.parse('2026-09-30T10:00:00Z'), config: SPRINT_CAPACITY, holst: { board: 'b', group: 'g', sticker: 's' }, kaiten: 'https://dodopizza.kaiten.ru', title: 'Staff Core' }).chart, { labels: null, axis: null, bombs: [] });
+});

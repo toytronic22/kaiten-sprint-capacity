@@ -505,16 +505,16 @@ function sprintCapacityMount(config) {
     return holst ? holst.board : null;
   };
 
-  const markHolst = (token, board, state, message) => {
-    holstStatus = { token, board, state, message: message || '', check: null };
+  const markHolst = (token, board, state, message, readOnly) => {
+    holstStatus = { token, board, state, message: message || '', readOnly: Boolean(readOnly), check: null };
   };
 
   const checkHolstLogin = (token, board) => {
     const check = holstCheck(board, token)
-      .then(() => ['ok', ''], (error) => [error.auth ? 'rejected' : 'error', error.message || String(error)])
-      .then(([state, message]) => {
+      .then(() => ['ok', ''], (error) => [error.auth ? 'rejected' : 'error', error.message || String(error), error.readOnly])
+      .then(([state, message, readOnly]) => {
         if (closed || !holstStatus || holstStatus.check !== check) return null;
-        markHolst(token, board, state, message);
+        markHolst(token, board, state, message, readOnly);
         renderHolstKey();
         return state;
       });
@@ -534,6 +534,7 @@ function sprintCapacityMount(config) {
     if (state === 'none') return ['Вход в Holst — один раз на этом компьютере', false];
     if (state === 'checking') return ['Вход в Holst сохранён, проверяю…', false];
     if (state === 'ok') return ['Вход в Holst работает — входить заново не нужно', false];
+    if (state === 'rejected' && holstStatus.readOnly) return [holstStatus.message, true];
     if (state === 'rejected') return [`Holst не пустил с сохранённым входом — войдите заново. Не помогло — проверьте, открывается ли у вас эта доска (${holstStatus.message})`, true];
     return [`Вход в Holst сохранён, но проверить не получилось: ${holstStatus.message}`, false];
   };
@@ -652,7 +653,7 @@ function sprintCapacityMount(config) {
       holstNotify(tab, 'Вход работает — эту вкладку можно закрыть', false);
       return;
     }
-    const text = state === 'rejected' ? `Holst не пускает и со свежим входом (${holstStatus.message}) — проверьте, открывается ли у вас эта доска` : `Вход в Holst сохранён, но проверить не получилось: ${holstStatus.message}`;
+    const text = state === 'rejected' && holstStatus.readOnly ? holstStatus.message : state === 'rejected' ? `Holst не пускает и со свежим входом (${holstStatus.message}) — проверьте, открывается ли у вас эта доска` : `Вход в Holst сохранён, но проверить не получилось: ${holstStatus.message}`;
     sprintToast(text, true);
     holstNotify(tab, text, true);
   };
@@ -671,7 +672,7 @@ function sprintCapacityMount(config) {
     try {
       await holstCheck(board, token);
     } catch (error) {
-      showHolstLogin(error.auth ? `Holst не принял этот вход (${error.message})` : `Не получилось проверить вход: ${error.message || error}`, true, send);
+      showHolstLogin(error.readOnly ? error.message : error.auth ? `Holst не принял этот вход (${error.message})` : `Не получилось проверить вход: ${error.message || error}`, true, send);
       return;
     }
     if (!keepHolstToken(token)) {
@@ -726,13 +727,13 @@ function sprintCapacityMount(config) {
       sprintToast(result.text, !result.ok, result.ok ? 'ok' : 'fail', true);
       holstNotify(tab, result.text, !result.ok, true);
     } catch (error) {
-      if (error.auth) markHolst(token, settingsNow.holst.board, 'rejected', error.message);
-      if (error.auth && !fresh) {
+      if (error.auth) markHolst(token, settingsNow.holst.board, 'rejected', error.message, error.readOnly);
+      if (error.auth && !error.readOnly && !fresh) {
         tab.close();
         showHolstLogin(`Holst не пустил (${error.message}) — войдите заново`, true, true);
         sprintToast('В Holst не отправилось: Holst не пустил — войдите заново в панели', true, 'fail');
       } else {
-        const text = `В Holst не отправилось: ${error.auth ? `Holst не пускает и со свежим входом (${error.message}) — проверьте, открывается ли у вас эта доска` : error.message || error}`;
+        const text = `В Holst не отправилось: ${error.auth && !error.readOnly ? `Holst не пускает и со свежим входом (${error.message}) — проверьте, открывается ли у вас эта доска` : error.message || error}`;
         if (!fresh) tab.close();
         sprintToast(text, true, 'fail');
         holstNotify(tab, text, true, true);
