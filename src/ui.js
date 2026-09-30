@@ -93,7 +93,7 @@ button { font: inherit; color: inherit; background: none; border: 0; border-radi
 .holst-login { margin: 0 14px 14px; padding: 10px 12px; background: var(--soft); border-radius: 10px; font-size: 12px; }
 .holst-login ol { margin: 6px 0 0; padding-left: 18px; color: var(--muted); }
 .holst-login li { white-space: normal; }
-.holst-login input { margin-top: 8px; text-align: left; }
+.holst-login input[type=password] { margin-top: 8px; text-align: left; }
 .holst-login .why { font-weight: 600; }
 .holst-login .error { margin: 0; }
 .holst-login .plan { margin-top: 8px; }
