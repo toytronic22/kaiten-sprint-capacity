@@ -39,3 +39,17 @@ async function kaitenCardComments(cardId) {
 async function kaitenAddComment(cardId, text) {
   return kaitenJson(`/api/cards/${cardId}/comments`, { text });
 }
+
+async function kaitenBoard(boardId) {
+  return kaitenJson(`/api/boards/${boardId}`);
+}
+
+async function kaitenLocationHistory(cardId) {
+  const history = await kaitenJson(`/api/cards/${cardId}/location-history`);
+  if (!Array.isArray(history)) throw new Error('Kaiten вернул историю карты не списком');
+  return history;
+}
+
+async function kaitenSprint(sprintId) {
+  return kaitenJson(`/api/sprints/${sprintId}`);
+}

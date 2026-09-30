@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 
 const EXPORT_LINE = /^if \(typeof module !== 'undefined'\) module\.exports = .*$/m;
 
@@ -27,8 +27,8 @@ const wrap = (parts) => {
   return text;
 };
 
-const script = wrap([core.replace(EXPORT_LINE, ''), holstCore.replace(EXPORT_LINE, ''), read('./src/kaiten.js'), read('./src/ui.js'), 'sprintCapacityMount(SPRINT_CAPACITY);']);
-const holstScript = wrap([holstCore.replace(EXPORT_LINE, ''), read('./src/holst.js'), "holstSprintRun().catch((error) => holstToast(`Ёмкость спринта: ${error.message || error}`, true));"]);
+const script = wrap([core.replace(EXPORT_LINE, ''), holstCore.replace(EXPORT_LINE, ''), read('./src/kaiten.js'), read('./src/toast.js'), read('./src/ui.js'), 'sprintCapacityMount(SPRINT_CAPACITY);']);
+const holstScript = wrap([holstCore.replace(EXPORT_LINE, ''), read('./src/toast.js'), read('./src/holst.js'), "holstSprintRun().catch((error) => sprintToast(`Ёмкость спринта: ${error.message || error}`, true, 'fail'));"]);
 
 const PAGES = 'https://toytronic22.github.io/kaiten-sprint-capacity/';
 const makeBookmarklet = (file, failure) => {
@@ -84,4 +84,6 @@ write('./dist/holst-sprint.js', holstScript);
 write('./dist/bookmarklet.txt', `${bookmarklet}\n`);
 write('./dist/holst-bookmarklet.txt', `${holstBookmarklet}\n`);
 write('./dist/install.html', installPage);
+mkdirSync(new URL('./dist/memes/', import.meta.url), { recursive: true });
+for (const meme of ['ok.png', 'fail.png']) copyFileSync(new URL(`./assets/memes/${meme}`, import.meta.url), new URL(`./dist/memes/${meme}`, import.meta.url));
 console.log(`Готово: панель ${Math.round(script.length / 1024)} КБ, скрипт Holst ${Math.round(holstScript.length / 1024)} КБ, закладки ${bookmarklet.length} и ${holstBookmarklet.length} знаков`);

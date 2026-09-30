@@ -4,19 +4,6 @@ const HOLST_LIBS = {
   decoding: 'https://cdn.jsdelivr.net/npm/lib0@0.2/decoding/+esm',
 };
 
-function holstToast(text, failed) {
-  const old = document.getElementById('sprintcap-toast');
-  if (old) old.remove();
-  const box = document.createElement('div');
-  box.id = 'sprintcap-toast';
-  box.textContent = text;
-  box.title = 'Нажмите, чтобы закрыть';
-  box.style.cssText = `position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:2147483647;max-width:min(560px,calc(100vw - 32px));padding:12px 16px;border-radius:10px;font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;white-space:pre-line;cursor:pointer;box-shadow:0 6px 24px rgba(0,0,0,.18);color:#1f2328;background:${failed ? '#ffe1e1' : '#e6f6e8'};border:1px solid ${failed ? '#e5a3a3' : '#9fd3a7'}`;
-  box.addEventListener('click', () => box.remove());
-  document.body.appendChild(box);
-  if (!failed) window.setTimeout(() => box.remove(), 20000);
-}
-
 async function holstConnect(board) {
   const [Y, enc, dec] = await Promise.all([import(HOLST_LIBS.yjs), import(HOLST_LIBS.encoding), import(HOLST_LIBS.decoding)]);
   let token = null;
@@ -211,18 +198,18 @@ async function holstSprintRun() {
   try {
     payload = decodeHolstPayload(location.hash);
   } catch (error) {
-    holstToast('Ёмкость спринта: данные в адресе повреждены — нажмите «В Holst» в калькуляторе ещё раз', true);
+    sprintToast('Ёмкость спринта: данные в адресе повреждены — нажмите «В Holst» в калькуляторе ещё раз', true, 'fail');
     return;
   }
   if (!payload) {
-    holstToast('Ёмкость спринта: сначала нажмите «В Holst» в калькуляторе Kaiten — он откроет эту доску с данными', true);
+    sprintToast('Ёмкость спринта: сначала нажмите «В Holst» в калькуляторе Kaiten — он откроет эту доску с данными', true, 'fail');
     return;
   }
   if (!location.pathname.includes(payload.board)) {
-    holstToast('Ёмкость спринта: это не та доска Holst, которую открыл калькулятор', true);
+    sprintToast('Ёмкость спринта: это не та доска Holst, которую открыл калькулятор', true, 'fail');
     return;
   }
-  holstToast('Ёмкость спринта: обновляю доску…');
+  sprintToast('Ёмкость спринта: обновляю доску…');
   const connection = await holstConnect(payload.board);
   const { Y, doc, send } = connection;
   try {
@@ -269,7 +256,7 @@ async function holstSprintRun() {
     lines.push(`Список: ${plan.stats.cards} карт, подсвечено ${plan.stats.marked}, оставил на месте ${plan.stats.kept}`);
     if (plan.stats.manual) lines.push(`Строк без карты не тронул: ${plan.stats.manual}`);
     if (plan.stats.gone) lines.push(`Карт уже не в спринте, оставил: ${plan.stats.gone}`);
-    holstToast(lines.join('\n'));
+    sprintToast(lines.join('\n'), false, 'ok');
   } finally {
     connection.ws.close();
   }

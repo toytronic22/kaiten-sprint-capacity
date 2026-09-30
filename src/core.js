@@ -1,6 +1,6 @@
 const SPRINT_CAPACITY = {
   boards: [
-    { id: 68084, title: 'Staff Core' },
+    { id: 68084, title: 'Staff Core', holst: { board: 'af338e51-5478-4b8f-a0df-5ff06716ecf6', group: '700f5295-d5f8-4afc-8605-61c00f20610f', sticker: '245b8cd3-402e-4326-99f7-1d00b9a84708' } },
     { id: 1321013, title: 'Staff Mobile', platform: { back: 16232407, front: 16237830 }, platformTags: { back: 'Backend', front: 'Mobile' }, labels: { front: 'Mobile' } },
   ],
   snapshotCardId: 71238243,
@@ -205,6 +205,7 @@ function boardConfig(boardId, config = SPRINT_CAPACITY) {
     platform: board.platform || config.platform,
     platformTags: board.platformTags || config.platformTags,
     labels: { ...DIRECTION_LABELS, ...config.labels, ...board.labels },
+    holst: board.holst || null,
   };
 }
 

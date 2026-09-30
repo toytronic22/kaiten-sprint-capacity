@@ -316,7 +316,8 @@ function sprintCapacityMount(config) {
     const plan = `<div class="plan"><button type="button" data-act="start-planning"${snapshot ? ' class="again"' : ''}${data.busy ? ' disabled' : ''}>Начать планирование</button>${since}</div>`;
     const endSince = planEnd ? `<span title="${escapeHtml(planEnd.author)}">${snapshotTime(planEnd.takenAt)}</span>` : '';
     const end = snapshot ? `<div class="plan"><button type="button" data-act="end-planning"${planEnd ? ' class="again"' : ''}${data.busy ? ' disabled' : ''}>Закончить планирование</button>${endSince}</div>` : '';
-    box.innerHTML = rows + legend + done + plan + end;
+    const holst = boardConfig(boardId, config).holst ? `<div class="plan"><button type="button" data-act="to-holst" class="again"${data.busy ? ' disabled' : ''}>В Holst</button><span>бомба и розовый список</span></div>` : '';
+    box.innerHTML = rows + legend + done + plan + end + holst;
   };
 
   const renderWarnings = () => {
@@ -443,6 +444,40 @@ function sprintCapacityMount(config) {
     }
     data.busy = false;
     await refresh();
+  };
+
+  const sendToHolst = async () => {
+    const board = boardId;
+    const settingsNow = boardConfig(board, config);
+    if (!settingsNow.holst) return;
+    const tab = window.open('about:blank', '_blank');
+    if (tab) tab.opener = null;
+    if (!tab) {
+      sprintToast('Браузер не дал открыть Holst — разрешите всплывающие окна для Kaiten', true, 'fail');
+      return;
+    }
+    data.busy = true;
+    render();
+    try {
+      const cards = await kaitenBoardCards(board);
+      const now = Date.now();
+      const current = buildReport({ cards, settings, snapshot, planEnd, config: settingsNow });
+      const columns = holstColumns(await kaitenBoard(board));
+      const histories = {};
+      for (const id of holstHistoryIds(cards, now)) histories[id] = await kaitenLocationHistory(id);
+      const boards = {};
+      for (const id of holstForeignBoards(cards, histories)) boards[id] = (await kaitenBoard(id)).title;
+      const sprintId = holstSprintId(cards);
+      if (!sprintId) throw new Error('у карт доски нет спринта');
+      const sprint = await kaitenSprint(sprintId);
+      const payload = holstPayload({ cards, report: current, doneAtStart: snapshot ? snapshot.doneIds : [], histories, columns, boards, sprintStart: sprint.start_date, now, config: settingsNow, holst: settingsNow.holst, kaiten: location.origin, title: boardTitle(board, config) });
+      tab.location.href = `https://app.holst.so/board/${settingsNow.holst.board}#${HOLST_HASH}=${encodeHolstPayload(payload)}`;
+    } catch (error) {
+      tab.close();
+      sprintToast(`В Holst не отправилось: ${error.message || error}`, true, 'fail');
+    }
+    data.busy = false;
+    render();
   };
 
   const timer = window.setInterval(() => {
@@ -590,6 +625,7 @@ function sprintCapacityMount(config) {
     if (act === 'refresh') refresh();
     if (act === 'start-planning' && !data.busy) startPlanning();
     if (act === 'end-planning' && !data.busy) endPlanning();
+    if (act === 'to-holst' && !data.busy) sendToHolst();
     if (act === 'done-by') {
       doneBy = button.dataset.by === 'points' ? 'points' : 'cards';
       writeStored('doneBy', doneBy);

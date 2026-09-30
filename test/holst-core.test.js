@@ -172,3 +172,11 @@ test('Карта пришла с другой доски — в приписке
   const [item] = H.holstCards({ cards, histories, columns: { 10: 'To Do' }, boards: { 1108487: 'Inbox(P2P)' }, now, config: SPRINT_CAPACITY });
   assert.deepEqual([item.block, item.mark, item.from], ['todo', 'work', 'Inbox(P2P)']);
 });
+
+test('Колонки доски вместе с подколонками, спринт — тот, где больше карт', () => {
+  const board = { columns: [{ id: 1, title: 'To Do' }, { id: 2, title: 'Doing', subcolumns: [{ id: 21, title: 'Review' }] }] };
+  assert.deepEqual(H.holstColumns(board), { 1: 'To Do', 2: 'Doing', 21: 'Review' });
+  assert.deepEqual(H.holstColumns(null), {});
+  assert.equal(H.holstSprintId([{ sprint_id: 5 }, { sprint_id: 7 }, { sprint_id: 7 }, {}]), 7);
+  assert.equal(H.holstSprintId([{}]), null);
+});

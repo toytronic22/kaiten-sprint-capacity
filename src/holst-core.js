@@ -340,4 +340,21 @@ function holstForeignBoards(cards, histories) {
   return [...ids];
 }
 
-if (typeof module !== 'undefined') module.exports = { HOLST_BLOCKS, HOLST_STYLE, HOLST_HASH, normalizeTitle, blockOfColumn, blockInfo, blockOrder, encodeHolstPayload, decodeHolstPayload, workingDayIndex, shortTime, bombTop, columnAt, holstCards, holstHistoryIds, holstPayload, holstForeignBoards, readStickerLines, planSticker, kaitenCardId };
+function holstColumns(board) {
+  const columns = {};
+  for (const column of (board && board.columns) || []) {
+    columns[column.id] = column.title;
+    for (const sub of column.subcolumns || []) columns[sub.id] = sub.title;
+  }
+  return columns;
+}
+
+function holstSprintId(cards) {
+  const counts = new Map();
+  for (const card of cards) if (card.sprint_id) counts.set(card.sprint_id, (counts.get(card.sprint_id) || 0) + 1);
+  let best = null;
+  for (const [id, count] of counts) if (best === null || count > counts.get(best)) best = id;
+  return best;
+}
+
+if (typeof module !== 'undefined') module.exports = { HOLST_BLOCKS, HOLST_STYLE, HOLST_HASH, normalizeTitle, blockOfColumn, blockInfo, blockOrder, encodeHolstPayload, decodeHolstPayload, workingDayIndex, shortTime, bombTop, columnAt, holstCards, holstHistoryIds, holstPayload, holstForeignBoards, holstColumns, holstSprintId, readStickerLines, planSticker, kaitenCardId };
