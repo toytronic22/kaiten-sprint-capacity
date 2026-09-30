@@ -52,7 +52,7 @@ function holstHandoff() {
     }
     if (event.data.type === 'sprint-capacity:result' && sent) {
       const failed = Boolean(event.data.failed);
-      sprintToast(String(event.data.text), failed, event.data.meme ? (failed ? 'fail' : 'ok') : null, true);
+      sprintToast(String(event.data.text), failed, event.data.meme ? (failed ? 'fail' : 'ok') : null);
       stop();
     }
   };

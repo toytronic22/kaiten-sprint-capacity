@@ -459,6 +459,27 @@ test('Закладка на доске Holst: здоровается с Kaiten �
   assert.deepEqual(holst.copied, []);
 });
 
+test('Итог «В Holst» пропадает сам через 20 секунд, ошибка остаётся до клика', () => {
+  // Arrange
+  const done = page({ hostname: 'app.holst.so', stored: { 'social-auth-store': JSON.stringify({ token: 'test-holst-2' }) }, opener: fakeTab() });
+  const failed = page({ hostname: 'app.holst.so', stored: { 'social-auth-store': JSON.stringify({ token: 'test-holst-3' }) }, opener: fakeTab() });
+  const kaitenTab = fakeTab();
+  done.message(KAITEN, { type: 'sprint-capacity:ping' }, kaitenTab);
+  failed.message(KAITEN, { type: 'sprint-capacity:ping' }, kaitenTab);
+  done.message(KAITEN, { type: 'sprint-capacity:result', text: 'Staff Core: записал', failed: false, meme: true }, kaitenTab);
+  failed.message(KAITEN, { type: 'sprint-capacity:result', text: 'В Holst не отправилось', failed: true, meme: true }, kaitenTab);
+
+  // Act
+  const before = done.toast();
+  done.runTimers(20000);
+  failed.runTimers(20000);
+
+  // Assert
+  assert.equal(before, 'Staff Core: записал');
+  assert.equal(done.toast(), null);
+  assert.equal(failed.toast(), 'В Holst не отправилось');
+});
+
 test('Закладка на Holst: Kaiten не ответил — вход копируется, и подсказано, куда вставить', async () => {
   // Arrange
   const holst = page({ hostname: 'app.holst.so', stored: { 'social-auth-store': JSON.stringify({ token: 'test-holst-2' }) }, opener: fakeTab() });
