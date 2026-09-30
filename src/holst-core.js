@@ -478,7 +478,15 @@ function holstSyncQueue({ apply, fetchLink, onResponse, onAck, onSynced, onError
   };
 }
 
-function holstChart({ objects, group, chart = {} }) {
+function arrowOnBoard(item) {
+  if (item.type !== 'arrow' || !item.start || !item.end) return item;
+  const at = item.position || { x: 0, y: 0 };
+  const shift = (point) => ({ x: point.x + (at.x || 0), y: point.y + (at.y || 0) });
+  return { ...item, start: shift(item.start), end: shift(item.end) };
+}
+
+function holstChart({ objects: raw, group, chart = {} }) {
+  const objects = raw.map(arrowOnBoard);
   const byId = new Map(objects.map((item) => [item.id, item]));
   const inGroup = (item) => Boolean(group) && item.parentId === group;
   const isScale = (item) => Boolean(item && item.type === 'simple-text' && item.position && item.lines && item.lines.length > 1);

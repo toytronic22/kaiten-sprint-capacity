@@ -524,6 +524,18 @@ test('График: номера из настроек не нашлись — �
   assert.deepEqual([chart.problem, chart.top, chart.left], [null, 100, 100]);
 });
 
+test('График: у оси, нарисованной руками, точки записаны от её position — левый край считаю на доске', () => {
+  // Arrange
+  const objects = chartObjects().map((item) => (item.id === 'axis' ? { ...item, position: { x: -3611, y: 976 }, start: { x: 0, y: 0 }, end: { x: 4313, y: 1 } } : item));
+
+  // Act
+  const chart = H.holstChart({ objects, group: 'g', chart: { labels: 'scale', axis: 'axis' } });
+
+  // Assert
+  assert.equal(chart.left, -3611);
+  assert.equal(H.percentLabelPlace(chart).x, -3597);
+});
+
 test('График: нет шкалы или оси — процент не пишу и говорю, чего не нашёл', () => {
   const objects = chartObjects();
   assert.match(H.holstChart({ objects, group: 'other', chart: {} }).problem, /шкалу/);

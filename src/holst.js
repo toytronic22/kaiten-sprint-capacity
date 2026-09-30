@@ -262,9 +262,11 @@ async function holstApply(payload, token) {
     const labelRoot = label instanceof Y.Map ? documents.get(label.get('documentId')) || null : null;
     const labelItems = payload.percent === null ? null : percentLabelItems({ percent: payload.percent, now });
     const labelChanged = Boolean(labelItems) && (!labelRoot || runsText((holstDocItems(Y, labelRoot)[0] || { runs: [] }).runs) !== runsText(labelItems[0].runs));
-    const chart = labelChanged && !labelRoot ? holstChart({ objects: holstChartObjects({ Y, objects, documents, payload }), group: payload.group, chart: payload.chart }) : null;
+    const moveLabel = Boolean(labelRoot) && !listRun.placed;
+    const chart = (labelChanged && !labelRoot) || moveLabel ? holstChart({ objects: holstChartObjects({ Y, objects, documents, payload }), group: payload.group, chart: payload.chart }) : null;
     const place = chart && !chart.problem ? percentLabelPlace(chart) : null;
-    const percentProblem = chart && chart.problem ? chart.problem : null;
+    const percentProblem = !labelRoot && chart && chart.problem ? chart.problem : null;
+    const labelMove = moveLabel && Boolean(place);
     const labelWrite = labelChanged && !percentProblem;
     const leftovers = holstLeftovers(Y, objects);
     const cleanup = leftovers.lines.length + leftovers.labels.length + leftovers.bombs.length > 0;
@@ -275,7 +277,7 @@ async function holstApply(payload, token) {
     const percentLine = payload.percent === null ? 'Процент не написал: в спринте нет карт'
       : percentProblem ? `Процент не написал: ${percentProblem}`
       : `Спринт: ${payload.percent}%${labelWrite ? ' — написал над графиком' : ''}, в Done ${payload.done} из ${payload.of}`;
-    if (!listChanged && !labelWrite && !cleanup && !fit && !forcedFont) {
+    if (!listChanged && !labelWrite && !labelMove && !cleanup && !fit && !forcedFont) {
       const why = payload.percent === null ? 'список как в Kaiten' : `над графиком уже ${payload.percent}%, список как в Kaiten`;
       return { ok: !percentProblem, calm: !percentProblem, text: [`${payload.title}: обновлять нечего — ${why}`, ...(percentProblem ? [percentLine] : []), ...(unknown ? [`Прогресс: ${unknown}`] : [])].join('\n') };
     }
@@ -289,6 +291,7 @@ async function holstApply(payload, token) {
     doc.transact(() => {
       if (labelWrite && labelRoot) holstReplaceText({ Y, object: label, root: labelRoot, items: labelItems, author, now });
       else if (labelWrite) labelId = holstCreateText({ Y, objects, documents, x: place.x, y: place.y, scale: place.textScale, zIndex: place.zIndex, author, now, items: labelItems });
+      if (labelMove) label.set('position', { x: place.x, y: place.y });
       for (const id of leftovers.lines) objects.delete(id);
       for (const id of leftovers.labels) {
         const documentId = objects.get(id).get('documentId');
@@ -306,7 +309,7 @@ async function holstApply(payload, token) {
         sticker.set('height', fit.height);
         sticker.set('textScale', fit.textScale);
       }
-      sticker.set('sprintcap', { t: payload.generatedAt, k: fit ? fit.k : scale, ...(labelId ? { label: labelId } : {}) });
+      sticker.set('sprintcap', { t: payload.generatedAt, k: fit ? fit.k : scale, ...(labelId ? { label: labelId, placed: !moveLabel || labelMove } : {}) });
       sticker.set('updated', { a: author, t: now });
     }, 'local');
     doc.off('updateV2', listen);
@@ -314,6 +317,8 @@ async function holstApply(payload, token) {
     const result = [`${payload.title}: готово`, percentLine];
     result.push(markedText);
     result.push(`Список: ${plan.stats.cards} карт, оставил на месте ${plan.stats.kept}`);
+    if (labelMove) result.push('Передвинул процент под заголовок графика');
+    if (moveLabel && !labelMove) result.push(`Процент не передвинул: ${chart.problem}`);
     if (forcedFont) result.push('У стикера стоял шрифт, выбранный вручную, — вернул подбор под размер стикера');
     if (fit) result.push(fit.grow ? 'Список стал короче — сделал шрифт крупнее, стикер тот же' : 'Список не влезал в стикер — сделал шрифт мельче, стикер тот же');
     if (unknown) result.push(`Прогресс: ${unknown}`);
