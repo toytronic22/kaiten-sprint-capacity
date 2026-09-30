@@ -71,9 +71,75 @@ test('Подсветка: сдвинулась сегодня — жёлтая, 
   assert.deepEqual(result.map((item) => [item.id, item.block, item.mark, item.from]), [
     [1, 'doing', 'work', 'To Do'],
     [2, 'done', 'done', 'Test'],
-    [3, 'doing', null, null],
+    [3, 'doing', null, 'Review'],
     [4, 'review', null, null],
   ]);
+});
+
+test('Подсветка держится весь день и добавляет карты, сдвинутые после прошлого обновления', () => {
+  const at = (day, h, m = 0) => new Date(2026, 8, day, h, m).getTime();
+  const iso = (day, h, m = 0) => new Date(at(day, h, m)).toISOString();
+  const now = at(30, 15);
+  const sprintStart = iso(22, 9);
+  const lookback = H.holstLookback(sprintStart, now);
+  assert.equal(lookback, at(22, 0));
+  const cards = [
+    { id: 1, title: 'Сегодня', state: 2, column_id: 20, column: { title: 'Doing' }, column_changed_at: iso(30, 11, 20) },
+    { id: 2, title: 'Вчера вечером', state: 2, column_id: 30, column: { title: 'Review' }, column_changed_at: iso(29, 17) },
+    { id: 3, title: 'Вчера до обновления', state: 2, column_id: 30, column: { title: 'Review' }, column_changed_at: iso(29, 10) },
+    { id: 4, title: 'Вернулась сегодня', state: 2, column_id: 20, column: { title: 'Doing' }, column_changed_at: iso(30, 9) },
+    { id: 5, title: 'В Done сегодня', state: 3, column_id: 70, column: { title: 'Done' }, column_changed_at: iso(30, 12) },
+    { id: 6, title: 'Новая вчера вечером', state: 1, column_id: 10, column: { title: 'To Do' }, column_changed_at: iso(29, 16) },
+    { id: 7, title: 'Давно', state: 2, column_id: 20, column: { title: 'Doing' }, column_changed_at: iso(20, 10) },
+  ];
+  const histories = {
+    1: [{ changed: iso(20, 10), column_id: 10 }, { changed: iso(30, 11, 20), column_id: 20 }],
+    2: [{ changed: iso(20, 10), column_id: 20 }, { changed: iso(29, 17), column_id: 30 }],
+    3: [{ changed: iso(20, 10), column_id: 20 }, { changed: iso(29, 10), column_id: 30 }],
+    4: [{ changed: iso(20, 10), column_id: 20 }, { changed: iso(29, 16), column_id: 30 }, { changed: iso(30, 9), column_id: 20 }],
+    5: [{ changed: iso(20, 10), column_id: 50 }, { changed: iso(30, 12), column_id: 70 }],
+    6: [{ changed: iso(29, 16), column_id: 10 }],
+  };
+  assert.deepEqual(H.holstHistoryIds(cards, lookback), [1, 2, 3, 4, 5, 6]);
+  const columns = { 10: 'To Do', 20: 'Doing', 30: 'Review', 50: 'Test', 70: 'Done' };
+  const items = H.holstCards({ cards, histories, columns, since: lookback, now, config: SPRINT_CAPACITY });
+  const marks = (list) => list.map((item) => [item.id, item.mark]);
+  assert.deepEqual(marks(items), [[1, 'work'], [2, null], [3, null], [4, 'work'], [5, 'done'], [6, null], [7, null]]);
+  const lastRun = at(29, 15);
+  const first = H.holstMarkWindow({ stored: { t: lastRun }, sprintStart, now });
+  assert.equal(first, lastRun);
+  const marked = H.holstMarkSince(items, first, now);
+  assert.deepEqual(marks(marked), [[1, 'work'], [2, 'work'], [3, null], [4, 'work'], [5, 'done'], [6, 'work'], [7, null]]);
+  const again = H.holstMarkWindow({ stored: { t: at(30, 12), since: first }, sprintStart, now: at(30, 18) });
+  assert.equal(again, first);
+  assert.deepEqual(marks(H.holstMarkSince(items, again, at(30, 18))), marks(marked));
+  assert.equal(H.holstMarkWindow({ stored: { t: at(30, 12), since: first }, sprintStart, now: at(31, 10) }), at(30, 12));
+  const { items: out } = H.planSticker({ items: [], cards: marked, cardUrl: url });
+  const line = out.find((item) => item.runs.some((run) => run.text === 'Вчера вечером'));
+  assert.equal(lineTexts([line])[0], `Вчера вечером  ← из Doing, ${H.shortTime(at(29, 17))}`);
+  assert.equal(line.runs[0].marks.backgroundColor, H.HOLST_STYLE.work);
+});
+
+test('Окно подсветки: сегодня, с прошлого обновления, не раньше начала спринта', () => {
+  const at = (day, h, m = 0) => new Date(2026, 8, day, h, m).getTime();
+  const now = at(30, 15);
+  const sprintStart = new Date(at(22, 9)).toISOString();
+  const today = at(30, 0);
+  assert.equal(H.holstMarkWindow({ stored: {}, sprintStart, now }), today);
+  assert.equal(H.holstMarkWindow({ stored: null, sprintStart, now }), today);
+  assert.equal(H.holstMarkWindow({ stored: { t: at(30, 9) }, sprintStart, now }), today);
+  assert.equal(H.holstMarkWindow({ stored: { t: at(30, 9), since: at(26, 18) }, sprintStart, now }), at(26, 18));
+  assert.equal(H.holstMarkWindow({ stored: { t: at(26, 18) }, sprintStart, now }), at(26, 18));
+  assert.equal(H.holstMarkWindow({ stored: { t: at(19, 18) }, sprintStart, now }), at(22, 0));
+  assert.equal(H.holstMarkWindow({ stored: { t: at(19, 18) }, sprintStart: new Date(at(31, 9)).toISOString(), now }), today);
+  assert.equal(H.holstMarkWindow({ stored: { t: at(19, 18) }, sprintStart: null, now }), today);
+  assert.equal(H.holstLookback(null, now), today);
+});
+
+test('Данные из старой панели без истории перемещений: подсветка как пришла', () => {
+  const cards = [card(1, 'Старая', 'doing', { mark: 'work' }), card(2, 'Тихая', 'todo')];
+  const result = H.holstMarkSince(cards, new Date(2026, 8, 29, 15).getTime(), new Date(2026, 8, 30, 15).getTime());
+  assert.deepEqual(result.map((item) => item.mark), ['work', null]);
 });
 
 test('Старый розовый стикер: заголовок остаётся, 🔴 переезжает к ссылке, старый «+/-» снимается', () => {

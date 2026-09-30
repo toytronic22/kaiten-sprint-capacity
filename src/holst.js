@@ -288,10 +288,13 @@ async function holstSprintWork() {
     const expectedBombs = sprintBombCount(payload.sprintStart, payload.sprintFinish);
     const bombsMatch = expectedBombs === null || chart.bombs.length === expectedBombs;
     const bomb = !weekend && bombsMatch && day >= 1 && payload.percent !== null ? chart.bombs[day - 1] || null : null;
-    const lastRun = (sticker.get('sprintcap') || {}).t || null;
+    const listRun = sticker.get('sprintcap') || {};
+    const lastRun = listRun.t || null;
+    const since = holstMarkWindow({ stored: listRun, sprintStart: payload.sprintStart, now });
+    const cards = holstMarkSince(payload.cards, since, now);
     const root = documents.get(sticker.get('documentId'));
     const before = holstDocItems(Y, root);
-    const plan = planSticker({ items: before, cards: payload.cards, lastRun, cardUrl: (id) => `${payload.kaiten}/${id}` });
+    const plan = planSticker({ items: before, cards, lastRun, cardUrl: (id) => `${payload.kaiten}/${id}` });
     const listChanged = stickerSignature(plan.items) !== stickerSignature(before);
     const topOf = (percent, size) => bombTop({ percent, labels: chart.labels, axisY: chart.axisY, size });
     const percentOf = (target) => {
@@ -316,8 +319,9 @@ async function holstSprintWork() {
         : { size, x: position.x, y, previous, delta: payload.percent - previous, label: labelAlive ? label : null, changed: y !== position.y || !labelAlive || stored.percent !== payload.percent };
     }
     const weekday = HOLST_STYLE.weekdays[new Date(now).getDay()];
-    const movedToday = payload.cards.filter((item) => item.mark).length;
-    const movedSince = lastRun === null ? null : payload.cards.filter((item) => item.mark && item.movedAt > lastRun).length;
+    const marked = cards.filter((item) => item.mark);
+    const movedSince = lastRun === null ? null : marked.filter((item) => item.movedAt > lastRun).length;
+    const markedText = `Подсвечено карт: ${marked.length} — подвинулись ${sameDay(since, now) ? 'сегодня' : `с ${shortTime(since)}`}${movedSince === null ? '' : `, из них с прошлого обновления: ${movedSince}`}`;
     const unknown = unknownColumnsText(payload.unknown);
     if (!listChanged && !(bombPlan && bombPlan.changed)) {
       history.replaceState(null, '', location.pathname + location.search);
@@ -354,7 +358,7 @@ async function holstSprintWork() {
       root.delete(0, root.length);
       root.applyDelta(nodes.map((node) => ({ insert: node })), { sanitize: false });
       sticker.set('horizontalAlign', 'left');
-      sticker.set('sprintcap', { t: payload.generatedAt });
+      sticker.set('sprintcap', { t: payload.generatedAt, since });
       sticker.set('updated', { a: author, t: now });
     }, 'local');
     doc.off('updateV2', listen);
@@ -369,7 +373,7 @@ async function holstSprintWork() {
     else if (day < 1) lines.push('Бомбу не двигал: сегодня первый день спринта');
     else if (!bombsMatch) lines.push(`Бомбу не двигал: на графике ${chart.bombs.length} бомб, а должно быть ${expectedBombs} — по одной на каждый рабочий день спринта, кроме первого. Проверьте, не удалена ли бомба или не добавлена ли лишняя`);
     else lines.push(`Бомбу не двигал: на графике ${chart.bombs.length} бомб, а сегодня ${day}-й рабочий день`);
-    lines.push(movedSince === null ? `Карт подвинулось сегодня: ${movedToday}` : `Карт подвинулось сегодня: ${movedToday}, с прошлого обновления: ${movedSince}`);
+    lines.push(markedText);
     lines.push(`Список: ${plan.stats.cards} карт, оставил на месте ${plan.stats.kept}`);
     if (unknown) lines.push(`Прогресс: ${unknown}`);
     if (plan.stats.renamed) lines.push(`Обновил названия: ${plan.stats.renamed}`);
