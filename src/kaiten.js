@@ -50,6 +50,12 @@ async function kaitenLocationHistory(cardId) {
   return history;
 }
 
+async function kaitenCardActivity(cardId) {
+  const activity = await kaitenJson(`/api/cards/${cardId}/activity`);
+  if (!Array.isArray(activity)) throw new Error('Kaiten вернул историю изменений карты не списком');
+  return activity;
+}
+
 async function kaitenSprint(sprintId) {
   return kaitenJson(`/api/sprints/${sprintId}`);
 }

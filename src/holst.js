@@ -193,7 +193,41 @@ function holstFindChart({ Y, objects, documents, group }) {
   return { labels: labelBox, axisY, bombs };
 }
 
+function holstCreateText({ Y, objects, documents, x, y, scale, zIndex, author, now, items }) {
+  const id = crypto.randomUUID();
+  const documentId = crypto.randomUUID();
+  const root = new Y.XmlText();
+  documents.set(documentId, root);
+  root.applyDelta(items.map((item) => ({ insert: holstItemNode(Y, item) })), { sanitize: false });
+  const object = new Y.Map();
+  objects.set(id, object);
+  const fields = { id, type: 'simple-text', documentId, position: { x, y }, textScale: scale, lineHeight: '150%', fontFamily: 'Inter', zIndex, created: { a: author, t: now }, updated: { a: author, t: now } };
+  for (const [key, value] of Object.entries(fields)) object.set(key, value);
+  return id;
+}
+
+function holstReplaceText({ Y, object, documents, items, x, y, author, now }) {
+  const root = documents.get(object.get('documentId'));
+  root.delete(0, root.length);
+  root.applyDelta(items.map((item) => ({ insert: holstItemNode(Y, item) })), { sanitize: false });
+  object.set('position', { x, y });
+  object.set('updated', { a: author, t: now });
+}
+
+function holstWaitHash(ms) {
+  return new Promise((resolve) => {
+    const done = () => {
+      clearTimeout(timer);
+      window.removeEventListener('hashchange', done);
+      resolve();
+    };
+    const timer = setTimeout(done, ms);
+    window.addEventListener('hashchange', done);
+  });
+}
+
 async function holstSprintRun() {
+  window.opener = null;
   if (window.sprintcapRunning) {
     sprintToast('Ёмкость спринта: уже обновляю доску, подождите');
     return;
@@ -206,14 +240,26 @@ async function holstSprintRun() {
   }
 }
 
-async function holstSprintWork() {
-  let payload;
+function holstReadPayload() {
   try {
-    payload = decodeHolstPayload(location.hash);
+    return { payload: decodeHolstPayload(location.hash) };
   } catch (error) {
+    return { broken: true };
+  }
+}
+
+async function holstSprintWork() {
+  let read = holstReadPayload();
+  if (!read.broken && !read.payload && performance.now() < 60000) {
+    sprintToast('Ёмкость спринта: жду данные из Kaiten…');
+    await holstWaitHash(30000);
+    read = holstReadPayload();
+  }
+  if (read.broken) {
     sprintToast('Ёмкость спринта: данные в адресе повреждены — нажмите «В Holst» в калькуляторе ещё раз', true, 'fail');
     return;
   }
+  const payload = read.payload;
   if (!payload) {
     sprintToast('Ёмкость спринта: сначала нажмите «В Holst» в калькуляторе Kaiten — он откроет эту доску с данными', true, 'fail');
     return;
@@ -237,43 +283,84 @@ async function holstSprintWork() {
     const sticker = objects.get(payload.sticker);
     if (!sticker || !documents.get(sticker.get('documentId'))) throw new Error('На доске нет розового стикера — проверьте его номер в настройках калькулятора');
     const now = Date.now();
+    const weekend = isWeekend(now);
     const day = workingDayIndex(payload.sprintStart, now);
-    const bomb = day >= 1 && payload.percent !== null ? chart.bombs[day - 1] : null;
+    const bomb = !weekend && day >= 1 && payload.percent !== null ? chart.bombs[day - 1] || null : null;
     const lastRun = (sticker.get('sprintcap') || {}).t || null;
     const root = documents.get(sticker.get('documentId'));
-    const plan = planSticker({ items: holstDocItems(Y, root), cards: payload.cards, lastRun, cardUrl: (id) => `${payload.kaiten}/${id}` });
-    let bombY = null;
+    const before = holstDocItems(Y, root);
+    const plan = planSticker({ items: before, cards: payload.cards, lastRun, cardUrl: (id) => `${payload.kaiten}/${id}` });
+    const listChanged = stickerSignature(plan.items) !== stickerSignature(before);
+    const percentOf = (target) => {
+      const stored = target.object.get('sprintcap');
+      if (stored && typeof stored.percent === 'number') return stored.percent;
+      return bombPercent({ top: target.object.get('position').y, labels: chart.labels, axisY: chart.axisY, size: target.object.get('height') || 169 });
+    };
+    let bombPlan = null;
+    if (bomb) {
+      const size = bomb.object.get('height') || 169;
+      const position = bomb.object.get('position');
+      const y = bombTop({ percent: payload.percent, labels: chart.labels, axisY: chart.axisY, size });
+      const stored = bomb.object.get('sprintcap') || {};
+      const label = stored.label ? objects.get(stored.label) : null;
+      const labelAlive = Boolean(label && documents.get(label.get('documentId')));
+      const previous = day >= 2 && chart.bombs[day - 2] ? percentOf(chart.bombs[day - 2]) : 0;
+      bombPlan = { size, x: position.x, y, previous, delta: payload.percent - previous, label: labelAlive ? label : null, changed: y !== position.y || !labelAlive || stored.percent !== payload.percent };
+    }
+    const weekday = HOLST_STYLE.weekdays[new Date(now).getDay()];
+    const movedToday = payload.cards.filter((item) => item.mark).length;
+    const movedSince = lastRun === null ? null : payload.cards.filter((item) => item.mark && item.movedAt > lastRun).length;
+    if (!listChanged && !(bombPlan && bombPlan.changed)) {
+      history.replaceState(null, '', location.pathname + location.search);
+      const why = bombPlan ? `бомба ${weekday} уже на ${payload.percent}%, список как в Kaiten` : 'список как в Kaiten';
+      sprintToast(`${payload.title}: обновлять нечего — ${why}`, true, 'fail');
+      return;
+    }
+    const author = (sticker.get('updated') || sticker.get('created')).a;
     const updates = [];
     const listen = (update, origin) => {
       if (origin !== 'server') updates.push(update);
     };
     doc.on('updateV2', listen);
     doc.transact(() => {
-      if (bomb) {
-        const size = bomb.object.get('height') || 169;
-        bombY = bombTop({ percent: payload.percent, labels: chart.labels, axisY: chart.axisY, size });
-        bomb.object.set('position', { x: bomb.object.get('position').x, y: bombY });
+      if (bombPlan && bombPlan.changed) {
+        bomb.object.set('position', { x: bombPlan.x, y: bombPlan.y });
+        const items = bombLabelItems({ percent: payload.percent, delta: bombPlan.delta, now });
+        const scale = 2;
+        const labelX = bombPlan.x + bombPlan.size + 12;
+        const labelY = Math.round(bombPlan.y + bombPlan.size / 2 - 2 * 14 * scale * 1.5 / 2);
+        let labelId;
+        if (bombPlan.label) {
+          holstReplaceText({ Y, object: bombPlan.label, documents, items, x: labelX, y: labelY, author, now });
+          labelId = bombPlan.label.get('id');
+        } else {
+          labelId = holstCreateText({ Y, objects, documents, x: labelX, y: labelY, scale, zIndex: (bomb.object.get('zIndex') || 0) + 0.5, author, now, items });
+        }
+        bomb.object.set('sprintcap', { percent: payload.percent, t: now, label: labelId });
         bomb.object.set('updated', { a: (bomb.object.get('updated') || bomb.object.get('created')).a, t: now });
       }
-      const nodes = plan.items.map((item) => holstItemNode(Y, item));
+      const nodes = [...plan.items, updatedLine(now)].map((item) => holstItemNode(Y, item));
       root.delete(0, root.length);
       root.applyDelta(nodes.map((node) => ({ insert: node })), { sanitize: false });
       sticker.set('horizontalAlign', 'left');
       sticker.set('sprintcap', { t: payload.generatedAt });
-      sticker.set('updated', { a: (sticker.get('updated') || sticker.get('created')).a, t: now });
+      sticker.set('updated', { a: author, t: now });
     }, 'local');
     doc.off('updateV2', listen);
     for (const update of updates) await send(update);
     history.replaceState(null, '', location.pathname + location.search);
-    const weekday = HOLST_STYLE.weekdays[new Date(now).getDay()];
     const lines = [`${payload.title}: готово`];
-    if (bomb) lines.push(`Бомба ${weekday} → ${payload.percent}% (${payload.done} из ${payload.of})`);
+    if (bombPlan && bombPlan.changed) lines.push(`Спринт: ${bombPlan.previous}% → ${payload.percent}% (${signed(bombPlan.delta)} за день), бомба ${weekday}, ${payload.done} из ${payload.of}`);
+    else if (bombPlan) lines.push(`Спринт: ${payload.percent}%, бомба ${weekday} уже на месте`);
+    else if (weekend) lines.push('Бомбу не двигал: выходной');
     else if (payload.percent === null) lines.push('Бомбу не двигал: в спринте нет карт');
     else if (day < 1) lines.push('Бомбу не двигал: сегодня первый день спринта');
     else lines.push(`Бомбу не двигал: на графике ${chart.bombs.length} бомб, а сегодня ${day}-й рабочий день`);
-    lines.push(`Список: ${plan.stats.cards} карт, подсвечено ${plan.stats.marked}, оставил на месте ${plan.stats.kept}`);
+    lines.push(movedSince === null ? `Карт подвинулось сегодня: ${movedToday}` : `Карт подвинулось сегодня: ${movedToday}, с прошлого обновления: ${movedSince}`);
+    lines.push(`Список: ${plan.stats.cards} карт, оставил на месте ${plan.stats.kept}`);
+    if (plan.stats.renamed) lines.push(`Обновил названия: ${plan.stats.renamed}`);
+    if (plan.stats.gone) lines.push(`Убрал карт не из спринта: ${plan.stats.gone}`);
     if (plan.stats.manual) lines.push(`Строк без карты не тронул: ${plan.stats.manual}`);
-    if (plan.stats.gone) lines.push(`Карт уже не в спринте, оставил: ${plan.stats.gone}`);
     sprintToast(lines.join('\n'), false, 'ok');
   } finally {
     connection.ws.close();

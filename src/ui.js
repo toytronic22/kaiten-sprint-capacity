@@ -450,8 +450,8 @@ function sprintCapacityMount(config) {
     const board = boardId;
     const settingsNow = boardConfig(board, config);
     if (!settingsNow.holst) return;
-    const tab = window.open('about:blank', '_blank');
-    if (tab) tab.opener = null;
+    const holstUrl = `https://app.holst.so/board/${settingsNow.holst.board}`;
+    const tab = window.open(holstUrl, '_blank');
     if (!tab) {
       sprintToast('Браузер не дал открыть Holst — разрешите всплывающие окна для Kaiten', true, 'fail');
       return;
@@ -459,19 +459,25 @@ function sprintCapacityMount(config) {
     data.busy = true;
     render();
     try {
-      const cards = await kaitenBoardCards(board);
+      const [cards, boardJson] = await Promise.all([kaitenBoardCards(board), kaitenBoard(board)]);
       const now = Date.now();
       const current = buildReport({ cards, settings, snapshot, planEnd, config: settingsNow });
-      const columns = holstColumns(await kaitenBoard(board));
-      const histories = {};
-      for (const id of holstHistoryIds(cards, now)) histories[id] = await kaitenLocationHistory(id);
-      const boards = {};
-      for (const id of holstForeignBoards(cards, histories)) boards[id] = (await kaitenBoard(id)).title;
+      const columns = holstColumns(boardJson);
       const sprintId = holstSprintId(cards);
       if (!sprintId) throw new Error('у карт доски нет спринта');
-      const sprint = await kaitenSprint(sprintId);
-      const payload = holstPayload({ cards, report: current, doneAtStart: snapshot ? snapshot.doneIds : [], histories, columns, boards, sprintStart: sprint.start_date, now, config: settingsNow, holst: settingsNow.holst, kaiten: location.origin, title: boardTitle(board, config) });
-      tab.location.href = `https://app.holst.so/board/${settingsNow.holst.board}#${HOLST_HASH}=${encodeHolstPayload(payload)}`;
+      const historyIds = holstHistoryIds(cards, now);
+      const [sprint, historyList, activityList] = await Promise.all([
+        kaitenSprint(sprintId),
+        Promise.all(historyIds.map((id) => kaitenLocationHistory(id))),
+        Promise.all(cards.map((card) => kaitenCardActivity(card.id).catch(() => []))),
+      ]);
+      const histories = Object.fromEntries(historyIds.map((id, index) => [id, historyList[index]]));
+      const renames = Object.fromEntries(cards.map((card, index) => [card.id, activityList[index]]));
+      const foreignIds = holstForeignBoards(cards, histories);
+      const foreignList = await Promise.all(foreignIds.map((id) => kaitenBoard(id)));
+      const boards = Object.fromEntries(foreignIds.map((id, index) => [id, foreignList[index].title]));
+      const payload = holstPayload({ cards, report: current, doneAtStart: snapshot ? snapshot.doneIds : [], histories, columns, boards, renames, sprintStart: sprint.start_date, now, config: settingsNow, holst: settingsNow.holst, kaiten: location.origin, title: boardTitle(board, config) });
+      tab.location.href = `${holstUrl}#${HOLST_HASH}=${encodeHolstPayload(payload)}`;
       sprintToast('Holst открыт в соседней вкладке — нажмите там закладку «Спринт → Holst»');
     } catch (error) {
       tab.close();

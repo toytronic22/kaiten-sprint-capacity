@@ -19,6 +19,10 @@ const HOLST_STYLE = {
 
 const HOLST_HASH = 'sprintcap';
 
+const HOLST_MARKERS = { doing: '+/-', review: '+/-', test: '+/-', release: '+/-', done: '+' };
+
+const HOLST_UPDATED = /^\s*Обновлено\s+\d{2}\.\d{2}/;
+
 function normalizeTitle(text) {
   return String(text || '').toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ').trim();
 }
@@ -106,7 +110,21 @@ function columnAt(history, time) {
   return column;
 }
 
-function holstCards({ cards, doneAtStart = [], histories = {}, columns = {}, boards = {}, now, config }) {
+function holstOldTitles(activity, title) {
+  const current = normalizeTitle(title);
+  const seen = new Set([current]);
+  const result = [];
+  for (const entry of activity || []) {
+    if (!entry || entry.changed_field !== 'title' || !entry.old_title) continue;
+    const name = normalizeTitle(entry.old_title);
+    if (!name || seen.has(name)) continue;
+    seen.add(name);
+    result.push(String(entry.old_title).trim());
+  }
+  return result;
+}
+
+function holstCards({ cards, doneAtStart = [], histories = {}, columns = {}, boards = {}, renames = {}, now, config }) {
   const skip = new Set(doneAtStart);
   const dayStart = localDay(now).getTime();
   const title = (id) => columns[id] || `колонка ${id}`;
@@ -122,6 +140,8 @@ function holstCards({ cards, doneAtStart = [], histories = {}, columns = {}, boa
         mark: null,
         from: null,
       };
+      const old = holstOldTitles(renames[card.id], card.title);
+      if (old.length) item.old = old;
       const history = [...(histories[card.id] || [])].sort((a, b) => new Date(a.changed) - new Date(b.changed));
       if (movedAt !== null && movedAt >= dayStart && history.length) {
         const before = columnAt(history, dayStart - 1);
@@ -140,7 +160,7 @@ function holstHistoryIds(cards, now) {
   return cards.filter((card) => card.column_changed_at && new Date(card.column_changed_at).getTime() >= dayStart).map((card) => card.id);
 }
 
-function holstPayload({ cards, report, doneAtStart = [], histories = {}, columns = {}, boards = {}, sprintStart, now, config, holst, kaiten, title }) {
+function holstPayload({ cards, report, doneAtStart = [], histories = {}, columns = {}, boards = {}, renames = {}, sprintStart, now, config, holst, kaiten, title }) {
   return {
     v: 1,
     board: holst.board,
@@ -153,7 +173,7 @@ function holstPayload({ cards, report, doneAtStart = [], histories = {}, columns
     percent: report.done.percent,
     done: report.done.count,
     of: report.done.of,
-    cards: holstCards({ cards, doneAtStart, histories, columns, boards, now, config }),
+    cards: holstCards({ cards, doneAtStart, histories, columns, boards, renames, now, config }),
   };
 }
 
@@ -207,14 +227,34 @@ function headerBlock(text, knownKeys) {
   return extra || `column:${match[1].trim()}`;
 }
 
+function isUpdatedLine(item) {
+  return item.type !== 'ol-list-item' && HOLST_UPDATED.test(runsText(item.runs));
+}
+
+function stripMarker(runs) {
+  const copy = runs.map((run) => ({ ...run }));
+  while (copy.length && !copy[0].link) {
+    const cleaned = copy[0].text.replace(/^\s*(?:\+\s*\/\s*-|\+)(?![\p{L}\p{N}])\s*/u, '');
+    if (cleaned === copy[0].text) break;
+    copy[0].text = cleaned;
+    if (cleaned) break;
+    copy.shift();
+    while (copy.length && !copy[0].link && !copy[0].text.trim()) copy.shift();
+  }
+  return copy.filter((run) => run.text);
+}
+
 function readStickerLines(items, cards) {
-  const byTitle = [...cards].filter((card) => card.title).sort((a, b) => b.title.length - a.title.length);
+  const byTitle = cards
+    .flatMap((card) => [card.title, ...(card.old || [])].filter(Boolean).map((title) => ({ card, title })))
+    .sort((a, b) => normalizeTitle(b.title).length - normalizeTitle(a.title).length);
   const knownKeys = [...new Set(cards.map((card) => card.block))];
   const result = { preamble: [], lines: [] };
   let block = null;
   let started = false;
   for (const item of items) {
     const text = runsText(item.runs);
+    if (isUpdatedLine(item)) continue;
     if (item.type !== 'ol-list-item') {
       const header = headerBlock(text, knownKeys);
       if (header) {
@@ -234,19 +274,21 @@ function readStickerLines(items, cards) {
     if (linkAt >= 0) {
       const tail = item.runs.slice(linkAt + 1);
       const noteAt = tail.findIndex(isNoteRun);
+      const link = item.runs[linkAt].link;
       result.lines.push({
         block,
-        cardId: kaitenCardId(item.runs[linkAt].link),
+        cardId: kaitenCardId(link),
+        matched: item.runs.filter((run) => run.link === link).map((run) => run.text).join(''),
         prefix: trimRuns(item.runs.slice(0, linkAt), 'end'),
         suffix: trimRuns(noteAt >= 0 ? tail.slice(0, noteAt) : tail, 'start'),
         item,
       });
       continue;
     }
-    const card = byTitle.find((candidate) => titlePattern(candidate.title).test(text));
-    const parts = card && splitByTitle(item.runs, card.title);
+    const hit = byTitle.find((candidate) => titlePattern(candidate.title).test(text));
+    const parts = hit && splitByTitle(item.runs, hit.title);
     if (parts) {
-      result.lines.push({ block, cardId: card.id, prefix: trimRuns(parts.prefix, 'end'), suffix: parts.suffix, item });
+      result.lines.push({ block, cardId: hit.card.id, matched: hit.title, prefix: trimRuns(parts.prefix, 'end'), suffix: parts.suffix, item });
       continue;
     }
     result.lines.push({ block, cardId: null, item });
@@ -254,12 +296,15 @@ function readStickerLines(items, cards) {
   return result;
 }
 
-function cardRuns(card, line, url) {
+function cardRuns(card, line, url, block = card.block) {
   const marks = { color: HOLST_STYLE.link };
   if (card.mark) marks.backgroundColor = HOLST_STYLE[card.mark];
   const runs = [];
-  if (line && line.prefix && line.prefix.length) {
-    runs.push(...line.prefix);
+  const marker = HOLST_MARKERS[block];
+  const prefix = line && line.prefix ? stripMarker(line.prefix) : [];
+  if (marker) runs.push({ text: `${marker} ` });
+  if (prefix.length) {
+    runs.push(...prefix);
     runs.push({ text: ' ' });
   }
   runs.push({ text: card.title, marks, link: url });
@@ -281,16 +326,25 @@ function planSticker({ items, cards, lastRun = null, cardUrl }) {
     if (!blocks.has(key)) blocks.set(key, []);
     blocks.get(key).push(entry);
   };
-  const stats = { cards: 0, kept: 0, marked: 0, manual: 0, gone: 0 };
+  const stats = { cards: 0, kept: 0, marked: 0, manual: 0, gone: 0, renamed: 0 };
+  const renamed = new Set();
   for (const line of parsed.lines) {
-    if (line.cardId === null || !byId.has(line.cardId)) {
-      if (line.cardId !== null) {
-        if (seen.has(line.cardId)) continue;
-        seen.add(line.cardId);
-        stats.gone += 1;
-      } else {
-        stats.manual += 1;
+    if (line.cardId !== null && byId.has(line.cardId) && normalizeTitle(line.matched) !== normalizeTitle(byId.get(line.cardId).title)) renamed.add(line.cardId);
+  }
+  stats.renamed = renamed.size;
+  for (const line of parsed.lines) {
+    if (line.cardId !== null && !byId.has(line.cardId)) {
+      if (!line.block) {
+        loose.push({ item: line.item });
+        continue;
       }
+      if (seen.has(line.cardId)) continue;
+      seen.add(line.cardId);
+      stats.gone += 1;
+      continue;
+    }
+    if (line.cardId === null) {
+      stats.manual += 1;
       if (line.block) put(line.block, { item: line.item });
       else loose.push({ item: line.item });
       continue;
@@ -301,7 +355,7 @@ function planSticker({ items, cards, lastRun = null, cardUrl }) {
     if (!stays) continue;
     seen.add(card.id);
     stats.kept += 1;
-    put(line.block, { card, runs: cardRuns(card, line, cardUrl(card.id)) });
+    put(line.block, { card, runs: cardRuns(card, line, cardUrl(card.id), line.block) });
   }
   const lineOf = new Map();
   for (const line of parsed.lines) {
@@ -332,6 +386,52 @@ function planSticker({ items, cards, lastRun = null, cardUrl }) {
   return { items: out, stats };
 }
 
+function updatedLine(now) {
+  return { type: 'paragraph', runs: [{ text: `Обновлено ${shortTime(now)}`, marks: { color: HOLST_STYLE.note, italic: true, fontSize: HOLST_STYLE.noteSize } }] };
+}
+
+function canonicalMarks(marks) {
+  return JSON.stringify(Object.keys(marks || {}).sort().filter((key) => marks[key] !== undefined && marks[key] !== null && marks[key] !== false).map((key) => [key, marks[key]]));
+}
+
+function stickerSignature(items) {
+  return JSON.stringify(items.filter((item) => !isUpdatedLine(item)).map((item) => {
+    const runs = [];
+    for (const run of item.runs) {
+      if (!run.text) continue;
+      const link = run.link || null;
+      const marks = canonicalMarks(run.marks);
+      const last = runs[runs.length - 1];
+      if (last && last[1] === link && last[2] === marks) last[0] += run.text;
+      else runs.push([run.text, link, marks]);
+    }
+    return [item.type, runs];
+  }));
+}
+
+function bombPercent({ top, labels, axisY, size }) {
+  const lowest = axisY - 21;
+  const center = top + size / 2;
+  if (center >= lowest - 1) return 0;
+  const row = ((center - labels.top) * labels.lines) / labels.height - 0.5;
+  return Math.round(Math.min(Math.max(100 - (row / (labels.lines - 1)) * 100, 0), 100));
+}
+
+function isWeekend(now) {
+  const day = new Date(now).getDay();
+  return day === 0 || day === 6;
+}
+
+function signed(number) {
+  return number > 0 ? `+${number}` : String(number);
+}
+
+function bombLabelItems({ percent, delta, now }) {
+  return [
+    { type: 'paragraph', runs: [{ text: `${signed(delta)}% → ${percent}%`, marks: { bold: true } }] },
+    { type: 'paragraph', runs: [{ text: shortTime(now), marks: { color: HOLST_STYLE.note } }] },
+  ];
+}
 
 function holstForeignBoards(cards, histories) {
   const own = new Set(cards.map((card) => card.board_id));
@@ -366,4 +466,4 @@ function holstSprintId(cards) {
   return best;
 }
 
-if (typeof module !== 'undefined') module.exports = { HOLST_BLOCKS, HOLST_STYLE, HOLST_HASH, normalizeTitle, blockOfColumn, blockInfo, blockOrder, encodeHolstPayload, decodeHolstPayload, workingDayIndex, shortTime, bombTop, columnAt, holstCards, holstHistoryIds, holstPayload, holstForeignBoards, holstColumns, holstSprintId, holstPayloadStale, readStickerLines, planSticker, kaitenCardId };
+if (typeof module !== 'undefined') module.exports = { HOLST_BLOCKS, HOLST_STYLE, HOLST_HASH, normalizeTitle, blockOfColumn, blockInfo, blockOrder, encodeHolstPayload, decodeHolstPayload, workingDayIndex, shortTime, bombTop, columnAt, holstCards, holstHistoryIds, holstPayload, holstForeignBoards, holstColumns, holstSprintId, holstPayloadStale, holstOldTitles, readStickerLines, planSticker, kaitenCardId, stripMarker, updatedLine, stickerSignature, bombPercent, isWeekend, signed, bombLabelItems };
