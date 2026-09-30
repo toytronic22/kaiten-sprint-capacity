@@ -261,9 +261,9 @@ test('Выходные и подпись у бомбы', () => {
   assert.equal(H.isWeekend(new Date(2026, 9, 3, 12)), true);
   assert.equal(H.isWeekend(new Date(2026, 9, 4, 12)), true);
   assert.equal(H.isWeekend(new Date(2026, 9, 5, 12)), false);
-  assert.deepEqual(lineTexts(H.bombLabelItems({ percent: 3, delta: 2, now: new Date(2026, 8, 30, 14, 5).getTime() })), ['+2% → 3%', '30.09 14:05']);
-  assert.deepEqual(lineTexts(H.bombLabelItems({ percent: 3, delta: -1, now: new Date(2026, 8, 30, 14, 5).getTime() })), ['-1% → 3%', '30.09 14:05']);
-  assert.deepEqual(lineTexts(H.bombLabelItems({ percent: 3, delta: 0, now: new Date(2026, 8, 30, 14, 5).getTime() })), ['0% → 3%', '30.09 14:05']);
+  assert.deepEqual(lineTexts(H.bombLabelItems({ previous: 1, percent: 3, now: new Date(2026, 8, 30, 14, 5).getTime() })), ['1% → 3% (+2)', '30.09 14:05']);
+  assert.deepEqual(lineTexts(H.bombLabelItems({ previous: 48, percent: 3, now: new Date(2026, 8, 30, 14, 5).getTime() })), ['48% → 3% (-45)', '30.09 14:05']);
+  assert.deepEqual(lineTexts(H.bombLabelItems({ previous: 3, percent: 3, now: new Date(2026, 8, 30, 14, 5).getTime() })), ['3% → 3% (0)', '30.09 14:05']);
 });
 
 test('Номер карты берётся из разных видов ссылки Kaiten', () => {
@@ -299,4 +299,25 @@ test('Данные из адреса годятся только сегодня 
   assert.equal(H.holstPayloadStale({ generatedAt: now - 61 * 60 * 1000 }, now), 'данным больше часа');
   assert.equal(H.holstPayloadStale({ generatedAt: new Date(2026, 8, 29, 23, 50).getTime() }, new Date(2026, 8, 30, 0, 10).getTime()), 'данные не сегодняшние');
   assert.equal(H.holstPayloadStale({}, now), 'в данных нет времени');
+});
+
+test('бомб на графике — по одной на каждый рабочий день спринта, кроме первого', () => {
+  assert.equal(H.sprintBombCount('2026-09-27T21:00:00.000Z', '2026-10-11T20:59:59.999Z'), 9);
+  assert.equal(H.sprintBombCount('2026-09-27T21:00:00.000Z', '2026-10-04T20:59:59.999Z'), 4);
+  assert.equal(H.sprintBombCount('2026-09-27T21:00:00.000Z', undefined), null);
+  const start = '2026-09-27T21:00:00.000Z';
+  assert.equal(H.workingDayIndex(start, new Date(2026, 8, 28, 12).getTime()), 0);
+  assert.equal(H.workingDayIndex(start, new Date(2026, 8, 30, 12).getTime()), 2);
+  assert.equal(H.workingDayIndex(start, new Date(2026, 9, 5, 12).getTime()), 5);
+  assert.equal(H.workingDayIndex(start, new Date(2026, 9, 9, 12).getTime()), 9);
+});
+
+test('бомба, подвинутая руками, важнее записи скрипта', () => {
+  assert.equal(H.bombStoredTrusted({ percent: 30 }, 1000, 1000), true);
+  assert.equal(H.bombStoredTrusted({ percent: 30 }, 1002, 1000), true);
+  assert.equal(H.bombStoredTrusted({ percent: 30 }, 900, 1000), false);
+  assert.equal(H.bombStoredTrusted({}, 1000, 1000), false);
+  assert.equal(H.bombStoredTrusted(null, 1000, 1000), false);
+  assert.equal(H.sameDay(new Date(2026, 8, 30, 0, 5).getTime(), new Date(2026, 8, 30, 23, 55).getTime()), true);
+  assert.equal(H.sameDay(new Date(2026, 8, 29, 23, 55).getTime(), new Date(2026, 8, 30, 0, 5).getTime()), false);
 });

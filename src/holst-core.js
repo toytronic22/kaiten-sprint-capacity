@@ -75,8 +75,12 @@ function localDay(value) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
+function sprintFirstDay(start) {
+  return localDay(new Date(start).getTime() + 12 * 3600000);
+}
+
 function workingDayIndex(start, now) {
-  const first = localDay(start);
+  const first = sprintFirstDay(start);
   const today = localDay(now);
   if (today < first) return -1;
   let index = 0;
@@ -86,6 +90,18 @@ function workingDayIndex(start, now) {
     if (next.getDay() !== 0 && next.getDay() !== 6) index += 1;
   }
   return index;
+}
+
+function sprintBombCount(start, finish) {
+  if (!start || !finish) return null;
+  const length = Math.round((new Date(finish) - new Date(start)) / 86400000);
+  const day = sprintFirstDay(start);
+  let count = 0;
+  for (let index = 1; index < length; index += 1) {
+    day.setDate(day.getDate() + 1);
+    if (day.getDay() !== 0 && day.getDay() !== 6) count += 1;
+  }
+  return count;
 }
 
 function shortTime(value) {
@@ -160,7 +176,7 @@ function holstHistoryIds(cards, now) {
   return cards.filter((card) => card.column_changed_at && new Date(card.column_changed_at).getTime() >= dayStart).map((card) => card.id);
 }
 
-function holstPayload({ cards, report, doneAtStart = [], histories = {}, columns = {}, boards = {}, renames = {}, sprintStart, now, config, holst, kaiten, title }) {
+function holstPayload({ cards, report, doneAtStart = [], histories = {}, columns = {}, boards = {}, renames = {}, sprintStart, sprintFinish, now, config, holst, kaiten, title }) {
   return {
     v: 1,
     board: holst.board,
@@ -169,6 +185,7 @@ function holstPayload({ cards, report, doneAtStart = [], histories = {}, columns
     title,
     kaiten,
     sprintStart,
+    sprintFinish,
     generatedAt: now,
     percent: report.done.percent,
     done: report.done.count,
@@ -422,13 +439,21 @@ function isWeekend(now) {
   return day === 0 || day === 6;
 }
 
+function bombStoredTrusted(stored, top, storedTop) {
+  return Boolean(stored && typeof stored.percent === 'number' && Math.abs(top - storedTop) <= 2);
+}
+
+function sameDay(a, b) {
+  return localDay(a).getTime() === localDay(b).getTime();
+}
+
 function signed(number) {
   return number > 0 ? `+${number}` : String(number);
 }
 
-function bombLabelItems({ percent, delta, now }) {
+function bombLabelItems({ previous, percent, now }) {
   return [
-    { type: 'paragraph', runs: [{ text: `${signed(delta)}% → ${percent}%`, marks: { bold: true } }] },
+    { type: 'paragraph', runs: [{ text: `${previous}% → ${percent}% (${signed(percent - previous)})`, marks: { bold: true } }] },
     { type: 'paragraph', runs: [{ text: shortTime(now), marks: { color: HOLST_STYLE.note } }] },
   ];
 }
@@ -466,4 +491,4 @@ function holstSprintId(cards) {
   return best;
 }
 
-if (typeof module !== 'undefined') module.exports = { HOLST_BLOCKS, HOLST_STYLE, HOLST_HASH, normalizeTitle, blockOfColumn, blockInfo, blockOrder, encodeHolstPayload, decodeHolstPayload, workingDayIndex, shortTime, bombTop, columnAt, holstCards, holstHistoryIds, holstPayload, holstForeignBoards, holstColumns, holstSprintId, holstPayloadStale, holstOldTitles, readStickerLines, planSticker, kaitenCardId, stripMarker, updatedLine, stickerSignature, bombPercent, isWeekend, signed, bombLabelItems };
+if (typeof module !== 'undefined') module.exports = { HOLST_BLOCKS, HOLST_STYLE, HOLST_HASH, normalizeTitle, blockOfColumn, blockInfo, blockOrder, encodeHolstPayload, decodeHolstPayload, workingDayIndex, sprintBombCount, shortTime, bombTop, columnAt, holstCards, holstHistoryIds, holstPayload, holstForeignBoards, holstColumns, holstSprintId, holstPayloadStale, holstOldTitles, readStickerLines, planSticker, kaitenCardId, stripMarker, updatedLine, stickerSignature, bombPercent, isWeekend, signed, bombLabelItems, bombStoredTrusted, sameDay };

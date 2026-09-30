@@ -285,34 +285,44 @@ async function holstSprintWork() {
     const now = Date.now();
     const weekend = isWeekend(now);
     const day = workingDayIndex(payload.sprintStart, now);
-    const bomb = !weekend && day >= 1 && payload.percent !== null ? chart.bombs[day - 1] || null : null;
+    const expectedBombs = sprintBombCount(payload.sprintStart, payload.sprintFinish);
+    const bombsMatch = expectedBombs === null || chart.bombs.length === expectedBombs;
+    const bomb = !weekend && bombsMatch && day >= 1 && payload.percent !== null ? chart.bombs[day - 1] || null : null;
     const lastRun = (sticker.get('sprintcap') || {}).t || null;
     const root = documents.get(sticker.get('documentId'));
     const before = holstDocItems(Y, root);
     const plan = planSticker({ items: before, cards: payload.cards, lastRun, cardUrl: (id) => `${payload.kaiten}/${id}` });
     const listChanged = stickerSignature(plan.items) !== stickerSignature(before);
+    const topOf = (percent, size) => bombTop({ percent, labels: chart.labels, axisY: chart.axisY, size });
     const percentOf = (target) => {
       const stored = target.object.get('sprintcap');
-      if (stored && typeof stored.percent === 'number') return stored.percent;
-      return bombPercent({ top: target.object.get('position').y, labels: chart.labels, axisY: chart.axisY, size: target.object.get('height') || 169 });
+      const size = target.object.get('height') || 169;
+      const top = target.object.get('position').y;
+      if (stored && bombStoredTrusted(stored, top, topOf(stored.percent, size))) return stored.percent;
+      return bombPercent({ top, labels: chart.labels, axisY: chart.axisY, size });
     };
     let bombPlan = null;
     if (bomb) {
       const size = bomb.object.get('height') || 169;
       const position = bomb.object.get('position');
-      const y = bombTop({ percent: payload.percent, labels: chart.labels, axisY: chart.axisY, size });
+      const y = topOf(payload.percent, size);
       const stored = bomb.object.get('sprintcap') || {};
       const label = stored.label ? objects.get(stored.label) : null;
       const labelAlive = Boolean(label && documents.get(label.get('documentId')));
       const previous = day >= 2 && chart.bombs[day - 2] ? percentOf(chart.bombs[day - 2]) : 0;
-      bombPlan = { size, x: position.x, y, previous, delta: payload.percent - previous, label: labelAlive ? label : null, changed: y !== position.y || !labelAlive || stored.percent !== payload.percent };
+      const manual = typeof stored.percent === 'number' && stored.t && sameDay(stored.t, now) && !bombStoredTrusted(stored, position.y, topOf(stored.percent, size));
+      bombPlan = manual
+        ? { size, x: position.x, y: position.y, previous, manual: percentOf(bomb), changed: false }
+        : { size, x: position.x, y, previous, delta: payload.percent - previous, label: labelAlive ? label : null, changed: y !== position.y || !labelAlive || stored.percent !== payload.percent };
     }
     const weekday = HOLST_STYLE.weekdays[new Date(now).getDay()];
     const movedToday = payload.cards.filter((item) => item.mark).length;
     const movedSince = lastRun === null ? null : payload.cards.filter((item) => item.mark && item.movedAt > lastRun).length;
     if (!listChanged && !(bombPlan && bombPlan.changed)) {
       history.replaceState(null, '', location.pathname + location.search);
-      const why = bombPlan ? `бомба ${weekday} уже на ${payload.percent}%, список как в Kaiten` : 'список как в Kaiten';
+      const why = !bombPlan ? 'список как в Kaiten'
+        : bombPlan.manual !== undefined ? `бомбу ${weekday} подвинули вручную на ${bombPlan.manual}%, её не трогаю; список как в Kaiten`
+        : `бомба ${weekday} уже на ${payload.percent}%, список как в Kaiten`;
       sprintToast(`${payload.title}: обновлять нечего — ${why}`, true, 'fail');
       return;
     }
@@ -325,7 +335,7 @@ async function holstSprintWork() {
     doc.transact(() => {
       if (bombPlan && bombPlan.changed) {
         bomb.object.set('position', { x: bombPlan.x, y: bombPlan.y });
-        const items = bombLabelItems({ percent: payload.percent, delta: bombPlan.delta, now });
+        const items = bombLabelItems({ previous: bombPlan.previous, percent: payload.percent, now });
         const scale = 2;
         const labelX = bombPlan.x + bombPlan.size + 12;
         const labelY = Math.round(bombPlan.y + bombPlan.size / 2 - 2 * 14 * scale * 1.5 / 2);
@@ -351,10 +361,12 @@ async function holstSprintWork() {
     history.replaceState(null, '', location.pathname + location.search);
     const lines = [`${payload.title}: готово`];
     if (bombPlan && bombPlan.changed) lines.push(`Спринт: ${bombPlan.previous}% → ${payload.percent}% (${signed(bombPlan.delta)} за день), бомба ${weekday}, ${payload.done} из ${payload.of}`);
+    else if (bombPlan && bombPlan.manual !== undefined) lines.push(`Спринт: бомбу ${weekday} подвинули вручную на ${bombPlan.manual}% — её не трогаю (по Kaiten ${payload.percent}%, ${payload.done} из ${payload.of})`);
     else if (bombPlan) lines.push(`Спринт: ${payload.percent}%, бомба ${weekday} уже на месте`);
     else if (weekend) lines.push('Бомбу не двигал: выходной');
     else if (payload.percent === null) lines.push('Бомбу не двигал: в спринте нет карт');
     else if (day < 1) lines.push('Бомбу не двигал: сегодня первый день спринта');
+    else if (!bombsMatch) lines.push(`Бомбу не двигал: на графике ${chart.bombs.length} бомб, а должно быть ${expectedBombs} — по одной на каждый рабочий день спринта, кроме первого. Проверьте, не удалена ли бомба или не добавлена ли лишняя`);
     else lines.push(`Бомбу не двигал: на графике ${chart.bombs.length} бомб, а сегодня ${day}-й рабочий день`);
     lines.push(movedSince === null ? `Карт подвинулось сегодня: ${movedToday}` : `Карт подвинулось сегодня: ${movedToday}, с прошлого обновления: ${movedSince}`);
     lines.push(`Список: ${plan.stats.cards} карт, оставил на месте ${plan.stats.kept}`);
