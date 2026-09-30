@@ -1,7 +1,7 @@
 const SPRINT_CAPACITY = {
   boards: [
-    { id: 68084, title: 'Staff Core', holst: { board: 'af338e51-5478-4b8f-a0df-5ff06716ecf6', group: '700f5295-d5f8-4afc-8605-61c00f20610f', sticker: '245b8cd3-402e-4326-99f7-1d00b9a84708' } },
-    { id: 1321013, title: 'Staff Mobile', platform: { back: 16232407, front: 16237830 }, platformTags: { back: 'Backend', front: 'Mobile' }, labels: { front: 'Mobile' } },
+    { id: 68084, title: 'Staff Core', holst: { board: '67165a75-56cd-40d4-aeb8-c6f05ae5c057', group: '8686c163-2c4c-4dd4-b86a-9272dde08876', sticker: '48d1ad3f-be39-4601-9680-fca941dbf8cb' } },
+    { id: 1321013, title: 'Staff Mobile', platform: { back: 16232407, front: 16237830 }, platformTags: { back: 'Backend', front: 'Mobile' }, labels: { front: 'Mobile' }, holst: { board: '67165a75-56cd-40d4-aeb8-c6f05ae5c057', group: '5e307012-f88c-4d6e-ab3f-559114026ebd', sticker: 'f78f383c-1b8a-4adf-be02-b9971043f4d0' } },
   ],
   snapshotCardId: 71238243,
   fields: { devEstimate: 'id_396449', platform: 'id_499149', testType: 'id_505017' },
