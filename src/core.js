@@ -255,7 +255,7 @@ function geeseCall({ rows, snapshot, planEnd, now, lastDay, seen, config = SPRIN
   const planning = Boolean(snapshot) && localDay(new Date(snapshot.takenAt)) === today;
   const base = seen && seen.from === from ? seen.totals : planEnd ? planEnd.totals : null;
   const crossed = rows.filter((row) => Boolean(base) && Number.isFinite(base[row.direction]) && !isChaos({ ...row, total: base[row.direction] }));
-  const names = planning ? (lastDay === today ? [] : chaosNames(rows, config)) : chaosNames(crossed, config);
+  const names = lastDay === today ? [] : planning ? chaosNames(rows, config) : chaosNames(crossed, config);
   return { names, planning, seen: { from, totals: Object.fromEntries(rows.map((row) => [row.direction, row.total])) } };
 }
 

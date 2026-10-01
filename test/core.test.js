@@ -408,6 +408,24 @@ test('гуси в спринте: докинули, и направление п
   assert.deepEqual(reopened.names, []);
 });
 
+test('гуси бегут раз в день: уже бегали сегодня — новый переход через ×2 молчит до завтра', () => {
+  // Arrange
+  const snapshot = { takenAt: new Date(2026, 8, 28, 10, 0).toISOString(), totals: { back: 20, front: 2, qa: 5 } };
+  const rows = [{ direction: 'back', total: 43, capacity: 20 }, { direction: 'front', total: 9, capacity: 4 }, { direction: 'qa', total: 6, capacity: 10 }];
+  const seen = { from: snapshot.takenAt, totals: { back: 39, front: 7, qa: 6 } };
+  const now = new Date(2026, 9, 1, 15, 0);
+  const tomorrow = new Date(2026, 9, 2, 9, 0);
+  const config = core.boardConfig(CORE_BOARD);
+
+  // Act
+  const sameDay = core.geeseCall({ rows, snapshot, planEnd: null, now, lastDay: core.localDay(now), seen, config });
+  const nextDay = core.geeseCall({ rows, snapshot, planEnd: null, now: tomorrow, lastDay: core.localDay(now), seen, config });
+
+  // Assert
+  assert.deepEqual(sameDay.names, []);
+  assert.deepEqual(nextDay.names, ['Бэк', 'Frontend']);
+});
+
 test('гуси в спринте: кричат, только когда перешагнули ×2; уже выше порога, без новых карт или без конца планирования — тишина', () => {
   // Arrange
   const snapshot = { takenAt: new Date(2026, 8, 28, 10, 0).toISOString(), totals: { back: 20, front: 2, qa: 5 } };

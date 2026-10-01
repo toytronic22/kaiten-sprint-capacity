@@ -867,7 +867,7 @@ function sprintCapacityMount(config) {
     const call = geeseCall({ rows: report.rows, snapshot, planEnd, now: new Date(), lastDay: readStored(`geese.${boardId}`, null), seen: readStored(`geeseSeen.${boardId}`, null), config: boardConfig(boardId, config) });
     writeStored(`geeseSeen.${boardId}`, call.seen);
     if (!call.names.length) return;
-    if (call.planning) writeStored(`geese.${boardId}`, localDay(new Date()));
+    writeStored(`geese.${boardId}`, localDay(new Date()));
     releaseGeese(call.names);
   };
   const checkChaosLater = () => {
