@@ -390,7 +390,7 @@ test('гуси на планировании: в день «Начать пла�
   assert.deepEqual(again.names, []);
 });
 
-test('гуси в спринте: кричат только про то, что докинули сверх порога, и один раз', () => {
+test('гуси в спринте: докинули, и направление перешагнуло ×2 — кричат про него один раз', () => {
   // Arrange
   const snapshot = { takenAt: new Date(2026, 8, 28, 10, 0).toISOString(), totals: { back: 20, front: 2, qa: 5 } };
   const planEnd = { totals: { back: 38, front: 9, qa: 6 } };
@@ -408,7 +408,7 @@ test('гуси в спринте: кричат только про то, что 
   assert.deepEqual(reopened.names, []);
 });
 
-test('гуси в спринте: перегруз без новых карт и первое открытие без конца планирования — тишина', () => {
+test('гуси в спринте: кричат, только когда перешагнули ×2; уже выше порога, без новых карт или без конца планирования — тишина', () => {
   // Arrange
   const snapshot = { takenAt: new Date(2026, 8, 28, 10, 0).toISOString(), totals: { back: 20, front: 2, qa: 5 } };
   const rows = [{ direction: 'back', total: 50, capacity: 20 }, { direction: 'front', total: 9, capacity: 4 }, { direction: 'qa', total: 6, capacity: 10 }];
@@ -419,13 +419,15 @@ test('гуси в спринте: перегруз без новых карт и
   // Act
   const firstOpen = core.geeseCall({ rows, snapshot, planEnd: null, now, lastDay: null, seen: null, config });
   const afterOldSprint = core.geeseCall({ rows, snapshot, planEnd: null, now, lastDay: null, seen: oldSprint, config });
-  const grew = core.geeseCall({ rows, snapshot, planEnd: null, now, lastDay: null, seen: { from: snapshot.takenAt, totals: { back: 48, front: 9, qa: 6 } }, config });
+  const alreadyOver = core.geeseCall({ rows, snapshot, planEnd: null, now, lastDay: null, seen: { from: snapshot.takenAt, totals: { back: 45, front: 9, qa: 6 } }, config });
+  const crossed = core.geeseCall({ rows, snapshot, planEnd: null, now, lastDay: null, seen: { from: snapshot.takenAt, totals: { back: 39, front: 9, qa: 6 } }, config });
 
   // Assert
   assert.deepEqual(firstOpen.names, []);
   assert.deepEqual(afterOldSprint.names, []);
-  assert.deepEqual(grew.names, ['Бэк']);
-  assert.deepEqual(grew.seen, { from: snapshot.takenAt, totals: { back: 50, front: 9, qa: 6 } });
+  assert.deepEqual(alreadyOver.names, []);
+  assert.deepEqual(crossed.names, ['Бэк']);
+  assert.deepEqual(crossed.seen, { from: snapshot.takenAt, totals: { back: 50, front: 9, qa: 6 } });
 });
 
 test('конец планирования: всё, что прилетело после, считается отдельно «сверху» и остаётся в «прибавилось»', () => {
