@@ -249,8 +249,14 @@ function localDay(date) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
-function geeseDue(lastDay, now) {
-  return lastDay !== localDay(now);
+function geeseCall({ rows, snapshot, planEnd, now, lastDay, seen, config = SPRINT_CAPACITY }) {
+  const today = localDay(now);
+  const from = snapshot ? snapshot.takenAt : null;
+  const planning = Boolean(snapshot) && localDay(new Date(snapshot.takenAt)) === today;
+  const base = seen && seen.from === from ? seen.totals : planEnd ? planEnd.totals : null;
+  const grown = rows.filter((row) => Boolean(base) && Number.isFinite(base[row.direction]) && row.total > base[row.direction]);
+  const names = planning ? (lastDay === today ? [] : chaosNames(rows, config)) : chaosNames(grown, config);
+  return { names, planning, seen: { from, totals: Object.fromEntries(rows.map((row) => [row.direction, row.total])) } };
 }
 
 function signed(value) {
@@ -343,4 +349,4 @@ function planEndFromComments(comments, snapshot) {
   return null;
 }
 
-if (typeof module !== 'undefined') module.exports = { SPRINT_CAPACITY, DIRECTIONS, DIRECTION_LABELS, toNumber, round1, formatNumber, plural, readEstimate, platformOf, needsQa, isBug, splitEstimate, progressStage, progressWeight, estimateIssues, defaultSettings, normalizeSettings, capacityOf, buildReport, boardConfig, isChaos, chaosNames, localDay, geeseDue, formatRow, takeSnapshot, takePlanEnd, normalizeSnapshot, boardTitle, snapshotComment, snapshotFromComments, planEndComment, planEndFromComments };
+if (typeof module !== 'undefined') module.exports = { SPRINT_CAPACITY, DIRECTIONS, DIRECTION_LABELS, toNumber, round1, formatNumber, plural, readEstimate, platformOf, needsQa, isBug, splitEstimate, progressStage, progressWeight, estimateIssues, defaultSettings, normalizeSettings, capacityOf, buildReport, boardConfig, isChaos, chaosNames, localDay, geeseCall, formatRow, takeSnapshot, takePlanEnd, normalizeSnapshot, boardTitle, snapshotComment, snapshotFromComments, planEndComment, planEndFromComments };
