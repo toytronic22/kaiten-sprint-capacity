@@ -866,7 +866,11 @@ function sprintCapacityMount(config) {
   const checkChaos = () => {
     const names = report ? chaosNames(report.rows, boardConfig(boardId, config)) : [];
     const chaos = names.length > 0;
-    if (chaos && !chaosBefore) releaseGeese(names);
+    const geeseKey = `geese.${boardId}`;
+    if (chaos && !chaosBefore && geeseDue(readStored(geeseKey, null), new Date())) {
+      writeStored(geeseKey, localDay(new Date()));
+      releaseGeese(names);
+    }
     chaosBefore = chaos;
   };
   const checkChaosLater = () => {

@@ -373,6 +373,22 @@ test('беспредел: трещит тот, у кого вдвое больш
   assert.deepEqual(qaOnly, ['QA']);
 });
 
+test('гуси бегают раз в день: в тот же день не бегут, со следующего дня — снова', () => {
+  // Arrange
+  const morning = new Date(2026, 9, 1, 9, 5);
+  const night = new Date(2026, 9, 1, 23, 59);
+  const nextDay = new Date(2026, 9, 2, 0, 1);
+
+  // Act
+  const ran = core.localDay(morning);
+
+  // Assert
+  assert.equal(ran, '2026-10-01');
+  assert.equal(core.geeseDue(null, morning), true);
+  assert.equal(core.geeseDue(ran, night), false);
+  assert.equal(core.geeseDue(ran, nextDay), true);
+});
+
 test('конец планирования: всё, что прилетело после, считается отдельно «сверху» и остаётся в «прибавилось»', () => {
   // Arrange
   const start = [card(1, { size: 6, sp: 3, platforms: [BACK] }), card(4, { size: 9, sp: 5, platforms: [BACK], state: DONE })];
