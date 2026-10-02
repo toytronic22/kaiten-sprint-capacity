@@ -756,6 +756,7 @@ function sprintCapacityMount(config) {
   };
   document.addEventListener('visibilitychange', onVisible);
 
+  let chaosBefore = false;
   let chaosTimer = null;
   let chaosWords = null;
   const crashGoose = (random) => {
@@ -863,12 +864,10 @@ function sprintCapacityMount(config) {
     }, lifetime * 1000);
   };
   const checkChaos = () => {
-    if (!report || data.snapshotError) return;
-    const call = geeseCall({ rows: report.rows, snapshot, planEnd, now: new Date(), lastDay: readStored(`geese.${boardId}`, null), seen: readStored(`geeseSeen.${boardId}`, null), config: boardConfig(boardId, config) });
-    writeStored(`geeseSeen.${boardId}`, call.seen);
-    if (!call.names.length) return;
-    if (call.planning) writeStored(`geese.${boardId}`, localDay(new Date()));
-    releaseGeese(call.names);
+    const names = report ? chaosNames(report.rows, boardConfig(boardId, config)) : [];
+    const chaos = names.length > 0;
+    if (chaos && !chaosBefore) releaseGeese(names);
+    chaosBefore = chaos;
   };
   const checkChaosLater = () => {
     window.clearTimeout(chaosTimer);
@@ -914,6 +913,7 @@ function sprintCapacityMount(config) {
     settings = loadSettings();
     snapshot = null;
     planEnd = null;
+    chaosBefore = false;
     Object.assign(data, { cards: null, loadedAt: null, error: null, snapshotError: null });
     fillSettings();
     $('.settings').open = DIRECTIONS.some((direction) => settings.team[direction].people === 0);

@@ -244,21 +244,6 @@ function chaosNames(rows, config = SPRINT_CAPACITY) {
   return rows.filter(isChaos).map((row) => names[row.direction]);
 }
 
-function localDay(date) {
-  const pad = (value) => String(value).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-}
-
-function geeseCall({ rows, snapshot, planEnd, now, lastDay, seen, config = SPRINT_CAPACITY }) {
-  const today = localDay(now);
-  const from = snapshot ? snapshot.takenAt : null;
-  const planning = Boolean(snapshot) && localDay(new Date(snapshot.takenAt)) === today;
-  const base = seen && seen.from === from ? seen.totals : planEnd ? planEnd.totals : null;
-  const crossed = rows.filter((row) => Boolean(base) && Number.isFinite(base[row.direction]) && !isChaos({ ...row, total: base[row.direction] }));
-  const names = planning ? (lastDay === today ? [] : chaosNames(rows, config)) : chaosNames(crossed, config);
-  return { names, planning, seen: { from, totals: Object.fromEntries(rows.map((row) => [row.direction, row.total])) } };
-}
-
 function signed(value) {
   return `${value < 0 ? '−' : '+'}${formatNumber(Math.abs(value))}`;
 }
@@ -349,4 +334,4 @@ function planEndFromComments(comments, snapshot) {
   return null;
 }
 
-if (typeof module !== 'undefined') module.exports = { SPRINT_CAPACITY, DIRECTIONS, DIRECTION_LABELS, toNumber, round1, formatNumber, plural, readEstimate, platformOf, needsQa, isBug, splitEstimate, progressStage, progressWeight, estimateIssues, defaultSettings, normalizeSettings, capacityOf, buildReport, boardConfig, isChaos, chaosNames, localDay, geeseCall, formatRow, takeSnapshot, takePlanEnd, normalizeSnapshot, boardTitle, snapshotComment, snapshotFromComments, planEndComment, planEndFromComments };
+if (typeof module !== 'undefined') module.exports = { SPRINT_CAPACITY, DIRECTIONS, DIRECTION_LABELS, toNumber, round1, formatNumber, plural, readEstimate, platformOf, needsQa, isBug, splitEstimate, progressStage, progressWeight, estimateIssues, defaultSettings, normalizeSettings, capacityOf, buildReport, boardConfig, isChaos, chaosNames, formatRow, takeSnapshot, takePlanEnd, normalizeSnapshot, boardTitle, snapshotComment, snapshotFromComments, planEndComment, planEndFromComments };

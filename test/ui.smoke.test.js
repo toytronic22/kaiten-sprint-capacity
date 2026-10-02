@@ -123,9 +123,9 @@ const fakeTab = () => {
   return tab;
 };
 
-const page = ({ hostname, stored = {}, opener = null, clipboard = true, holst = 'ok' }) => {
+const page = ({ hostname, stored = {}, opener = null, clipboard = true, holst = 'ok', fetch = () => Promise.reject(new Error('нет сети в тесте')) }) => {
   const env = { stored: new Map(Object.entries(stored)), timers: [], listeners: {}, opened: [], alerts: [], copied: [], blockPopups: false, holst, sockets: [] };
-  const shadow = remember(fakeElement(), new Map([['.holst-login', remember(Object.assign(fakeElement(), { hidden: true }))]]));
+  const shadow = remember(fakeElement(), new Map([['.holst-login', remember(Object.assign(fakeElement(), { hidden: true }))], ['.geese', null]]));
   const body = fakeElement();
   const document = {
     hidden: false,
@@ -158,7 +158,7 @@ const page = ({ hostname, stored = {}, opener = null, clipboard = true, holst = 
       removeItem: (key) => env.stored.delete(key),
     },
     navigator: clipboard ? { clipboard: { writeText: (text) => { env.copied.push(text); return Promise.resolve(); } } } : {},
-    fetch: () => Promise.reject(new Error('нет сети в тесте')),
+    fetch,
     holstImport,
     WebSocket: fakeSocket(env),
     setTimeout: (listener, ms) => addTimer(listener, ms, false),
@@ -194,6 +194,7 @@ const page = ({ hostname, stored = {}, opener = null, clipboard = true, holst = 
     timer.listener();
   });
   env.document = document;
+  env.geese = () => shadow.children.filter((element) => element.className === 'geese').length;
   env.toast = () => {
     const box = document.getElementById('sprintcap-toast');
     return box ? box.children.map((element) => element.textContent).join('') : null;
@@ -203,6 +204,35 @@ const page = ({ hostname, stored = {}, opener = null, clipboard = true, holst = 
 
 const flush = () => new Promise((resolve) => setImmediate(resolve));
 const plain = (value) => JSON.parse(JSON.stringify(value));
+
+const overloadedKaiten = () => page({
+  hostname: 'dodopizza.kaiten.ru',
+  stored: {
+    'sprintCapacity.v1.board': '68084',
+    'sprintCapacity.v1.settings.68084': JSON.stringify({ team: { back: { people: 1 } } }),
+    'sprintCapacity.v1.geese.68084': JSON.stringify('2026-10-02'),
+  },
+  fetch: (url) => Promise.resolve({
+    ok: true,
+    json: () => Promise.resolve(url.startsWith('/api/cards?') ? [{ id: 1, title: 'Карта 1', size: 30, properties: { id_499149: [16232407] }, state: 1 }] : []),
+  }),
+});
+
+test('Перегруз: гуси бегут при каждом открытии панели, а обновление в открытой панели их не зовёт', async () => {
+  // Arrange
+  const first = overloadedKaiten();
+  await flush();
+
+  // Act
+  first.click('refresh');
+  await flush();
+  const reopened = overloadedKaiten();
+  await flush();
+
+  // Assert
+  assert.equal(first.geese(), 1);
+  assert.equal(reopened.geese(), 1);
+});
 
 test('Панель на Kaiten: красная точка без входа открывает вход через Holst', () => {
   // Arrange

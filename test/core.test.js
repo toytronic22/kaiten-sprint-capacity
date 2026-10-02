@@ -373,63 +373,6 @@ test('беспредел: трещит тот, у кого вдвое больш
   assert.deepEqual(qaOnly, ['QA']);
 });
 
-test('гуси на планировании: в день «Начать планирование» бегут при перегрузе, но один раз за день', () => {
-  // Arrange
-  const snapshot = { takenAt: new Date(2026, 8, 28, 10, 0).toISOString(), totals: { back: 20, front: 2, qa: 5 } };
-  const rows = [{ direction: 'back', total: 45, capacity: 20 }, { direction: 'front', total: 3, capacity: 4 }, { direction: 'qa', total: 8, capacity: 10 }];
-  const now = new Date(2026, 8, 28, 15, 0);
-  const config = core.boardConfig(CORE_BOARD);
-
-  // Act
-  const first = core.geeseCall({ rows, snapshot, planEnd: null, now, lastDay: null, seen: null, config });
-  const again = core.geeseCall({ rows, snapshot, planEnd: null, now, lastDay: core.localDay(now), seen: first.seen, config });
-
-  // Assert
-  assert.equal(first.planning, true);
-  assert.deepEqual(first.names, ['Бэк']);
-  assert.deepEqual(again.names, []);
-});
-
-test('гуси в спринте: докинули, и направление перешагнуло ×2 — кричат про него один раз', () => {
-  // Arrange
-  const snapshot = { takenAt: new Date(2026, 8, 28, 10, 0).toISOString(), totals: { back: 20, front: 2, qa: 5 } };
-  const planEnd = { totals: { back: 38, front: 9, qa: 6 } };
-  const rows = [{ direction: 'back', total: 43, capacity: 20 }, { direction: 'front', total: 9, capacity: 4 }, { direction: 'qa', total: 6, capacity: 10 }];
-  const now = new Date(2026, 9, 1, 9, 0);
-  const config = core.boardConfig(CORE_BOARD);
-
-  // Act
-  const first = core.geeseCall({ rows, snapshot, planEnd, now, lastDay: null, seen: null, config });
-  const reopened = core.geeseCall({ rows, snapshot, planEnd, now, lastDay: null, seen: first.seen, config });
-
-  // Assert
-  assert.equal(first.planning, false);
-  assert.deepEqual(first.names, ['Бэк']);
-  assert.deepEqual(reopened.names, []);
-});
-
-test('гуси в спринте: кричат, только когда перешагнули ×2; уже выше порога, без новых карт или без конца планирования — тишина', () => {
-  // Arrange
-  const snapshot = { takenAt: new Date(2026, 8, 28, 10, 0).toISOString(), totals: { back: 20, front: 2, qa: 5 } };
-  const rows = [{ direction: 'back', total: 50, capacity: 20 }, { direction: 'front', total: 9, capacity: 4 }, { direction: 'qa', total: 6, capacity: 10 }];
-  const now = new Date(2026, 9, 1, 9, 0);
-  const config = core.boardConfig(CORE_BOARD);
-  const oldSprint = { from: new Date(2026, 8, 14, 10, 0).toISOString(), totals: { back: 10, front: 1, qa: 1 } };
-
-  // Act
-  const firstOpen = core.geeseCall({ rows, snapshot, planEnd: null, now, lastDay: null, seen: null, config });
-  const afterOldSprint = core.geeseCall({ rows, snapshot, planEnd: null, now, lastDay: null, seen: oldSprint, config });
-  const alreadyOver = core.geeseCall({ rows, snapshot, planEnd: null, now, lastDay: null, seen: { from: snapshot.takenAt, totals: { back: 45, front: 9, qa: 6 } }, config });
-  const crossed = core.geeseCall({ rows, snapshot, planEnd: null, now, lastDay: null, seen: { from: snapshot.takenAt, totals: { back: 39, front: 9, qa: 6 } }, config });
-
-  // Assert
-  assert.deepEqual(firstOpen.names, []);
-  assert.deepEqual(afterOldSprint.names, []);
-  assert.deepEqual(alreadyOver.names, []);
-  assert.deepEqual(crossed.names, ['Бэк']);
-  assert.deepEqual(crossed.seen, { from: snapshot.takenAt, totals: { back: 50, front: 9, qa: 6 } });
-});
-
 test('конец планирования: всё, что прилетело после, считается отдельно «сверху» и остаётся в «прибавилось»', () => {
   // Arrange
   const start = [card(1, { size: 6, sp: 3, platforms: [BACK] }), card(4, { size: 9, sp: 5, platforms: [BACK], state: DONE })];
