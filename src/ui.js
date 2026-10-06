@@ -374,6 +374,195 @@ a:hover { text-decoration: underline; }
 @keyframes wl-judge { from { transform: translateY(260px); } to { transform: translateY(0); } }
 @keyframes wl-card { from { transform: translateY(440px); } to { transform: translateY(0); } }
 @keyframes wl-third { 0% { opacity: 0; transform: translateX(-40px); } 8%, 90% { opacity: 1; transform: translateX(0); } 100% { opacity: 0; transform: translateX(0); } }
+.geese .rk-sky { background: linear-gradient(#060a1c, #18203f 62%, #3b3558); }
+.geese .rk text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
+.geese .rk-wide { animation: rk-push 3.3s ease-in both, rk-off .01s linear 3.3s forwards; }
+.geese .rk-rumble { animation: rk-jitter .06s linear 1.9s infinite alternate; }
+.geese .rk-steam { animation: rk-steam 1.4s ease-out 2.1s both; }
+.geese .rk-flame { opacity: 0; animation: rk-on .01s linear 2.5s forwards, rk-flick .08s linear 2.5s infinite alternate; }
+.geese .rk-lift { animation: rk-lift .75s cubic-bezier(.55, 0, .9, .45) 2.65s both; }
+.geese .rk-close { opacity: 0; animation: rk-on .01s linear 3.3s forwards, rk-zoom 10.8s linear both; }
+.geese .rk-rig { animation: rk-jitter2 .07s linear 3.3s 41 alternate, rk-bounce .55s ease-out 6.22s forwards; }
+.geese .rk-cabin { animation: rk-away .7s cubic-bezier(.5, 0, .9, .5) 6.2s forwards; }
+.geese .rk-column { opacity: 0; transform-box: fill-box; transform-origin: 50% 100%; animation: rk-column 1.1s ease-out 6.3s forwards; }
+.geese .rk-trail { animation: rk-trail 1.5s cubic-bezier(.45, 0, .9, .6) 6.75s both; }
+.geese .rk-sparks { opacity: 0; animation: rk-spark .2s steps(1, end) 6.25s 12; }
+.geese .rk-wire { opacity: 0; animation: rk-on .01s linear 6.25s forwards; }
+.geese .rk-streak { animation: rk-streak .14s linear 3.3s infinite; }
+.geese .rk-lamp { animation: rk-blink .6s steps(1, end) var(--d) infinite; }
+.geese .rk-blink { animation: rk-blink .5s steps(1, end) infinite; }
+.geese .rk-stretch { animation: rk-stretch 10.8s linear both; }
+.geese .rk-jaw { animation: rk-flap .06s linear 3.5s 44 alternate, rk-gape .3s ease-out 6.3s forwards, rk-shut .2s ease-in 7.75s forwards; }
+.geese .rk-eye { animation: rk-wink .3s ease-in-out 8.55s both; }
+.geese .rk-ripple { opacity: 0; animation: rk-on .01s linear 3.6s forwards, rk-wobble .05s linear 3.6s infinite alternate, rk-off .01s linear 7.6s forwards; }
+.geese .rk-fish { animation: rk-fish 10.8s linear both; }
+.geese .rk-wing { animation: rk-wing 10.8s linear both; }
+.geese .rk-rrr, .geese .rk-crack { opacity: 0; transform-box: fill-box; transform-origin: center; }
+.geese .rk-rrr { animation: rk-on .01s linear 3.4s forwards, rk-shiver .07s linear 3.4s 40 alternate, rk-off .01s linear 6.2s forwards; }
+.geese .rk-crack { animation: rk-text 1.2s ease-out 6.2s forwards; }
+.geese .rk-hud, .geese .rk-count, .geese .rk-g, .geese .rk-sub { height: fit-content; width: fit-content; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
+.geese .rk-hud { inset: 3% auto auto 3%; padding: .3em .7em; border: 2px solid #5fe08a; background: rgba(0, 0, 0, .55); color: #5fe08a; font: 700 clamp(12px, 1.6vw, 22px) "Courier New", monospace; letter-spacing: .1em; }
+.geese .rk-count { inset: 0; margin: auto; color: #fff; font-size: clamp(64px, 15vw, 220px); font-weight: 900; text-shadow: 0 0 .25em #5fb2e6; opacity: 0; animation: rk-pop .7s ease-out var(--d) both; }
+.geese .rk-go { font-size: clamp(40px, 9vw, 130px); color: #ffd23a; text-shadow: 0 0 .25em #ff8a2a; }
+.geese .rk-g { inset: 5% 0 auto 0; margin: 0 auto; padding: .2em .8em; border: 3px solid #ff3b2f; background: rgba(30, 0, 0, .65); color: #ffd23a; font: 900 clamp(16px, 3vw, 44px) "Courier New", monospace; opacity: 0; animation: rk-on .01s linear var(--d) forwards, rk-off .01s linear var(--e) forwards; }
+.geese .rk-g b { color: #ff3b2f; animation: rk-blink .4s steps(1, end) infinite; }
+.geese .rk-over { inset: auto 0 7% 0; font-size: clamp(18px, 3.6vw, 52px); }
+.geese .rk-sub { inset: auto 0 7% 0; margin: 0 auto; padding: .3em .8em; background: rgba(0, 0, 0, .72); color: #fff; font-size: clamp(14px, 2.3vw, 32px); opacity: 0; animation: rk-on .01s linear var(--d) forwards, rk-off .01s linear var(--e) forwards; }
+@keyframes rk-on { to { opacity: 1; } }
+@keyframes rk-off { to { opacity: 0; } }
+@keyframes rk-blink { 0% { opacity: 1; } 50% { opacity: .2; } }
+@keyframes rk-spark { 0% { opacity: 1; } 50% { opacity: 0; } }
+@keyframes rk-push { from { transform: translate(800px, 450px) scale(1) translate(-800px, -450px); } to { transform: translate(800px, 450px) scale(1.12) translate(-800px, -470px); } }
+@keyframes rk-jitter { from { transform: translateX(-3px); } to { transform: translateX(3px); } }
+@keyframes rk-jitter2 { from { transform: translate(-4px, 2px); } to { transform: translate(4px, -2px); } }
+@keyframes rk-steam { from { transform: scale(0); opacity: 1; } to { transform: scale(1.7); opacity: .9; } }
+@keyframes rk-flick { from { transform: scale(.9, .8); } to { transform: scale(1.1, 1.2); } }
+@keyframes rk-lift { from { transform: translateY(0); } to { transform: translateY(-1300px); } }
+@keyframes rk-bounce { 0% { transform: translate(0, 0); } 30% { transform: translate(0, -46px); } 60% { transform: translate(0, 0); } 80% { transform: translate(0, -10px); } 100% { transform: translate(0, 0); } }
+@keyframes rk-away { from { transform: translateY(0); } to { transform: translateY(-1150px); } }
+@keyframes rk-column { from { opacity: 1; transform: scaleY(0); } to { opacity: 1; transform: scaleY(1); } }
+@keyframes rk-trail { from { transform: translateY(-260px); } to { transform: translateY(-1500px); } }
+@keyframes rk-streak { from { transform: translateX(70px); } to { transform: translateX(-70px); } }
+@keyframes rk-stretch {
+  0%, 31.48% { transform: scale(1, 1); }
+  34.26% { transform: scale(1.72, .86); }
+  40% { transform: scale(1.64, .88); }
+  46% { transform: scale(1.74, .85); }
+  52% { transform: scale(1.65, .88); }
+  57.41%, 70.37% { transform: scale(1.7, .86); }
+  73.15% { transform: scale(.86, 1.07); }
+  75.46% { transform: scale(1.1, .96); }
+  77.78% { transform: scale(.96, 1.02); }
+  79.63%, 100% { transform: scale(1, 1); }
+}
+@keyframes rk-flap { from { transform: rotate(0deg); } to { transform: rotate(24deg); } }
+@keyframes rk-gape { from { transform: rotate(0deg); } to { transform: rotate(16deg); } }
+@keyframes rk-shut { from { transform: rotate(16deg); } to { transform: rotate(0deg); } }
+@keyframes rk-wink { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(.1); } }
+@keyframes rk-wobble { from { transform: translate(-3px, 1px); } to { transform: translate(3px, -1px); } }
+@keyframes rk-fish {
+  0%, 31.48% { transform: translate(0px, 0px) rotate(0deg) scale(1, 1); }
+  10% { transform: translate(-90px, 30px) rotate(12deg) scale(1, 1); }
+  21% { transform: translate(-30px, 14px) rotate(-8deg) scale(1, 1); }
+  34.26%, 70.37% { transform: translate(-250px, 40px) rotate(-30deg) scale(.6, 1.25); }
+  75% { transform: translate(-90px, 50px) rotate(160deg) scale(1, 1); }
+  81.48%, 100% { transform: translate(0px, 0px) rotate(0deg) scale(1, 1); }
+}
+@keyframes rk-wing {
+  0%, 81.48% { transform: rotate(0deg); }
+  83.8% { transform: rotate(106deg); }
+  85.2% { transform: rotate(97deg); }
+  86.6% { transform: rotate(103deg); }
+  100% { transform: rotate(100deg); }
+}
+@keyframes rk-shiver { from { transform: translate(-5px, 2px) rotate(-2deg); } to { transform: translate(5px, -2px) rotate(2deg); } }
+@keyframes rk-text { 0% { opacity: 1; transform: scale(.3) rotate(-14deg); } 18% { opacity: 1; transform: scale(1.15) rotate(-8deg); } 80% { opacity: 1; transform: scale(1) rotate(-8deg); } 100% { opacity: 0; transform: scale(1) rotate(-8deg); } }
+@keyframes rk-pop { 0% { opacity: 0; transform: scale(1.8); } 18% { opacity: 1; transform: scale(1); } 80% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(.9); } }
+@keyframes rk-zoom {
+  0%, 87.04% { transform: translate(800px, 450px) scale(1) translate(-800px, -450px); }
+  94.44%, 100% { transform: translate(800px, 450px) scale(1.35) translate(-800px, -430px); }
+}
+.geese .nt text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
+.geese .nt-fly { animation: nt-fly 11s ease-in-out both; }
+.geese .nt-flap { transform-box: fill-box; transform-origin: center; animation: nt-flutter .12s linear infinite alternate; }
+.geese .nt-goose { animation: nt-walk 11s linear both, nt-gcarry 1.2s cubic-bezier(.4, 0, .8, .6) 7.8s forwards; }
+.geese .nt-shadow { animation: nt-off .01s linear 7.8s forwards; }
+.geese .nt-hop { animation: nt-hop .38s 5.1s 5; }
+.geese .nt-load { animation: nt-load 11s ease-in-out both; }
+.geese .nt-stack { animation: nt-off .01s linear 7.8s forwards; }
+.geese .nt-sway { animation: nt-sway 11s ease-in-out both; }
+.geese .nt-card { opacity: 0; animation: nt-on .01s linear var(--d) forwards, nt-drop .3s cubic-bezier(.5, 0, 1, .5) var(--d) both; }
+.geese .nt-goose .sg-leg { animation: nt-step .25s ease-in-out 9 alternate, nt-step .35s ease-in-out 2.75s 6 alternate, nt-step .09s linear 7.8s infinite alternate; }
+.geese .nt-goose .sg-alt, .geese .nt-lead .sg-alt { animation-direction: alternate-reverse; }
+.geese .nt-goose .sg-neck { animation: nt-neck 11s ease-in-out both; }
+.geese .nt-goose .sg-wing { animation: nt-wave .19s ease-in-out 5.1s 10 alternate, nt-wave .07s linear 7.8s infinite alternate; }
+.geese .nt-goose .sg-eye { animation: nt-wide .2s ease-out 7.8s both; }
+.geese .nt-leaf { opacity: 0; animation: nt-on .01s linear 7.8s forwards, nt-scatter 1.7s ease-out 7.8s both; }
+.geese .nt-eagle { animation: nt-dive .9s cubic-bezier(.5, 0, .9, .6) 6.9s both, nt-ecarry 1.2s cubic-bezier(.4, 0, .8, .6) 7.8s forwards; }
+.geese .nt-eagle .nt-wing { animation: nt-beat .16s ease-in-out infinite alternate; }
+.geese .nt-tag { animation: nt-tag .3s ease-in-out infinite alternate; }
+.geese .nt-lead { animation: nt-lwalk 11s linear both; }
+.geese .nt-lead .sg-leg { animation: nt-step .175s ease-in-out 4.6s 4 alternate; }
+.geese .nt-lead .sg-neck { animation: nt-nod .5s ease-in-out 5.5s 4 alternate, nt-tilt .7s ease-in-out 8.7s forwards; }
+.geese .nt-lead .sg-wing { animation: nt-shrug .7s ease-in-out 8.7s both; }
+.geese .nt-bar { inset: 0 0 auto 0; height: 9%; background: #0d0c0b; }
+.geese .nt-low { inset: auto 0 0 0; }
+.geese .nt-logo { inset: 1.6% auto auto 3%; width: fit-content; height: fit-content; color: #f4e4b8; font: italic 700 clamp(12px, 1.8vw, 26px) Georgia, "Times New Roman", serif; letter-spacing: .04em; }
+.geese .nt-sub { inset: auto 0 2% 0; margin: 0 auto; width: fit-content; height: fit-content; max-width: 92%; color: #fff6d6; font: clamp(13px, 2vw, 28px) Georgia, "Times New Roman", serif; text-align: center; opacity: 0; animation: nt-on .01s linear var(--d) forwards, nt-off .01s linear var(--e) forwards; }
+.geese .nt-end { inset: 0; margin: auto; width: fit-content; height: fit-content; display: flex; flex-direction: column; align-items: center; gap: .15em; padding: .5em 1.2em; border-radius: .3em; background: rgba(28, 18, 8, .62); color: #f4e4b8; font: italic 700 clamp(20px, 4vw, 56px) Georgia, "Times New Roman", serif; opacity: 0; animation: nt-fade .7s ease-out 9.3s both; }
+.geese .nt-end b { font: 900 1.3em -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; color: #ff5a4a; letter-spacing: .06em; }
+@keyframes nt-on { to { opacity: 1; } }
+@keyframes nt-off { to { opacity: 0; } }
+@keyframes nt-fade { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: scale(1); } }
+@keyframes nt-fly { 0% { transform: translate(0, 0); } 25% { transform: translate(450px, -50px); } 50% { transform: translate(900px, 20px); } 75% { transform: translate(1350px, -40px); } 100% { transform: translate(1800px, 0); } }
+@keyframes nt-flutter { from { transform: scale(1, 1); } to { transform: scale(.25, 1); } }
+@keyframes nt-walk {
+  0% { transform: translate(-240px, 780px); }
+  20%, 25% { transform: translate(420px, 780px); }
+  30% { transform: translate(470px, 780px); }
+  34% { transform: translate(450px, 780px); }
+  38% { transform: translate(525px, 780px); }
+  41% { transform: translate(505px, 780px); }
+  45.45%, 100% { transform: translate(600px, 780px); }
+}
+@keyframes nt-gcarry { from { transform: translate(600px, 780px); } to { transform: translate(1910px, -84px); } }
+@keyframes nt-hop { 0% { transform: translateY(0); animation-timing-function: ease-out; } 50% { transform: translateY(-46px); animation-timing-function: ease-in; } 100% { transform: translateY(0); } }
+@keyframes nt-load {
+  0%, 25% { transform: rotate(0deg); }
+  30% { transform: rotate(-3deg); }
+  34% { transform: rotate(4deg); }
+  38% { transform: rotate(-5deg); }
+  42% { transform: rotate(5deg); }
+  45.45% { transform: rotate(-3deg); }
+  46.36%, 70.91% { transform: rotate(0deg); }
+  75% { transform: rotate(9deg); }
+  80% { transform: rotate(-7deg); }
+  85%, 100% { transform: rotate(5deg); }
+}
+@keyframes nt-sway {
+  0%, 25% { transform: rotate(0deg); }
+  30% { transform: rotate(3deg); }
+  35% { transform: rotate(-4deg); }
+  40% { transform: rotate(6deg); }
+  45% { transform: rotate(-7deg); }
+  50% { transform: rotate(12deg); }
+  55% { transform: rotate(-13deg); }
+  60% { transform: rotate(13deg); }
+  65% { transform: rotate(-9deg); }
+  69.09%, 100% { transform: rotate(0deg); }
+}
+@keyframes nt-drop { from { transform: translateY(-700px); } to { transform: translateY(0); } }
+@keyframes nt-step { from { transform: rotate(-24deg); } to { transform: rotate(24deg); } }
+@keyframes nt-neck {
+  0%, 25% { transform: rotate(0deg); }
+  30% { transform: rotate(10deg); }
+  45.45% { transform: rotate(16deg); }
+  46.36% { transform: rotate(-6deg); }
+  50% { transform: rotate(8deg); }
+  53.5% { transform: rotate(-8deg); }
+  57% { transform: rotate(8deg); }
+  60.5% { transform: rotate(-8deg); }
+  63.64% { transform: rotate(0deg); }
+  66.36%, 70.91% { transform: rotate(-30deg); }
+  72.5%, 100% { transform: rotate(8deg); }
+}
+@keyframes nt-wave { from { transform: rotate(0deg); } to { transform: rotate(55deg); } }
+@keyframes nt-wide { from { transform: scale(1); } to { transform: scale(1.7); } }
+@keyframes nt-scatter {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(calc(var(--dx) * .7), -120px) rotate(calc(var(--r) * 3)); }
+  55% { transform: translate(calc(var(--dx) * .85), calc(var(--dy) * .5)) rotate(calc(var(--r) * -1.5)); }
+  80% { transform: translate(calc(var(--dx) * .95), calc(var(--dy) * .85)) rotate(var(--r)); }
+  100% { transform: translate(var(--dx), var(--dy)) rotate(calc(var(--r) * .15)); }
+}
+@keyframes nt-dive { from { transform: translate(-300px, 20px) rotate(28deg); } to { transform: translate(500px, 600px) rotate(0deg); } }
+@keyframes nt-ecarry { from { transform: translate(500px, 600px) rotate(0deg); } to { transform: translate(1810px, -264px) rotate(-8deg); } }
+@keyframes nt-beat { from { transform: scaleY(1); } to { transform: scaleY(-.55); } }
+@keyframes nt-tag { from { transform: rotate(-7deg); } to { transform: rotate(7deg); } }
+@keyframes nt-lwalk { 0%, 41.82% { transform: translate(1820px, 780px); } 48.18%, 100% { transform: translate(1150px, 780px); } }
+@keyframes nt-nod { from { transform: rotate(0deg); } to { transform: rotate(10deg); } }
+@keyframes nt-tilt { 0%, 100% { transform: rotate(0deg); } 30%, 70% { transform: rotate(-14deg); } }
+@keyframes nt-shrug { 0%, 100% { transform: rotate(0deg); } 30%, 70% { transform: rotate(40deg); } }
 `;
 
 const HOLST_KEY_TITLES = {
@@ -773,6 +962,141 @@ ${judge(420, '9.8', 6.6)}${judge(800, '10', 7)}${judge(1180, 'Overload', 7.5, tr
 </svg>
 <div class="wl-live"><b>● LIVE</b> P2P Sport</div>
 <div class="wl-third"><b>Гусь Гусев</b><span>сборная P2P · рывок: ${list.map(safe).join(' + ')}</span></div>`;
+};
+
+const rocketScene = () => {
+  const stars = Array.from({ length: 40 }, () => `<circle cx="${Math.round(Math.random() * 1600)}" cy="${Math.round(Math.random() * 520)}" r="${(1 + Math.random() * 2).toFixed(1)}"/>`).join('');
+  const lattice = Array.from({ length: 10 }, (_, i) => `M600 ${760 - i * 51} L660 ${709 - i * 51} M660 ${760 - i * 51} L600 ${709 - i * 51}`).join(' ');
+  const steam = [[-170, -20, 60], [-260, -50, 46], [-110, -60, 40], [170, -20, 60], [260, -50, 46], [110, -60, 40], [-330, -10, 36], [330, -10, 36]]
+    .map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}"/>`).join('');
+  const lights = Array.from({ length: 24 }, (_, i) => `<circle class="rk-lamp" style="--d:${(i * .13 % 1).toFixed(2)}s" cx="${1090 + (i % 8) * 56}" cy="${190 + Math.floor(i / 8) * 46}" r="10" fill="${['#ff5a4a', '#ffd23a', '#5fe08a', '#5fb2e6'][i % 4]}"/>`).join('');
+  const skull = (fill, r) => `<circle r="${r}" fill="${fill}"/><path d="M${-r + 8} -${r * .5} C${-r - 30} -${r * .7} ${-r - 40} -${r * .2} ${-r - 10} 0" fill="${fill}"/>`;
+  return `<div class="rk-sky"></div>
+<svg class="rk" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+<g class="rk-wide">
+<g fill="#fff" fill-opacity=".8">${stars}</g>
+<path d="M0 740 Q200 690 420 730 T900 720 T1600 735 V900 H0 Z" fill="#20222e"/>
+<path d="M600 250 V760 M660 250 V760 ${lattice} M660 420 H740 M660 560 H740" stroke="#3b3f52" stroke-width="7" fill="none"/>
+<g transform="translate(800 760)"><g class="rk-rumble"><g class="rk-lift">
+<g class="rk-flame"><path d="M-46 0 C-40 70 -10 130 0 190 C10 130 40 70 46 0 Z" fill="#ff8a2a"/><path d="M-24 0 C-20 50 -6 90 0 130 C6 90 20 50 24 0 Z" fill="#ffe36a"/></g>
+<path d="M-62 0 V-420 C-62 -480 -30 -530 0 -570 C30 -530 62 -480 62 -420 V0 Z" fill="#eef1f5" stroke="#9aa3ad" stroke-width="5"/>
+<path d="M-62 -440 H62 M-62 -60 H62" stroke="#c8302a" stroke-width="18"/>
+<path d="M-62 -110 L-120 0 H-62 Z M62 -110 L120 0 H62 Z" fill="#c8302a" stroke="#8a1f1a" stroke-width="4"/>
+<text x="0" y="-160" font-size="34" font-weight="900" fill="#c8302a" text-anchor="middle" transform="rotate(-90 0 -170)">P2P-1</text>
+<circle cy="-330" r="38" fill="#5fb2e6" stroke="#9aa3ad" stroke-width="7"/><circle cx="-4" cy="-326" r="18" fill="#f4f3ee"/><path d="M12 -330 L34 -326 L12 -320 Z" fill="#ee9433"/><circle cx="2" cy="-332" r="3.5" fill="#111"/><circle cy="-328" r="27" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="3"/>
+</g></g>
+<g class="rk-steam" fill="#e9edf2">${steam}</g></g>
+</g>
+<g class="rk-close">
+<rect y="860" width="1600" height="40" fill="#8d9097"/><path d="M0 860 H1600" stroke="#f2c230" stroke-width="8" stroke-dasharray="40 40"/>
+<path d="M120 860 V420 M190 860 V420 M120 470 L190 520 M190 470 L120 520 M120 570 L190 620 M190 570 L120 620 M120 670 L190 720 M190 670 L120 720 M120 770 L190 820 M190 770 L120 820" stroke="#596071" stroke-width="7" fill="none"/>
+<g class="rk-column"><rect x="1210" y="-40" width="90" height="900" rx="40" fill="#f2f4f7" fill-opacity=".85"/><circle cx="1200" cy="840" r="70" fill="#e9edf2"/><circle cx="1320" cy="830" r="80" fill="#e9edf2"/><circle cx="1110" cy="860" r="50" fill="#e9edf2"/><circle cx="1420" cy="860" r="56" fill="#e9edf2"/></g>
+<g transform="translate(1255 820)"><g class="rk-trail"><path d="M-50 0 C-44 90 -12 170 0 260 C12 170 44 90 50 0 Z" fill="#ff8a2a"/><path d="M-62 0 V-260 C-62 -310 -30 -350 0 -380 C30 -350 62 -310 62 -260 V0 Z" fill="#eef1f5" stroke="#9aa3ad" stroke-width="5"/><path d="M-62 -40 H62" stroke="#c8302a" stroke-width="16"/></g></g>
+<g class="rk-rig">
+<g class="rk-cabin">
+<rect x="-50" y="-50" width="1700" height="1000" fill="#2b3440"/>
+<path d="M-50 70 H1650 M-50 110 H1650" stroke="#3c4754" stroke-width="16"/>
+<rect x="1050" y="150" width="500" height="380" rx="16" fill="#39444f" stroke="#1d242c" stroke-width="5"/>
+${lights}
+<rect x="1090" y="340" width="190" height="150" rx="8" fill="#0f1a14"/><path class="rk-graph" d="M1100 470 L1140 450 L1170 460 L1200 400 L1230 420 L1260 350" stroke="#5fe08a" stroke-width="4" fill="none"/>
+<rect x="1310" y="340" width="200" height="150" rx="8" fill="#0f1a14"/><text x="1410" y="430" font-size="44" font-weight="900" fill="#ff5a4a" text-anchor="middle" class="rk-blink">12g</text>
+<circle cx="190" cy="250" r="90" fill="#0b1020" stroke="#9aa3ad" stroke-width="16"/><g class="rk-streak" stroke="#fff" stroke-width="3" stroke-linecap="round"><path d="M140 210 H240 M120 250 H260 M150 290 H230"/></g>
+<rect x="-50" y="760" width="1700" height="200" fill="#222a33"/>
+<text class="rk-rrr" x="1050" y="640" font-size="70" font-weight="900" fill="#ffd23a" stroke="#1a1a1a" stroke-width="6" paint-order="stroke">РРРРРРР</text>
+</g>
+<g class="rk-sparks" stroke="#ffd23a" stroke-width="4" stroke-linecap="round"><path d="M450 862 l-30 -26 M470 862 l6 -40 M720 862 l30 -30 M700 862 l-8 -36"/></g>
+<path d="M440 848 L460 868 L480 846 L500 866 L520 846 L540 868 L560 846 L580 866 L600 846 L620 868 L640 846 L660 866 L680 846 L700 868 L720 846 V820 H440 Z" fill="#6b737e"/>
+<g class="rk-wire"><path d="M470 850 C460 880 490 880 480 900 M690 850 C710 875 680 885 700 900" stroke="#c8302a" stroke-width="5" fill="none"/><path d="M500 850 C510 880 530 870 524 900" stroke="#3d7be0" stroke-width="5" fill="none"/></g>
+<path d="M300 330 Q290 300 330 296 L420 300 Q446 304 440 340 L430 820 H330 Z" fill="#3a4250" stroke="#1d242c" stroke-width="6"/>
+<rect x="330" y="770" width="470" height="60" rx="18" fill="#4a5262" stroke="#1d242c" stroke-width="6"/>
+<path d="M730 660 C760 600 780 520 820 470 L880 500 C850 540 830 610 820 680 Z" fill="#aaa69a"/>
+<ellipse cx="600" cy="690" rx="214" ry="134" fill="#aaa69a"/>
+<path d="M733 660 C762 602 782 524 822 476 L874 502 C846 542 826 612 816 680 Z" fill="#f4f3ee"/>
+<ellipse cx="600" cy="690" rx="210" ry="130" fill="#f4f3ee"/>
+<path d="M470 580 L700 780 M560 570 L770 720" stroke="#2c5a9e" stroke-width="22" stroke-linecap="round"/><circle cx="640" cy="690" r="16" fill="#c9ced6" stroke="#5b6470" stroke-width="3"/>
+<ellipse cx="840" cy="560" rx="120" ry="26" fill="#c9ced6" stroke="#7b8792" stroke-width="4"/>
+<g transform="translate(870 380)"><g class="rk-head">
+<g transform="translate(88 0)"><g class="rk-stretch"><g transform="translate(-88 0)">
+${skull('#aaa69a', 104)}${skull('#f4f3ee', 100)}
+<path class="rk-ripple" d="M-30 40 Q-50 30 -70 42 M-20 62 Q-44 52 -66 66 M-40 18 Q-58 10 -76 20" stroke="#aaa69a" stroke-width="4" fill="none" stroke-linecap="round"/>
+<g transform="translate(36 -30)"><g class="rk-eye"><circle r="20" fill="#fff" stroke="#3a3a3a" stroke-width="2.5"/><circle cx="6" r="8" fill="#111"/><circle cx="8" cy="-3" r="2.5" fill="#fff"/></g></g>
+<path class="rk-brow" d="M14 -58 Q36 -66 58 -56" stroke="#3a3a3a" stroke-width="5" fill="none" stroke-linecap="round"/>
+</g></g></g>
+<g transform="translate(88 12)"><g class="rk-jaw"><path d="M0 0 C40 2 80 4 104 4 C80 18 40 28 0 26 Z" fill="#cf7420"/></g></g>
+<path d="M88 -34 C130 -32 180 -18 214 0 C180 10 130 14 88 12 Z" fill="#ee9433"/><circle cx="126" cy="-18" r="3.5" fill="#a85a12"/>
+<g transform="translate(70 -150)"><g class="rk-fish"><path d="M0 0 C14 -14 36 -14 46 0 C36 14 14 14 0 0 Z M0 0 L-16 -12 L-12 0 L-16 12 Z" fill="#ff8a2a"/><circle cx="34" cy="-2" r="2.5" fill="#111"/></g></g>
+<circle cx="-10" r="230" fill="#bfe6ff" fill-opacity=".14" stroke="#dff3ff" stroke-opacity=".9" stroke-width="7"/>
+<path d="M-150 -120 A190 190 0 0 1 20 -210" fill="none" stroke="#fff" stroke-opacity=".75" stroke-width="14" stroke-linecap="round"/>
+<path d="M140 120 A190 190 0 0 1 60 190" fill="none" stroke="#fff" stroke-opacity=".45" stroke-width="8" stroke-linecap="round"/>
+</g></g>
+<g transform="translate(700 620)"><g class="rk-wing"><path d="M0 0 C-60 -20 -200 -10 -300 40 C-280 50 -262 54 -250 56 C-262 66 -264 74 -258 80 C-220 82 -200 84 -186 88 C-190 96 -186 102 -178 104 C-100 104 -30 80 10 40 Z" fill="#dcdad2" stroke="#aaa69a" stroke-width="3"/></g></g>
+</g>
+<text class="rk-crack" x="1000" y="240" font-size="100" font-weight="900" fill="#ff3b2f" stroke="#1a1a1a" stroke-width="7" paint-order="stroke">КРРАК!</text>
+</g>
+</svg>
+<div class="rk-hud"><span>ЦУП · P2P-1</span></div>
+<div class="rk-count" style="--d:.5s;--e:1.2s">3</div><div class="rk-count" style="--d:1.2s;--e:1.9s">2</div><div class="rk-count" style="--d:1.9s;--e:2.6s">1</div><div class="rk-count rk-go" style="--d:2.6s;--e:3.2s">ПОЕХАЛИ!</div>
+<div class="rk-g" style="--d:3.4s;--e:6.2s">ПЕРЕГРУЗКА <b>12g</b></div>
+<div class="rk-sub" style="--d:6.9s;--e:8.7s">ЦУП: Гусь, приём? Гусь?..</div>
+<div class="rk-g rk-over" style="--d:9.5s;--e:99s">ПЕРЕГРУЗКА <b>Overload</b></div>`;
+};
+
+const natureScene = () => {
+  const colors = ['#e2574c', '#3d7be0', '#f2b33d', '#4caf6a', '#9b6ad6'];
+  const tile = (i) => `<rect x="-62" y="-22" width="124" height="22" rx="4" fill="#fff" stroke="#c9c4b8" stroke-width="2"/><rect x="-62" y="-22" width="9" height="22" rx="3" fill="${colors[i % colors.length]}"/><path d="M-44 -14 H${10 + (i * 17) % 34} M-44 -7 H${-6 + (i * 23) % 30}" stroke="#b9b4a8" stroke-width="3" stroke-linecap="round"/>`;
+  const shift = (i) => ((i * 37) % 21) - 10;
+  const stack = Array.from({ length: 16 }, (_, i) => `<g transform="translate(${shift(i)} ${-22 * i})"><g class="nt-card" style="--d:${(2.75 + i * .115).toFixed(3)}s">${tile(i)}</g></g>`).join('');
+  const leaves = Array.from({ length: 16 }, (_, i) => {
+    const y = 656 - 22 * i;
+    const dx = ((i * 53) % 400) - 200 + (i % 2 ? 40 : -40);
+    const dy = 782 + (i * 7) % 26 - y;
+    const r = ((i * 71) % 120) - 60;
+    return `<g transform="translate(${552 + shift(i)} ${y})"><g class="nt-leaf" style="--dx:${dx}px;--dy:${dy}px;--r:${r}deg">${tile(i)}</g></g>`;
+  }).join('');
+  const acacia = (x, y, s) => `<g transform="translate(${x} ${y}) scale(${s})"><path d="M-6 0 C-4 -60 -10 -110 -40 -150 M-2 -70 C10 -110 30 -130 60 -150 M-4 -40 C-30 -70 -60 -90 -90 -100" stroke="#a48a74" stroke-width="12" fill="none" stroke-linecap="round"/><ellipse cx="-10" cy="-160" rx="150" ry="34" fill="#a9cf97"/><ellipse cx="-50" cy="-178" rx="90" ry="24" fill="#bcdcaa"/><ellipse cx="50" cy="-172" rx="80" ry="22" fill="#b3d6a0"/></g>`;
+  const tufts = [120, 330, 760, 980, 1250, 1530].map((x) => `<path d="M${x} 792 l-10 -26 M${x + 6} 792 l2 -34 M${x + 12} 792 l12 -24" stroke="#9fc28a" stroke-width="5" stroke-linecap="round"/>`).join('');
+  const glasses = '<circle cx="22" cy="-102" r="11" fill="#fff" fill-opacity=".3" stroke="#2b2b2b" stroke-width="3"/><path d="M11 -101 L-10 -97 M33 -103 L40 -104" stroke="#2b2b2b" stroke-width="3" stroke-linecap="round"/>';
+  const tie = '<path d="M50 -108 H66 L61 -98 H55 Z" fill="#2f62c9"/><path d="M55 -98 H61 L68 -62 L58 -50 L48 -62 Z" fill="#2f62c9"/><path d="M54 -88 L63 -80 M51 -74 L65 -64" stroke="#f2b33d" stroke-width="3"/>';
+  const eagleWing = (fill, line) => `<path d="M0 0 C-30 -60 -60 -150 -40 -230 C-10 -200 0 -190 10 -186 C14 -196 22 -204 30 -206 C34 -170 40 -150 50 -146 C56 -160 66 -168 74 -170 C76 -120 70 -60 40 0 Z" fill="${fill}" stroke="${line}" stroke-width="3" stroke-linejoin="round"/>`;
+  return `<svg class="nt" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+<rect width="1600" height="900" fill="#fbe3cc"/>
+<rect width="1600" height="500" fill="#d6ebf0"/>
+<rect y="340" width="1600" height="180" fill="#f6dcc6" fill-opacity=".75"/>
+<circle cx="1230" cy="250" r="110" fill="#fff3c2" fill-opacity=".35"/><circle cx="1230" cy="250" r="74" fill="#fff3c2"/>
+<path d="M0 540 Q240 460 520 520 T1060 500 T1600 520 V900 H0 Z" fill="#cfe0b8"/>
+<path d="M0 610 Q300 560 640 600 T1300 580 T1600 600 V900 H0 Z" fill="#bcd6a3"/>
+${acacia(170, 590, .95)}${acacia(880, 575, .8)}${acacia(1560, 600, 1)}
+<path d="M0 690 Q400 660 800 682 T1600 674 V900 H0 Z" fill="#ead9a8"/>
+<rect y="770" width="1600" height="130" fill="#e3cf98"/>
+${tufts}
+<g class="nt-fly"><g transform="translate(-60 300)"><ellipse class="nt-flap" cx="0" cy="-6" rx="9" ry="13" fill="#f2a7c3"/><ellipse class="nt-flap" cx="8" cy="-4" rx="7" ry="10" fill="#f7c4d6"/><path d="M0 0 L6 6" stroke="#6d5a4e" stroke-width="3" stroke-linecap="round"/></g></g>
+<g transform="translate(1450 782)"><path d="M0 0 V-170" stroke="#a48a74" stroke-width="8"/><g transform="rotate(-4 0 -170)"><rect x="-70" y="-214" width="140" height="56" rx="6" fill="#fff8e6" stroke="#a48a74" stroke-width="5"/><text x="0" y="-174" font-size="34" font-weight="800" fill="#4caf6a" text-anchor="middle">Done</text></g></g>
+<g transform="translate(1340 776)"><ellipse rx="96" ry="26" fill="#9a7b5c"/><path d="M-96 -2 C-60 -30 60 -30 96 -2 M-90 6 C-40 -18 40 -18 90 6 M-80 -10 L60 8 M-60 10 L80 -12" stroke="#7d6248" stroke-width="5" fill="none" stroke-linecap="round"/><ellipse cx="-20" cy="-20" rx="16" ry="20" fill="#fffaf0"/><ellipse cx="14" cy="-22" rx="16" ry="20" fill="#fff4e0"/></g>
+<g class="nt-lead"><ellipse cy="4" rx="100" ry="14" fill="#4a3d30" fill-opacity=".22"/><g transform="scale(-1 1)">${sideGoose({ head: glasses, chest: tie })}</g></g>
+<g class="nt-goose"><ellipse class="nt-shadow" cy="4" rx="110" ry="15" fill="#4a3d30" fill-opacity=".25"/><g class="nt-hop"><g class="nt-load">
+<g transform="translate(-48 -124)"><g class="nt-stack"><g class="nt-sway">${stack}</g></g></g>
+${sideGoose({ body: '#b5afa4', wing: '#979186', line: '#736d63', tuft: true })}
+</g></g></g>
+${leaves}
+<g class="nt-eagle">
+<g transform="translate(-10 -16)"><g class="nt-wing">${eagleWing('#6b4a2f', '#4e3522')}</g></g>
+<g transform="translate(-6 60)"><g class="nt-tag"><path d="M0 0 L-44 -6" stroke="#7d6248" stroke-width="3"/><g transform="translate(-44 -6) rotate(6)"><rect x="-166" y="-4" width="166" height="44" rx="6" fill="#e2574c" stroke="#9e2a22" stroke-width="3"/><circle cx="-12" cy="18" r="5" fill="#fff"/><text x="-90" y="27" font-size="24" font-weight="900" fill="#fff" text-anchor="middle">ДЕДЛАЙН</text></g></g></g>
+<path d="M-70 -6 L-150 -30 L-140 0 L-156 22 L-70 14 Z" fill="#f6f2e8" stroke="#cfc6b2" stroke-width="3"/>
+<ellipse cx="0" cy="0" rx="82" ry="36" fill="#7a5233" stroke="#4e3522" stroke-width="4"/>
+<path d="M0 30 L-6 64 M18 30 L22 66" stroke="#e8b83a" stroke-width="7" stroke-linecap="round"/><path d="M-20 64 L-6 64 L6 72 M8 66 L22 66 L34 74" stroke="#e8b83a" stroke-width="5" fill="none" stroke-linecap="round"/>
+<circle cx="78" cy="-22" r="30" fill="#f6f2e8" stroke="#cfc6b2" stroke-width="3"/>
+<path d="M98 -32 C124 -34 136 -20 128 -2 C122 -12 112 -14 100 -12 Z" fill="#e8b83a" stroke="#b48a1e" stroke-width="2"/>
+<circle cx="88" cy="-30" r="5" fill="#1b1c20"/><path d="M74 -44 L100 -36" stroke="#3a2a1c" stroke-width="5" stroke-linecap="round"/>
+<g transform="translate(10 -20)"><g class="nt-wing">${eagleWing('#8a5d3b', '#4e3522')}</g></g>
+</g>
+</svg>
+<div class="nt-bar"></div><div class="nt-bar nt-low"></div>
+<div class="nt-logo">В мире животных</div>
+<div class="nt-sub" style="--d:.4s;--e:2.6s">Перед нами гусь серый в период спринта</div>
+<div class="nt-sub" style="--d:2.75s;--e:5s">Самец пытается унести в гнездо больше задач, чем способен поднять</div>
+<div class="nt-sub" style="--d:5.1s;--e:7s">Брачный танец перед тимлидом</div>
+<div class="nt-sub" style="--d:7.1s;--e:9.2s">Увы, не каждый гусь доживёт до релиза</div>
+<div class="nt-end"><span>Природа беспощадна.</span><b>Overload</b></div>`;
 };
 
 const ISSUE_LABELS = {
@@ -1562,7 +1886,7 @@ function sprintCapacityMount(config) {
 
   let chaosBefore = false;
   let chaosTimer = null;
-  const GOOSE_SCENES = [{ name: 'lift', draw: liftScene, end: 11.3 }, { name: 'bar', draw: barScene, end: 10.6 }, { name: 'noir', draw: noirScene, end: 11.6 }];
+  const GOOSE_SCENES = [{ name: 'lift', draw: liftScene, end: 11.3 }, { name: 'bar', draw: barScene, end: 10.6 }, { name: 'rocket', draw: rocketScene, end: 10.8 }, { name: 'nature', draw: natureScene, end: 11 }, { name: 'noir', draw: noirScene, end: 11.6 }];
   const releaseGeese = (names) => {
     if ($('.geese')) return;
     const last = GOOSE_SCENES.findIndex((item) => item.name === readStored('gooseScene', null));
