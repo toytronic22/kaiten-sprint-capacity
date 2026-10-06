@@ -21,65 +21,83 @@ button { font: inherit; color: inherit; background: none; border: 0; border-radi
 .key[data-state="ok"]:hover { color: var(--good); background: var(--good-soft); }
 @keyframes pulse { to { opacity: .3; } }
 @keyframes spin { to { transform: rotate(360deg); } }
-.geese { position: fixed; inset: 0; z-index: 2147483001; overflow: hidden; pointer-events: none; --w: clamp(40px, min(7vw, 11vh), 120px); --sw: min(max(96vw, 70vh), 125vh); --top: calc(max(12px, 12vh) + min(820px, 90vw, 110vh) / 2.2 + 3vh); --gy: calc((var(--top) + 104vh) / 2); }
-.goose { position: absolute; left: 0; width: var(--w); animation: goose-run var(--speed) cubic-bezier(.35, .05, .65, .95) var(--delay) both; }
-.goose .wave { animation: goose-wave var(--wave) ease-in-out var(--phase) infinite alternate; }
-.goose .bob { transform-origin: 50% 100%; animation: goose-bob var(--step) ease-in-out infinite alternate; }
-.goose svg { display: block; width: 100%; overflow: visible; filter: drop-shadow(0 .35em .25em rgba(0, 0, 0, .18)); }
-.goose .leg { transform-box: fill-box; transform-origin: 50% 0; animation: goose-leg var(--step) ease-in-out infinite alternate; }
-.goose .leg + .leg { animation-direction: alternate-reverse; }
-.goose .wing { transform-box: fill-box; transform-origin: 6% 30%; animation: goose-flap calc(var(--step) * 1.2) ease-in-out infinite alternate; }
-.goose .far .wing { animation-delay: calc(var(--step) * -.4); }
-.goose:not(.back) svg { transform: scaleX(-1); }
-.goose.tag { aspect-ratio: 262 / 446; }
-.goose .jaw { transform-box: fill-box; transform-origin: 100% 0; animation: goose-jaw calc(var(--step) * 1.3) ease-in-out infinite alternate; }
-.goose .say { position: absolute; left: 62%; bottom: 97%; translate: -50% 0; padding: .28em .7em .32em; font: 800 max(12px, calc(var(--w) * .2))/1.1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; color: #e0001a; background: #fff; border-radius: 1em; box-shadow: 0 .15em 0 rgba(0, 0, 0, .12), 0 .3em .9em rgba(0, 0, 0, .18); white-space: nowrap; transform-origin: 50% 100%; animation: goose-say .5s cubic-bezier(.2, 1.8, .4, 1) calc(var(--delay) + .3s) both, say-float 1.6s ease-in-out calc(var(--delay) + .8s) infinite alternate; }
-.goose.back .say { left: 38%; }
-.goose .say::after { content: ""; position: absolute; left: calc(50% - .3em); bottom: -.5em; border: .3em solid transparent; border-top: .55em solid #fff; border-bottom: 0; transform: skewX(20deg); }
-.boom { position: absolute; z-index: 60; left: 50%; top: max(12px, 12vh); width: min(820px, 90vw, 110vh); container-type: inline-size; aspect-ratio: 2.2; display: grid; place-items: center; transform: translateX(-50%) rotate(-6deg); animation: boom-in .45s cubic-bezier(.2, 1.7, .4, 1) both, boom-out .45s ease-in var(--boom-end) forwards; }
-.boom::before, .boom::after { content: ""; position: absolute; inset: 0; clip-path: polygon(100.0% 50.0%, 87.0% 58.5%, 95.0% 71.7%, 79.7% 73.7%, 81.2% 89.1%, 66.5% 84.2%, 61.1% 98.7%, 50.0% 88.0%, 38.9% 98.7%, 33.5% 84.2%, 18.8% 89.1%, 20.3% 73.7%, 5.0% 71.7%, 13.0% 58.5%, 0.0% 50.0%, 13.0% 41.5%, 5.0% 28.3%, 20.3% 26.3%, 18.8% 10.9%, 33.5% 15.8%, 38.9% 1.3%, 50.0% 12.0%, 61.1% 1.3%, 66.5% 15.8%, 81.2% 10.9%, 79.7% 26.3%, 95.0% 28.3%, 87.0% 41.5%); }
-.boom::before { background: #1b1c20; transform: scale(1.05) translate(1.2%, 2%); }
-.boom::after { background: radial-gradient(circle at 50% 45%, #ff5a4a, #d8261d 70%); animation: boom-flash .5s steps(1) infinite; }
-.boom span { position: relative; z-index: 1; max-width: 76%; text-align: center; font: italic 900 max(16px, 10.5cqw)/.95 Impact, "Arial Black", "Helvetica Neue", sans-serif; letter-spacing: .02em; color: #fff15c; -webkit-text-stroke: max(1px, .03em) #1b1c20; text-shadow: .06em .07em 0 #1b1c20; }
-.boom span.pop { animation: boom-pop .3s cubic-bezier(.2, 1.9, .4, 1); }
-@keyframes boom-in { from { transform: translateX(-50%) rotate(-24deg) scale(0); } to { transform: translateX(-50%) rotate(-6deg) scale(1); } }
-@keyframes boom-out { to { opacity: 0; transform: translateX(-50%) rotate(-6deg) scale(1.3); } }
-@keyframes boom-flash { 50% { background: radial-gradient(circle at 50% 45%, #ffe45c, #ffb21e 70%); } }
-@keyframes boom-pop { from { transform: scale(.6) rotate(-4deg); } to { transform: scale(1) rotate(0); } }
-@keyframes goose-run { from { transform: translate(var(--x0), 0) scale(var(--size)); } to { transform: translate(var(--x1), var(--dy)) scale(var(--size)); } }
-@keyframes goose-wave { from { transform: translateY(calc(var(--amp) * -1)) rotate(var(--lean)); } to { transform: translateY(var(--amp)) rotate(calc(var(--lean) * -1)); } }
-@keyframes goose-bob { from { transform: translateY(0) rotate(-3deg); } to { transform: translateY(-12%) rotate(4deg) scaleY(1.04); } }
-@keyframes goose-leg { from { transform: rotate(-30deg); } to { transform: rotate(30deg); } }
-@keyframes goose-flap { from { transform: rotate(12deg); } to { transform: rotate(-62deg); } }
-@keyframes goose-jaw { from { transform: rotate(0); } to { transform: rotate(-22deg); } }
-@keyframes goose-say { from { opacity: 0; transform: scale(.3); } to { opacity: 1; transform: scale(1); } }
-@keyframes say-float { from { transform: translateY(-4%) rotate(-2deg); } to { transform: translateY(4%) rotate(2deg); } }
-.geese { animation: geese-shake .4s linear var(--hit) both; }
-.goose.crash { left: var(--x); top: var(--y); bottom: auto; z-index: 30; width: min(30vw, 22vh); animation: crash-fly .9s cubic-bezier(.6, 0, .9, .4) calc(var(--hit) - .9s) both, crash-hide .01s linear var(--hit) forwards; }
-.splat { position: absolute; z-index: 40; left: var(--x); top: var(--y); width: var(--sw); aspect-ratio: 1; container-type: inline-size; animation: splat-hit .3s cubic-bezier(.2, 1.7, .4, 1) var(--hit) both, splat-slide 2.5s cubic-bezier(.5, 0, .8, .6) calc(var(--hit) + .5s) forwards; }
-.splat svg, .flat svg { display: block; width: 100%; overflow: visible; }
-.flat { position: absolute; z-index: 41; left: var(--x); top: var(--y); width: min(104vw, (104vh - var(--top)) * 2.1); animation: splat-hit .3s cubic-bezier(.2, 1.7, .4, 1) var(--hit) both, splat-slide 2.5s cubic-bezier(.5, 0, .8, .6) calc(var(--hit) + .5s) forwards; }
-.splat .drip { transform-box: fill-box; transform-origin: 50% 0; animation: drip 2.2s ease-in calc(var(--hit) + .2s) both; }
-.splat .feather { position: absolute; left: 50%; top: 45%; width: 3%; height: 1.1%; background: #fff; border-radius: 50%; box-shadow: 0 0 0 1px rgba(0, 0, 0, .15); animation: feather-fly 1.4s cubic-bezier(.2, .8, .4, 1) var(--hit) both; }
-@keyframes crash-fly { from { opacity: 0; transform: translate(-50%, -50%) scale(.1); } 15% { opacity: 1; } to { opacity: 1; transform: translate(-50%, -50%) scale(3.2) rotate(-10deg); } }
-@keyframes crash-hide { to { opacity: 0; visibility: hidden; } }
-@keyframes splat-hit { from { opacity: 0; transform: translate(-50%, -50%) scale(.3); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
-@keyframes splat-slide { from { transform: translate(-50%, -50%); } 75% { opacity: 1; } to { opacity: 0; transform: translate(-50%, -38%) rotate(2deg); } }
-@keyframes drip { from { transform: scaleY(0); } to { transform: scaleY(1); } }
-@keyframes feather-fly { from { opacity: 1; transform: translate(-50%, -50%); } to { opacity: 0; transform: translate(calc(-50% + var(--fx)), calc(-50% + var(--fy))) rotate(var(--fr)); } }
-.flash { position: absolute; inset: 0; z-index: 35; background: #e0001a; animation: flash .6s ease-out var(--hit) both; }
-.spray { position: absolute; z-index: 38; left: var(--x); top: var(--y); width: var(--s); aspect-ratio: 1; animation: splat-hit .25s cubic-bezier(.2, 1.7, .4, 1) calc(var(--hit) + var(--d)) both, spray-fade 1.6s ease-in calc(var(--hit) + 1.3s) forwards; }
-.spray svg { display: block; width: 100%; overflow: visible; }
-.crack { position: absolute; z-index: 43; left: var(--x); top: var(--y); width: var(--sw); aspect-ratio: 1; transform: translate(-50%, -50%); animation: crack-in .01s steps(1) var(--hit) both; }
-.crack svg { display: block; width: 100%; overflow: visible; }
-@keyframes crack-in { from { opacity: 0; } to { opacity: 1; } }
-.jet { position: absolute; z-index: 41; left: var(--x); top: var(--y); animation: jet-x var(--t) linear calc(var(--hit) + var(--d)) both; }
-.jet i { display: block; width: var(--r); height: calc(var(--r) * 1.25); margin: calc(var(--r) * -.6) 0 0 calc(var(--r) * -.5); border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ff7a86 0 14%, #f0001c 42%, #a3000f); animation: jet-y var(--t) linear calc(var(--hit) + var(--d)) both; }
-@keyframes flash { 0% { opacity: 0; } 6% { opacity: .6; } 100% { opacity: 0; } }
-@keyframes spray-fade { to { opacity: 0; transform: translate(-50%, -35%); } }
-@keyframes jet-x { from { transform: translateX(0); } to { transform: translateX(var(--dx)); } }
-@keyframes jet-y { 0% { opacity: 0; transform: translateY(0); animation-timing-function: cubic-bezier(.2, .7, .5, 1); } 3% { opacity: 1; } 40% { transform: translateY(var(--up)); animation-timing-function: cubic-bezier(.5, 0, .8, .4); } 90% { opacity: 1; } 100% { opacity: 0; transform: translateY(var(--down)); } }
-@keyframes geese-shake { 0%, 100% { transform: none; } 20% { transform: translate(-6px, 4px); } 40% { transform: translate(5px, -5px); } 60% { transform: translate(-4px, -2px); } 80% { transform: translate(3px, 3px); } }
+.geese { position: fixed; inset: 0; z-index: 2147483001; overflow: hidden; cursor: pointer; background: #0b0c0e; --bang: 9.2s; animation: noir-in .6s ease-out both, noir-out .8s ease-in 11.6s forwards; }
+.geese > svg { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+.geese > div { position: absolute; inset: 0; pointer-events: none; }
+.geese .cam { animation: noir-shake .45s linear var(--bang) both; }
+.geese .weave { animation: noir-weave 7.2s ease-in-out .4s both; }
+.geese .walker { animation: noir-walk 7.2s linear .4s both; }
+.geese .sway { animation: noir-sway 2.2s ease-in-out .4s 3 both; }
+.geese .bob { animation: noir-bob .55s ease-in-out .4s 12 alternate both; }
+.geese .leg { animation: noir-leg .55s ease-in-out .4s 12 alternate both; }
+.geese .leg.other { animation-direction: alternate-reverse; }
+.geese .hic { animation: noir-hic .5s ease-out 2.6s both; }
+.geese .arm-l { animation: noir-swig 4.9s ease-in-out both; }
+.geese .swing-l { animation: noir-swing 1.1s ease-in-out 4.9s 2 both; }
+.geese .swing-r { animation: noir-swing 1.1s ease-in-out .4s 6 both; }
+.geese .lid { animation: noir-lid var(--bang) linear both; }
+.geese .lean { animation: noir-lean .4s ease-in-out 8.5s both; }
+.geese .gunrise { animation: noir-gunrise .8s cubic-bezier(.2, .7, .3, 1) 7.9s both; }
+.geese .tremble { animation: noir-tremble .08s linear 8.7s 6; }
+.geese .sweat { animation: noir-sweat .7s ease-in 8.4s both; }
+.geese .wisp { animation: noir-wisp 2.4s linear infinite; }
+.geese .wisp + .wisp { animation-delay: -1.2s; }
+.geese .ember { animation: noir-ember 1.6s ease-in-out infinite alternate; }
+.geese .jerk { animation: noir-jerk .1s ease-out var(--bang) both; }
+.geese .fall { animation: noir-fall .75s cubic-bezier(.5, 0, .9, .5) calc(var(--bang) + .08s) both; }
+.geese .recoil { animation: noir-recoil .25s ease-out var(--bang) both; }
+.geese .muzzle { animation: noir-muzzle .16s ease-out var(--bang) both; }
+.geese .hat { animation: noir-hide .01s steps(1) var(--bang) forwards; }
+.geese .flyhat { animation: noir-hatfly 1.5s var(--bang) both; }
+.geese .flyspin { animation: noir-hatspin 1.5s var(--bang) both; }
+.geese .hatshadow { animation: noir-show .4s ease-out calc(var(--bang) + 1.25s) both; }
+.geese .puff { animation: noir-puff 2.4s ease-out calc(var(--bang) + var(--d)) both; }
+.geese .blink { animation: noir-blink 3.2s steps(1, end) infinite; }
+.geese .flicker { animation: noir-flicker 3.7s steps(1, end) infinite; }
+.geese .surge { animation: noir-surge .7s steps(1, end) var(--bang) both; }
+.geese .tube, .geese .lit { position: absolute; left: 5vw; top: 6vh; font: italic 400 clamp(44px, 11vh, 128px)/1 "Brush Script MT", "Snell Roundhand", "Segoe Script", cursive; letter-spacing: .02em; white-space: nowrap; transform: rotate(-6deg); }
+.geese .tube { color: #3a1416; text-shadow: 0 1px 0 #000; }
+.geese .lit { color: #fff1f1; text-shadow: 0 0 .02em #fff, 0 0 .08em #ff5a5a, 0 0 .18em #ff2424, 0 0 .4em #e00000, 0 0 .8em #a00000; }
+.geese .glow { background: radial-gradient(ellipse 42% 48% at 20% 12%, rgba(255, 34, 34, .26), rgba(255, 34, 34, .07) 55%, transparent 78%); mix-blend-mode: screen; }
+.geese .rain { inset: -25%; transform: rotate(10deg); background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cpath d='M22 0v34M74 46v34M128 12v34M150 92v34M42 104v34M98 124v34M8 62v22M118 70v22' stroke='%23fff' stroke-opacity='.32' stroke-width='1.3' stroke-linecap='round'/%3E%3C/svg%3E") 0 0 / 160px; animation: noir-rain .32s linear infinite; }
+.geese .rain.far { opacity: .5; background-size: 90px; animation-name: noir-rain-far; animation-duration: .5s; }
+.geese .grain { inset: -40%; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E") 0 0 / 200px; opacity: .13; animation: noir-grain .5s steps(5) infinite; }
+.geese .vignette { background: radial-gradient(ellipse 75% 70% at 50% 45%, transparent 50%, rgba(0, 0, 0, .78)); }
+.geese .flash { background: #fff; animation: noir-flash .4s ease-out var(--bang) both; }
+@keyframes noir-in { from { opacity: 0; } }
+@keyframes noir-out { to { opacity: 0; } }
+@keyframes noir-shake { 0%, 100% { transform: translate(0px, 0px); } 15% { transform: translate(-16px, 9px); } 30% { transform: translate(13px, -11px); } 45% { transform: translate(-9px, -6px); } 60% { transform: translate(7px, 7px); } 80% { transform: translate(-3px, 2px); } }
+@keyframes noir-weave { 0%, 100% { transform: translateX(0px); } 10% { transform: translateX(-60px); } 24% { transform: translateX(70px); } 38% { transform: translateX(-80px); } 52% { transform: translateX(60px); } 66% { transform: translateX(-70px); } 78% { transform: translateX(40px); } 88% { transform: translateX(-15px); } }
+@keyframes noir-walk { 0% { transform: translate(800px, 398px) scale(.34); } 22.2% { transform: translate(800px, 400px) scale(.44); } 43.1% { transform: translate(800px, 403px) scale(.58); } 63.9% { transform: translate(800px, 408px) scale(.84); } 77.8% { transform: translate(800px, 418px) scale(1.25); } 86.1% { transform: translate(800px, 436px) scale(1.95); } 91.7% { transform: translate(800px, 465px) scale(3.3); } 95.8% { transform: translate(800px, 495px) scale(5.6); animation-timing-function: ease-out; } 100% { transform: translate(800px, 510px) scale(7.5); } }
+@keyframes noir-sway { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(3.5deg); } 75% { transform: rotate(-3.5deg); } }
+@keyframes noir-bob { to { transform: translateY(-5px); } }
+@keyframes noir-leg { to { transform: translateY(-9px); } }
+@keyframes noir-hic { 0%, 45%, 100% { transform: translateY(0px); } 20% { transform: translateY(-12px); } 62% { transform: translateY(-3px); } }
+@keyframes noir-swig { 0%, 8.2% { transform: rotate(8deg) scale(1); } 13.8% { transform: rotate(14deg) scale(1); } 25% { transform: rotate(2deg) scale(1); } 36.2% { transform: rotate(14deg) scale(1); } 47.4% { transform: rotate(2deg) scale(1); } 58.7% { transform: rotate(14deg) scale(1); } 69.9% { transform: rotate(2deg) scale(1); } 73.5% { transform: rotate(8deg) scale(1); } 80.6% { transform: rotate(-152.9deg) scale(1.46); } 86.7% { transform: rotate(-155deg) scale(1.46); } 91.8% { transform: rotate(-152deg) scale(1.46); } 100% { transform: rotate(8deg) scale(1); } }
+@keyframes noir-swing { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(6deg); } 75% { transform: rotate(-6deg); } }
+@keyframes noir-lid { 0%, 84.8% { transform: scaleY(1); } 86.7%, 88% { transform: scaleY(2.05); } 91.8%, 96.2% { transform: scaleY(1.15); } 98.4%, 100% { transform: scaleY(2.05); } }
+@keyframes noir-lean { to { transform: rotate(-3deg); } }
+@keyframes noir-gunrise { 0% { opacity: 0; transform: translate(40px, 75px) rotate(28deg); } 6% { opacity: 1; } 100% { opacity: 1; transform: translate(0px, 0px) rotate(0deg); } }
+@keyframes noir-tremble { 0%, 100% { transform: translate(0px, 0px); } 25% { transform: translate(.7px, -.5px); } 50% { transform: translate(-.5px, .4px); } 75% { transform: translate(.4px, .7px); } }
+@keyframes noir-sweat { 0% { opacity: 0; transform: translate(0px, 0px); } 15% { opacity: .9; } 100% { opacity: .9; transform: translate(-1px, 13px); } }
+@keyframes noir-wisp { 0% { opacity: 0; transform: translate(0px, 0px); } 30% { opacity: .45; } 100% { opacity: 0; transform: translate(-3px, -16px); } }
+@keyframes noir-ember { to { opacity: .55; } }
+@keyframes noir-jerk { to { transform: translate(-5px, 1px) rotate(-12deg); } }
+@keyframes noir-fall { from { transform: translate(0px, 0px) translate(0px, 355px) rotate(0deg) translate(0px, -355px); } to { transform: translate(-30px, 170px) translate(0px, 355px) rotate(-26deg) translate(0px, -355px); } }
+@keyframes noir-recoil { to { transform: rotate(35deg); } }
+@keyframes noir-muzzle { 0% { opacity: 0; transform: scale(.2); } 1% { opacity: 1; transform: scale(.3); } 40% { opacity: 1; transform: scale(1.15); } 100% { opacity: 0; transform: scale(1.5); } }
+@keyframes noir-hide { to { opacity: 0; } }
+@keyframes noir-show { from { opacity: 0; } to { opacity: 1; } }
+@keyframes noir-hatfly { 0% { opacity: 0; transform: translate(0px, 0px); } 1% { opacity: 1; transform: translate(0px, 0px); animation-timing-function: cubic-bezier(.2, .8, .4, 1); } 25% { opacity: 1; transform: translate(-260px, -300px); animation-timing-function: cubic-bezier(.5, 0, .9, .6); } 88% { opacity: 1; transform: translate(-240px, 470px); animation-timing-function: ease-out; } 94% { opacity: 1; transform: translate(-246px, 452px); animation-timing-function: ease-in; } 100% { opacity: 1; transform: translate(-240px, 470px); } }
+@keyframes noir-hatspin { 0%, 1% { transform: rotate(0deg) scale(1, 1); animation-timing-function: cubic-bezier(.2, .8, .4, 1); } 25% { transform: rotate(-190deg) scale(.7, .7); animation-timing-function: linear; } 55% { transform: rotate(-290deg) scale(.5, .18); } 88% { transform: rotate(-349deg) scale(.4, .4); animation-timing-function: ease-out; } 94% { transform: rotate(-344deg) scale(.4, .37); } 100% { transform: rotate(-349deg) scale(.4, .4); } }
+@keyframes noir-puff { 0% { opacity: 0; transform: translate(0px, 0px) scale(.3); } 6% { opacity: .6; } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(2.4); } }
+@keyframes noir-blink { 0% { opacity: 1; } 46% { opacity: .2; } 47.5% { opacity: 1; } 49% { opacity: 0; } 50.5% { opacity: .8; } 52% { opacity: 0; } 76% { opacity: .6; } 77.5% { opacity: 0; } 79% { opacity: 1; } }
+@keyframes noir-flicker { 0% { opacity: 1; } 40% { opacity: .3; } 42% { opacity: 1; } 70% { opacity: .2; } 71% { opacity: 1; } 72% { opacity: .4; } 74% { opacity: 1; } }
+@keyframes noir-surge { 0% { opacity: 1; } 8% { opacity: .2; } 20% { opacity: 1; } 34% { opacity: .1; } 52% { opacity: 1; } 70% { opacity: .5; } 80% { opacity: 1; } }
+@keyframes noir-flash { 0% { opacity: 0; } 4% { opacity: .95; } 100% { opacity: 0; } }
+@keyframes noir-rain { to { background-position: 0 160px; } }
+@keyframes noir-rain-far { to { background-position: 0 90px; } }
+@keyframes noir-grain { 0% { transform: translate(0, 0); } 20% { transform: translate(-7%, 4%); } 40% { transform: translate(5%, -6%); } 60% { transform: translate(-3%, -8%); } 80% { transform: translate(8%, 3%); } }
 .error { margin: 10px 14px 0; padding: 8px 10px; background: #4a2428; color: #ffb4b8; border-radius: 8px; font-size: 12px; }
 .summary { padding: 12px 14px 14px; }
 .summary.stale { opacity: .55; }
@@ -216,23 +234,157 @@ const PANEL_HTML = `
   </div>
 </div>`;
 
-const GOOSE_SVG = `<svg viewBox="100 28 262 446" aria-hidden="true">
-<g class="leg"><path d="M218 398 V450" stroke="#e8923a" stroke-width="9" stroke-linecap="round"/><path d="M225 446 Q229 462 228 468 H188 Q194 454 210 446 Z" fill="#e8923a"/></g>
-<g class="leg"><path d="M252 396 V450" stroke="#e8923a" stroke-width="9" stroke-linecap="round"/><path d="M259 446 Q263 462 262 468 H222 Q228 454 244 446 Z" fill="#e8923a"/></g>
-<g class="far" transform="translate(10 -12)"><path class="wing" d="M180 280 C230 250 292 262 334 300 C292 294 252 304 222 326 C200 340 177 316 180 280 Z" fill="#d6d5ce"/></g>
-<path d="M205 45 C188 45 180 58 180 80 C180 130 140 190 128 260 C116 340 160 412 232 412 C280 412 318 340 342 294 C312 292 272 284 248 268 C214 246 196 215 198 170 C200 130 226 110 228 78 C229 56 220 45 205 45 Z" fill="#f4f3ee"/>
-<path class="wing" d="M180 280 C230 250 292 262 334 300 C292 294 252 304 222 326 C200 340 177 316 180 280 Z" fill="#e6e5df"/>
-<path class="jaw" d="M184 68 L156 62 L180 80 Z" fill="#d57a26"/>
-<path d="M186 52 L147 49 L181 71 Z" fill="#e8923a"/>
-<circle cx="200" cy="64" r="4.8" fill="#1b1c20"/>
-</svg>`;
-
-const FLAT_GOOSE = `<g fill="#e8923a"><path d="M88 76 L66 96 L78 94 L74 100 L94 82 Z"/><path d="M122 76 L144 96 L132 94 L136 100 L116 82 Z"/></g>
-<g fill="#e6e5df"><path d="M66 50 C44 30 18 28 0 34 C20 42 34 58 60 72 C67 66 69 58 66 50 Z"/><path d="M144 50 C166 30 192 28 210 34 C190 42 176 58 150 72 C143 66 141 58 144 50 Z"/></g>
-<g fill="#f4f3ee"><ellipse cx="105" cy="62" rx="46" ry="26"/><circle cx="105" cy="30" r="20"/></g>
-<path d="M90 39 Q105 33 120 39 Q117 48 105 50 Q93 48 90 39 Z" fill="#e8923a"/>
-<path d="M92 19 l7 7 m0 -7 l-7 7 M111 19 l7 7 m0 -7 l-7 7" fill="none" stroke="#1b1c20" stroke-width="2.4" stroke-linecap="round"/>
-<g fill="#ff9aac" opacity=".7"><ellipse cx="91" cy="33" rx="4" ry="2.4"/><ellipse cx="119" cy="33" rx="4" ry="2.4"/></g>`;
+const noirScene = () => {
+  const fix = (value) => +value.toFixed(1);
+  const points = (list) => list.map(([x, y]) => `${fix(x)},${fix(y)}`).join(' ');
+  const wallY = (x, v) => -40 + .525 * x + v * (752 - .94 * x);
+  const panes = [1.08, 1.38, 1.75, 2.2, 2.75, 3.4, 4.2].flatMap((z) => {
+    const near = 800 - 800 / z;
+    const far = 800 - 800 / (z * 1.14);
+    return [[.12, .24], [.32, .44], [.52, .64]].flatMap(([top, bottom]) => [0, 1600].map((mirror) => {
+      const x = (value) => Math.abs(mirror - value);
+      return points([[x(near), wallY(near, top)], [x(far), wallY(far, top)], [x(far), wallY(far, bottom)], [x(near), wallY(near, bottom)]]);
+    }));
+  });
+  const flicker = Math.floor(Math.random() * panes.length);
+  const windows = panes.map((pane, index) => {
+    const lit = index === flicker || Math.random() < .3;
+    return `<polygon${index === flicker ? ' class="flicker"' : ''} points="${pane}" fill="${lit ? '#9a9a9a' : '#060607'}" fill-opacity="${lit ? (.35 + Math.random() * .3).toFixed(2) : .85}"/>`;
+  }).join('');
+  const dashes = Array.from({ length: 9 }, (_, k) => {
+    const near = 380 + 520 / (1 + 2.2 * k);
+    const far = 380 + 520 / (2.1 + 2.2 * k);
+    const half = (y) => 8 * (y - 380) / 520;
+    return `<polygon points="${points([[800 - half(near), near], [800 + half(near), near], [800 + half(far), far], [800 - half(far), far]])}"/>`;
+  }).join('');
+  const puffs = [[60, -120, 0], [130, -60, .05], [20, -190, .12], [160, -160, .2], [90, -240, .3]]
+    .map(([dx, dy, delay]) => `<circle class="puff" r="40" style="--dx:${dx}px;--dy:${dy}px;--d:${delay}s" fill="url(#noir-smoke) #777"/>`).join('');
+  const wing = '<path d="M4 -6 C-12 -4 -22 20 -22 52 C-22 86 -14 112 -6 134 C-2 124 0 116 2 110 C4 120 6 124 8 128 C12 104 16 70 16 40 C16 14 14 -4 4 -6 Z" fill="url(#noir-white) #bdbdbd" stroke="#7a7a7a" stroke-width="1.2"/>';
+  const foot = '<path d="M0 0 V36" stroke="#4d4d4d" stroke-width="6" stroke-linecap="round"/><path d="M-2 33 L-15 41 Q-8 38.5 -5.5 43 Q0 39 5.5 43 Q8 38.5 15 41 L2 33 Z" fill="#3c3c3c"/>';
+  const almond = 'M-22 -3 C-20 -11 -9 -12 -6.5 -6 C-8 0 -19 1.5 -22 -3 Z';
+  const eyeball = `<path d="${almond}" fill="url(#noir-sclera) #dcb8b3"/><path d="M-21.6 -3.2 q2 -.9 3.6 -.3 q1 .3 1.8 -.4 M-21.4 -2.6 q2.2 1 3.4 .6 M-21 -3.6 q1.5 -1.4 3 -1.5 M-7 -5.8 q-1.6 .2 -2.6 1 q-.6 .5 -1.4 .4 M-7.2 -5.2 q-1 1.6 -2.4 2.2" fill="none" stroke="#b0201a" stroke-opacity=".85" stroke-width=".55" stroke-linecap="round"/><circle cx="-13.5" cy="-2" r="3.6" fill="#2e2e2e"/><circle cx="-13.5" cy="-2" r="1.9" fill="#0a0a0a"/><circle cx="-12.4" cy="-3.4" r=".6" fill="#fff" fill-opacity=".45"/>`;
+  const lid = '<path d="M-10 -2 H10 V5 Q0 8 -10 9.5 Z" fill="#9c9c9c"/><path d="M8 5.9 Q0 8.8 -9 10.2" fill="none" stroke="#a8322b" stroke-opacity=".55" stroke-width=".8"/><path d="M10 5 Q0 8 -10 9.5" fill="none" stroke="#262626" stroke-width="1.5"/>';
+  const sunken = '<path d="M-22 -3 C-19 1.5 -8 0 -6.5 -6 C-6 4 -20 7.5 -22 -3 Z" fill="#1c1c1c" fill-opacity=".32"/><path d="M-22 -3 C-19 1.5 -8 0 -6.5 -6 C-7 1.5 -19 4.5 -22 -3 Z" fill="#3b1212" fill-opacity=".35"/><path d="M-6.5 -6 C-8 0 -19 1.5 -22 -3" fill="none" stroke="#c62f25" stroke-opacity=".9" stroke-width="1.3" stroke-linecap="round"/><path d="M-22 -3 C-20 -11 -9 -12 -6.5 -6" fill="none" stroke="#2e2e2e" stroke-width="1.2" stroke-linecap="round"/><path d="M-23 -6.5 C-21 -14 -9 -15 -5.2 -8.8" fill="none" stroke="#4a4a4a" stroke-opacity=".55" stroke-width="1" stroke-linecap="round"/><path d="M-21.5 5 Q-14 8.5 -6.5 2" fill="none" stroke="#555" stroke-opacity=".35" stroke-width="1" stroke-linecap="round"/>';
+  const hat = '<path d="M-33 -2 C-35 -22 -33 -39 -28 -47 C-16 -53 -7 -45 0 -49 C7 -45 16 -53 28 -47 C33 -39 35 -22 33 -2 Z" fill="#26262a" stroke="#5a5a63" stroke-width="1.3"/><path d="M19 -48 C28 -45 32 -32 31.5 -3 L25 -3 C25.5 -28 23.5 -40 19 -48 Z" fill="#4a4a52" fill-opacity=".5"/><path d="M-34.2 -17 H34.2 L33.6 -8 H-33.6 Z" fill="#09090a"/><ellipse rx="54" ry="10" fill="#18181b" stroke="#4a4a52" stroke-width="1.2"/><path d="M-54 0 A54 10 0 0 1 54 0" fill="none" stroke="#6a6a73" stroke-width="1.4"/>';
+  return `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+<defs>
+<linearGradient id="noir-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0b0c0e"/><stop offset="1" stop-color="#2a2c30"/></linearGradient>
+<linearGradient id="noir-wall" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#0b0c0e"/><stop offset="1" stop-color="#1f2024"/></linearGradient>
+<linearGradient id="noir-wall-r" x1="1" y1="0" x2="0" y2="0"><stop offset="0" stop-color="#0b0c0e"/><stop offset="1" stop-color="#1f2024"/></linearGradient>
+<linearGradient id="noir-road" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a2c30"/><stop offset=".45" stop-color="#141518"/><stop offset="1" stop-color="#0c0d0f"/></linearGradient>
+<linearGradient id="noir-fog" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9aa0a6" stop-opacity="0"/><stop offset=".45" stop-color="#9aa0a6" stop-opacity=".2"/><stop offset="1" stop-color="#9aa0a6" stop-opacity="0"/></linearGradient>
+<linearGradient id="noir-cone" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".13"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+<radialGradient id="noir-redpool"><stop offset="0" stop-color="#ff2a2a" stop-opacity=".24"/><stop offset="1" stop-color="#ff2a2a" stop-opacity="0"/></radialGradient>
+<radialGradient id="noir-white" cx=".62" cy=".3" r=".8"><stop offset="0" stop-color="#f2f2f2"/><stop offset=".5" stop-color="#c2c2c2"/><stop offset=".85" stop-color="#777"/><stop offset="1" stop-color="#4a4a4a"/></radialGradient>
+<radialGradient id="noir-head" gradientUnits="userSpaceOnUse" cx="8.6" cy="-12.8" r="56"><stop offset="0" stop-color="#f2f2f2"/><stop offset=".5" stop-color="#c2c2c2"/><stop offset=".85" stop-color="#777"/><stop offset="1" stop-color="#4a4a4a"/></radialGradient>
+<radialGradient id="noir-sclera"><stop offset=".25" stop-color="#efdfdb"/><stop offset="1" stop-color="#c2625a"/></radialGradient>
+<radialGradient id="noir-smoke"><stop offset="0" stop-color="#b8b8b8" stop-opacity=".9"/><stop offset="1" stop-color="#b8b8b8" stop-opacity="0"/></radialGradient>
+<radialGradient id="noir-halo"><stop offset="0" stop-color="#fff" stop-opacity=".35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+</defs>
+<g class="cam">
+<rect x="-40" y="-40" width="1680" height="460" fill="url(#noir-sky) #16171a"/>
+<circle cx="1210" cy="92" r="120" fill="url(#noir-halo) none"/>
+<circle cx="1210" cy="92" r="40" fill="#d9d9d9"/>
+<g fill="#bdbdbd"><circle cx="1196" cy="80" r="7"/><circle cx="1224" cy="104" r="5"/><circle cx="1220" cy="76" r="3"/></g>
+<path d="M1100 112 Q1150 96 1206 104 T1330 98 Q1300 118 1210 120 T1100 112 Z M1150 62 Q1200 52 1250 58 Q1230 68 1180 68 Z" fill="#121316" fill-opacity=".85"/>
+<g fill="#141518"><rect x="660" y="318" width="38" height="64"/><rect x="694" y="334" width="30" height="48"/><rect x="722" y="300" width="26" height="82"/><rect x="746" y="326" width="40" height="56"/><rect x="814" y="322" width="34" height="60"/><rect x="846" y="296" width="24" height="86"/><rect x="868" y="330" width="36" height="52"/><rect x="902" y="312" width="38" height="70"/></g>
+<g fill="#8a8a8a" fill-opacity=".5"><rect x="668" y="330" width="3" height="4"/><rect x="730" y="314" width="3" height="4"/><rect x="852" y="310" width="3" height="4"/><rect x="910" y="340" width="3" height="4"/><rect x="760" y="338" width="3" height="4"/></g>
+<polygon points="0,-40 660,306 660,438 0,712" fill="url(#noir-wall) #141518"/>
+<polygon points="1600,-40 940,306 940,438 1600,712" fill="url(#noir-wall-r) #141518"/>
+<g>${windows}</g>
+<path d="M300 117.5 V587.5 M1270 114 V585" stroke="#08090a" stroke-width="6"/>
+<polygon points="0,712 785,380 150,900 0,900" fill="#17181b"/>
+<polygon points="1600,712 815,380 1450,900 1600,900" fill="#17181b"/>
+<polygon points="150,900 785,380 815,380 1450,900" fill="url(#noir-road) #16171a"/>
+<path d="M150 900 L785 380 M1450 900 L815 380" stroke="#2e3034" stroke-width="2.5"/>
+<path d="M0 712 L660 438 M1600 712 L940 438" stroke="#08090a" stroke-width="3"/>
+<g fill="#8d8d86" fill-opacity=".55">${dashes}</g>
+<g fill="#3a3d42" fill-opacity=".45"><ellipse cx="620" cy="720" rx="95" ry="13"/><ellipse cx="990" cy="560" rx="48" ry="6"/><ellipse cx="720" cy="470" rx="22" ry="2.6"/><ellipse cx="1120" cy="830" rx="70" ry="9"/></g>
+<ellipse class="blink" cx="390" cy="730" rx="120" ry="200" fill="url(#noir-redpool) none"/>
+<ellipse cx="1353" cy="760" rx="34" ry="150" fill="url(#noir-halo) none" fill-opacity=".45"/>
+<rect x="768" y="346" width="2" height="46" fill="#0c0d0f"/>
+<circle cx="764" cy="347" r="16" fill="url(#noir-halo) none"/>
+<circle cx="764" cy="347" r="2.5" fill="#f0ede0"/>
+<rect x="-40" y="300" width="1680" height="180" fill="url(#noir-fog) none"/>
+<polygon points="1340,206 1366,206 1560,890 1150,890" fill="url(#noir-cone) none"/>
+<ellipse cx="1360" cy="872" rx="220" ry="30" fill="#fff" fill-opacity=".06"/>
+<rect x="1420" y="170" width="14" height="690" fill="#0c0d0f"/>
+<path d="M1427 176 Q1420 192 1362 196" fill="none" stroke="#0c0d0f" stroke-width="7"/>
+<circle cx="1353" cy="206" r="70" fill="url(#noir-halo) none"/>
+<ellipse cx="1353" cy="201" rx="26" ry="8" fill="#222326"/>
+<ellipse cx="1353" cy="206" rx="15" ry="4.5" fill="#f4f1e6"/>
+<g class="weave"><g class="walker">
+<ellipse cy="357" rx="70" ry="9" fill="#000" fill-opacity=".45"/>
+<g class="fall"><g class="jerk"><g class="lean">
+<g class="hic"><g class="bob"><g transform="translate(0 355)"><g class="sway"><g transform="translate(0 -355)">
+<g transform="translate(-26 318)"><g class="leg">${foot}</g></g>
+<g transform="translate(26 318)"><g class="leg other">${foot}</g></g>
+<path d="M-22 150 C-21 100 -19 50 -17 18 L17 18 C19 50 21 100 22 150 Z" fill="url(#noir-white) #bdbdbd"/>
+<path d="M-22 150 C-21 100 -19 50 -17 18 L-9 18 C-11 50 -13 100 -12 150 Z" fill="#000" fill-opacity=".18"/>
+<ellipse cy="30" rx="18" ry="6" fill="#000" fill-opacity=".25"/>
+<ellipse cy="232" rx="92" ry="100" fill="url(#noir-white) #bdbdbd"/>
+<path d="M-52 196 q8 7 16 0 M-20 214 q8 7 16 0 M18 198 q8 7 16 0 M-40 246 q8 7 16 0 M4 252 q8 7 16 0 M40 236 q8 7 16 0" fill="none" stroke="#8a8a8a" stroke-opacity=".45" stroke-width="1.6" stroke-linecap="round"/>
+<path d="M-6 144 L10 144 L7 156 L-3 156 Z M-3 156 L7 156 L14 205 L6 218 L-2 207 Z" fill="#141416"/>
+<g transform="translate(70 168) scale(-1 1) rotate(8)"><g class="swing-r">${wing}</g></g>
+<ellipse rx="36" ry="32" fill="url(#noir-head) #bdbdbd"/>
+<path d="M-35 4 l-5 -3 M-36 10 l-6 0 M-33 -14 l-5 -4 M34 6 l6 -4 M35 12 l6 1 M33 -12 l5 -5" stroke="#9a9a9a" stroke-width="1.5" stroke-linecap="round"/>
+${eyeball}<g transform="scale(-1 1)">${eyeball}</g>
+<g transform="translate(-14 -12.5)"><g class="lid">${lid}</g></g>
+<g transform="translate(14 -12.5) scale(-1 1)"><g class="lid">${lid}</g></g>
+<path d="M-25 -18 H-3 V8 H-25 Z ${almond} M3 -18 H25 V8 H3 Z M22 -3 C20 -11 9 -12 6.5 -6 C8 0 19 1.5 22 -3 Z" fill="url(#noir-head) #bdbdbd" fill-rule="evenodd"/>
+<path d="M-31.8 -15 A36 32 0 0 1 31.8 -15 Q0 -8 -31.8 -15 Z" fill="#000" fill-opacity=".5"/>
+${sunken}<g transform="scale(-1 1)">${sunken}</g>
+<path d="M-23 -13 Q-16 -16.5 -8 -18.5 M23 -13 Q16 -16.5 8 -18.5" fill="none" stroke="#333" stroke-width="2.4" stroke-linecap="round"/>
+<path d="M-10 19 Q0 33 10 19 Q0 27 -10 19 Z" fill="#3d3d3d"/>
+<path d="M-15 3 C-15 -1.5 15 -1.5 15 3 C14 14 8 23 0 25.5 C-8 23 -14 14 -15 3 Z" fill="#6a6a6a"/>
+<path d="M-7 3 C-4 1 4 1 7 3" fill="none" stroke="#8e8e8e" stroke-width="1.4" stroke-linecap="round"/>
+<g fill="#2a2a2a"><ellipse cx="-5" cy="7" rx="1.6" ry="1"/><ellipse cx="5" cy="7" rx="1.6" ry="1"/></g>
+<circle cy="22.5" r="2" fill="#4a4a4a"/>
+<g transform="translate(31 -12)"><g class="sweat"><path d="M0 -3 C1.6 -.5 2.4 1 2.4 2.2 A2.4 2.4 0 0 1 -2.4 2.2 C-2.4 1 -1.6 -.5 0 -3 Z" fill="#dfe7ea" stroke="#888" stroke-width=".5"/></g></g>
+<g class="hat"><g transform="translate(0 -28) rotate(-8)">${hat}</g></g>
+<path d="M9 20 L23 30.5" stroke="#e4e4e4" stroke-width="3"/>
+<path d="M23 30.5 L24.2 31.4" stroke="#8a8a8a" stroke-width="3"/>
+<circle class="ember" cx="24.8" cy="31.8" r="1.5" fill="#ff3b30"/>
+<g fill="none" stroke="#aaa" stroke-width=".8" stroke-linecap="round"><path class="wisp" d="M25 29 q-3 -5 0 -9 q3 -4 0 -8"/><path class="wisp" d="M25 29 q3 -5 0 -9 q-3 -4 0 -8"/></g>
+<g transform="translate(-70 168)"><g class="swing-l"><g class="arm-l">
+<path d="M-3 112 H5 V140 C5 143 13 145 13 152 V198 C13 201 11 202 9 202 H-7 C-9 202 -11 201 -11 198 V152 C-11 145 -3 143 -3 140 Z" fill="#262829" fill-opacity=".92"/>
+<rect x="-4" y="108" width="10" height="4.5" rx="1" fill="#3a3c3e"/>
+<rect x="-11" y="162" width="24" height="20" fill="#bdbab2" fill-opacity=".85"/>
+<path d="M-7 172 H9" stroke="#555" stroke-width="2"/>
+<path d="M8 152 V196" stroke="#fff" stroke-opacity=".25" stroke-width="2.4" stroke-linecap="round"/>
+${wing}
+</g></g></g>
+</g></g></g></g></g>
+<g transform="translate(37 -6)"><g class="gunrise"><g class="tremble"><g transform="rotate(30) scale(1.15)"><g transform="translate(44 16)"><g class="recoil"><g transform="translate(-44 -16)">
+<path d="M38 8 C46 2 58 6 62 16 C68 34 76 60 90 94 L46 100 C48 74 42 44 36 24 C34 16 34 11 38 8 Z" fill="url(#noir-white) #bdbdbd" stroke="#7a7a7a" stroke-width="1.2"/>
+<rect y="-3.2" width="23" height="6.2" rx="1" fill="#55555c"/>
+<path d="M.5 -2.6 H22.5" stroke="#b5b5bd" stroke-width="1"/>
+<path d="M3 -3.2 L5 -5.4 L7 -3.2 Z" fill="#55555c"/>
+<rect x="22" y="-6.5" width="13" height="13.5" rx="2.5" fill="#46464d" stroke="#8a8a92" stroke-width=".6"/>
+<path d="M22 -2.5 H35 M22 1.5 H35" stroke="#2a2a2f" stroke-width="1.2"/>
+<path d="M34 -7 L44 -7 L47 -3 L47 6 L35 8 Z" fill="#505057" stroke="#8a8a92" stroke-width=".6"/>
+<path d="M44 -7 L49 -12 L51 -10 L47 -5 Z" fill="#3a3a40"/>
+<path d="M37 8 C36 15 41 18 46 15 L46 12 C42 14 39 12 39 8 Z" fill="#3a3a40"/>
+<path d="M41 8 C41 11 42 12 43 13" fill="none" stroke="#1a1a1d" stroke-width="1.5"/>
+<path d="M37 5 L47 3 C49 10 52 18 54 26 C51 28 46 29 43 27 C41 19 39 12 37 5 Z" fill="#2e2b29" stroke="#6a6560" stroke-width=".6"/>
+<path d="M52 9 C46 8 40 9 38.5 12 C40 14 46 13.5 52 14 Z M53 15 C47 14 41 15 40 18.5 C41.5 20.5 47 19.5 53.5 20 Z M54 21 C48 20.5 43 21.5 42 25 C43.5 27 48.5 26 55 26 Z" fill="url(#noir-white) #bdbdbd" stroke="#7a7a7a" stroke-width=".8"/>
+</g></g></g></g></g></g></g>
+<g transform="translate(37 -6)"><g class="muzzle"><circle r="34" fill="#fff3c4" fill-opacity=".35"/><polygon points="0,-22 4,-7 16,-16 7,-3 22,0 7,3 16,16 4,7 0,22 -4,7 -16,16 -7,3 -22,0 -7,-3 -16,-16 -4,-7" fill="#fffbe6"/><circle r="9" fill="#fff"/></g></g>
+</g></g></g>
+</g></g>
+<ellipse class="hatshadow" cx="549" cy="804" rx="170" ry="14" fill="#000" fill-opacity=".5"/>
+<g class="flyhat"><g transform="translate(800 510) scale(7.5) rotate(-3) translate(0 -28) rotate(-8)"><g class="flyspin">${hat}</g></g></g>
+<g transform="translate(1075 450)">${puffs}</g>
+</g>
+</svg>
+<div class="rain far"></div>
+<div class="rain"></div>
+<div class="glow blink"></div>
+<div class="surge"><div class="tube">Overload</div><div class="lit blink">Overload</div></div>
+<div class="grain"></div>
+<div class="vignette"></div>
+<div class="flash"></div>`;
+};
 
 const ISSUE_LABELS = {
   noPlatform: 'Нет {back} или {front} — не считаю',
@@ -1021,115 +1173,19 @@ function sprintCapacityMount(config) {
 
   let chaosBefore = false;
   let chaosTimer = null;
-  let chaosWords = null;
-  const crashGoose = (random) => {
-    const x = random(46, 54);
-    const y = 70;
-    const place = `--x:${x.toFixed(1)}%;--y:var(--gy)`;
-    const splash = (count, valley, spike) => {
-      const points = Array.from({ length: count }, (_, index) => {
-        const angle = (index / count) * Math.PI * 2;
-        const radius = index % 2 ? random(...valley) : random(...spike);
-        return [100 + Math.cos(angle) * radius, 100 + Math.sin(angle) * radius * 0.9];
-      });
-      const middle = (a, b) => `${((a[0] + b[0]) / 2).toFixed(1)} ${((a[1] + b[1]) / 2).toFixed(1)}`;
-      return `M${middle(points[0], points[1])} ` + points.map((_, index) => {
-        const next = points[(index + 1) % points.length];
-        return `Q${next[0].toFixed(1)} ${next[1].toFixed(1)} ${middle(next, points[(index + 2) % points.length])}`;
-      }).join(' ') + 'Z';
-    };
-    const blob = splash(26, [58, 72], [84, 124]);
-    const drops = Array.from({ length: 18 }, () => {
-      const angle = random(0, Math.PI * 2);
-      const distance = random(112, 170);
-      return `<circle cx="${(100 + Math.cos(angle) * distance).toFixed(1)}" cy="${(100 + Math.sin(angle) * distance).toFixed(1)}" r="${random(2.5, 9).toFixed(1)}"/>`;
-    }).join('');
-    const streaks = Array.from({ length: 12 }, () => {
-      const angle = random(0, 360);
-      const distance = random(118, 160);
-      const radians = (angle * Math.PI) / 180;
-      const cx = 100 + Math.cos(radians) * distance;
-      const cy = 100 + Math.sin(radians) * distance;
-      return `<ellipse cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" rx="${random(14, 34).toFixed(1)}" ry="${random(2.5, 5).toFixed(1)}" transform="rotate(${angle.toFixed(0)} ${cx.toFixed(1)} ${cy.toFixed(1)})"/>`;
-    }).join('');
-    const drips = Array.from({ length: 7 }, (_, index) => `<rect class="drip" x="${(52 + index * 14 + random(-4, 4)).toFixed(1)}" y="${random(150, 168).toFixed(0)}" width="${random(6, 11).toFixed(1)}" height="${random(70, 190).toFixed(0)}" rx="4"/>`).join('');
-    const cracks = Array.from({ length: 11 }, (_, index) => {
-      let angle = (index / 11) * Math.PI * 2 + random(-0.2, 0.2);
-      let radius = 0;
-      const points = [[100, 100]];
-      while (radius < 150) {
-        radius += random(14, 32);
-        angle += random(-0.18, 0.18);
-        points.push([100 + Math.cos(angle) * radius, 100 + Math.sin(angle) * radius]);
-      }
-      return points;
-    });
-    const line = (points) => 'M' + points.map((point) => `${point[0].toFixed(1)} ${point[1].toFixed(1)}`).join(' L');
-    const web = cracks.map(line).concat(cracks.flatMap((ray, index) => [1, 2, 3]
-      .filter((step) => step < 3 || random(0, 1) > 0.5)
-      .map((step) => line([ray[step], cracks[(index + 1) % cracks.length][step]])))).join(' ');
-    const crack = `<div class="crack" style="${place}"><svg viewBox="0 0 200 200" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="${web}" stroke="rgba(0,0,0,.45)" stroke-width="3.2" vector-effect="non-scaling-stroke"/><path d="${web}" stroke="#fff" stroke-width="1.4" opacity=".85" vector-effect="non-scaling-stroke"/></g><circle cx="100" cy="100" r="4" fill="#fff" opacity=".6"/></svg></div>`;
-    const gloss = Array.from({ length: 7 }, () => {
-      const angle = random(0, Math.PI * 2);
-      const distance = random(26, 50);
-      return `<ellipse cx="${(100 + Math.cos(angle) * distance).toFixed(1)}" cy="${(100 + Math.sin(angle) * distance).toFixed(1)}" rx="${random(2, 4.5).toFixed(1)}" ry="${random(.8, 1.6).toFixed(1)}" transform="rotate(${random(-40, 40).toFixed(0)})" transform-origin="${(100 + Math.cos(angle) * distance).toFixed(1)} ${(100 + Math.sin(angle) * distance).toFixed(1)}"/>`;
-    }).join('');
-    const clots = Array.from({ length: 9 }, () => `<circle cx="${random(64, 146).toFixed(1)}" cy="${random(22, 84).toFixed(1)}" r="${random(1.5, 5).toFixed(1)}"/>`).join('');
-    const feathers = Array.from({ length: 14 }, () => `<i class="feather" style="--fx:${random(-70, 70).toFixed(0)}cqw;--fy:${random(-60, 25).toFixed(0)}cqw;--fr:${random(-300, 300).toFixed(0)}deg"></i>`).join('');
-    const sprays = Array.from({ length: 6 }, () => {
-      const style = `--x:${(x + random(-48, 48)).toFixed(1)}%;--y:${(y + random(-50, 30)).toFixed(1)}%;--s:calc(var(--sw) * ${random(0.1, 0.24).toFixed(2)});--d:${random(0.05, 0.35).toFixed(2)}s`;
-      return `<div class="spray" style="${style}"><svg viewBox="0 0 200 200" aria-hidden="true"><path d="${splash(16, [40, 60], [70, 100])}" fill="#c8000f"/></svg></div>`;
-    }).join('');
-    const jets = Array.from({ length: 22 }, () => {
-      const style = `${place};--dx:${random(-48, 48).toFixed(1)}vw;--up:${random(-60, -22).toFixed(1)}vh;--down:${random(10, 45).toFixed(1)}vh;--t:${random(0.8, 1.5).toFixed(2)}s;--d:${random(0, 0.5).toFixed(2)}s;--r:${random(8, 22).toFixed(0)}px`;
-      return `<div class="jet" style="${style}"><i></i></div>`;
-    }).join('');
-    return `<div class="goose crash" style="${place};--step:.13s"><div class="bob">${GOOSE_SVG}</div></div><div class="flash"></div>${sprays}`
-      + `<div class="splat" style="${place}"><svg viewBox="0 0 200 200" aria-hidden="true"><g fill="#b0000c">${streaks}${drops}${drips}<path d="${blob}"/></g><path d="${blob}" fill="#e00016" transform="translate(100 100) scale(.62) translate(-100 -100)"/><g fill="#fff" opacity=".3">${gloss}</g></svg>${feathers}</div><div class="flat" style="${place}"><svg viewBox="0 0 210 100" aria-hidden="true">${FLAT_GOOSE}<g fill="#d0000f" opacity=".9">${clots}</g></svg></div>${crack}${jets}`;
-  };
-  const releaseGeese = (names) => {
+  const releaseGeese = () => {
     if ($('.geese')) return;
-    const count = 7;
-    const lifetime = 5;
-    const shouters = new Set(Array.from({ length: count }, (_, index) => index).sort(() => Math.random() - 0.5).slice(0, 3));
-    const words = ['!!Overload!!', ...names.map((name) => `${name} трещит!`)];
-    const random = (from, to) => from + Math.random() * (to - from);
-    const flock = document.createElement('div');
-    flock.className = 'geese';
-    flock.style.setProperty('--hit', '1.9s');
-    const sides = [1, -1, Math.random() < 0.5 ? 1 : -1].sort(() => Math.random() - 0.5);
-    let shouter = 0;
-    flock.innerHTML = `<div class="boom" style="--boom-end:${lifetime - 0.45}s"><span>${escapeHtml(words[0])}</span></div>` + Array.from({ length: count }, (_, index) => {
-      const size = random(0.75, 1.2);
-      const shouts = shouters.has(index);
-      const side = shouts ? sides[shouter++] : 1;
-      const run = side > 0 ? '--x0:-130%;--x1:calc(100vw + 40%)' : '--x0:calc(100vw + 40%);--x1:-130%';
-      const dy = shouts ? random(-18, 14) : random(-6, 6);
-      const style = `${run};--dy:${dy.toFixed(1)}vh;--delay:${random(0, 1.2).toFixed(2)}s;--speed:${random(2.4, 3.5).toFixed(2)}s;--size:${size.toFixed(2)};--step:${random(0.16, 0.24).toFixed(2)}s;--wave:${random(0.5, 0.9).toFixed(2)}s;--phase:${random(-1, 0).toFixed(2)}s;--amp:${random(1.5, 5).toFixed(1)}vh;--lean:${random(-6, 6).toFixed(1)}deg;bottom:${random(shouts ? 12 : 3, shouts ? 40 : 48).toFixed(1)}%`;
-      const back = side < 0 ? ' back' : '';
-      const goose = `<div class="goose${back}" style="${style};z-index:${Math.round(size * 10)}"><div class="wave"><div class="bob">${GOOSE_SVG}</div></div></div>`;
-      return shouts ? `${goose}<div class="goose tag${back}" style="${style};z-index:55"><span class="say">Беспредел!</span></div>` : goose;
-    }).join('') + crashGoose(random);
-    shadow.appendChild(flock);
-    const label = flock.querySelector('.boom span');
-    let word = 0;
-    window.clearInterval(chaosWords);
-    chaosWords = window.setInterval(() => {
-      word = (word + 1) % words.length;
-      label.textContent = words[word];
-      label.classList.remove('pop');
-      void label.offsetWidth;
-      label.classList.add('pop');
-    }, 650);
-    window.setTimeout(() => {
-      window.clearInterval(chaosWords);
-      flock.remove();
-    }, lifetime * 1000);
+    const scene = document.createElement('div');
+    scene.className = 'geese';
+    scene.innerHTML = noirScene();
+    scene.addEventListener('click', () => scene.remove());
+    shadow.appendChild(scene);
+    window.setTimeout(() => scene.remove(), 12400);
   };
   const checkChaos = () => {
     const names = report ? chaosNames(report.rows, boardConfig(boardId, config)) : [];
     const chaos = names.length > 0;
-    if (chaos && !chaosBefore) releaseGeese(names);
+    if (chaos && !chaosBefore) releaseGeese();
     chaosBefore = chaos;
   };
   const checkChaosLater = () => {
@@ -1141,7 +1197,6 @@ function sprintCapacityMount(config) {
     closed = true;
     window.clearInterval(timer);
     window.clearTimeout(chaosTimer);
-    window.clearInterval(chaosWords);
     document.removeEventListener('visibilitychange', onVisible);
     window.removeEventListener('message', onHolstMessage);
     window.removeEventListener('message', onTimeMessage);
