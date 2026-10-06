@@ -12,14 +12,13 @@ button { font: inherit; color: inherit; background: none; border: 0; border-radi
 .icon:hover { background: var(--soft); color: var(--fg); }
 .icon:disabled { cursor: default; }
 .icon:disabled span { display: inline-block; animation: spin 1s linear infinite; }
-.key { width: 22px; }
-.key i { display: inline-block; width: 10px; height: 10px; box-sizing: border-box; border: 2px solid var(--bad); border-radius: 50%; background: var(--bad); vertical-align: middle; }
-.key:hover i { box-shadow: 0 0 0 3px var(--bad-soft); }
-.key[data-state="checking"] i, .key[data-state="error"] i { border-color: var(--muted); background: none; }
-.key[data-state="checking"] i { animation: pulse .6s ease-in-out infinite alternate; }
-.key[data-state="checking"]:hover i, .key[data-state="error"]:hover i { box-shadow: 0 0 0 3px var(--line); }
-.key[data-state="ok"] i { border-color: var(--good); background: var(--good); }
-.key[data-state="ok"]:hover i { box-shadow: 0 0 0 3px var(--good-soft); }
+.key { width: 24px; font-size: 13px; font-weight: 700; color: var(--bad); }
+.key:hover { color: var(--bad); background: var(--bad-soft); }
+.key[data-state="checking"], .key[data-state="error"] { color: var(--muted); }
+.key[data-state="checking"] { animation: pulse .6s ease-in-out infinite alternate; }
+.key[data-state="checking"]:hover, .key[data-state="error"]:hover { color: var(--fg); background: var(--line); }
+.key[data-state="ok"] { color: var(--good); }
+.key[data-state="ok"]:hover { color: var(--good); background: var(--good-soft); }
 @keyframes pulse { to { opacity: .3; } }
 @keyframes spin { to { transform: rotate(360deg); } }
 .geese { position: fixed; inset: 0; z-index: 2147483001; overflow: hidden; pointer-events: none; --w: clamp(40px, min(7vw, 11vh), 120px); --sw: min(max(96vw, 70vh), 125vh); --top: calc(max(12px, 12vh) + min(820px, 90vw, 110vh) / 2.2 + 3vh); --gy: calc((var(--top) + 104vh) / 2); }
@@ -99,13 +98,13 @@ button { font: inherit; color: inherit; background: none; border: 0; border-radi
 .over .bar .add { background: var(--bad-soft); }
 .over .value b { color: var(--bad); }
 .bar .limit { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--fg); }
-.holst-login { margin: 0 14px 14px; padding: 10px 12px; background: var(--soft); border-radius: 10px; font-size: 12px; }
-.holst-login input[type=password] { margin-top: 8px; text-align: left; }
-.holst-login .why { font-weight: 600; }
-.holst-login .error { margin: 0; }
-.holst-login .plan { margin-top: 8px; }
-.holst-login .note { margin-top: 6px; color: var(--muted); }
-.holst-login .note b { color: var(--fg); font-weight: 600; }
+.holst-login, .time-login { margin: 0 14px 14px; padding: 10px 12px; background: var(--soft); border-radius: 10px; font-size: 12px; }
+.holst-login input[type=password], .time-login input[type=text] { margin-top: 8px; text-align: left; }
+.holst-login .why, .time-login .why { font-weight: 600; }
+.holst-login .error, .time-login .error { margin: 0; }
+.holst-login .plan, .time-login .plan { margin-top: 8px; }
+.holst-login .note, .time-login .note { margin-top: 6px; color: var(--muted); }
+.holst-login .note b, .time-login .note b { color: var(--fg); font-weight: 600; }
 .holst-login details { border: 0; margin-top: 8px; }
 .holst-login summary { padding: 0; font-weight: 400; color: var(--muted); }
 .holst-login summary::after { margin-left: 0; }
@@ -144,6 +143,14 @@ li { padding: 2px 0; white-space: nowrap; overflow: hidden; text-overflow: ellip
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
 .muted { color: var(--muted); font-size: 12px; }
+.report .plan { margin-top: 0; }
+.report select { flex: 1; min-width: 0; padding: 6px 8px; font: inherit; color: var(--fg); background: var(--field); border: 1px solid var(--line); border-radius: 8px; }
+.report textarea { display: block; width: 100%; box-sizing: border-box; min-height: 220px; margin-top: 8px; padding: 8px; font: 12px/1.45 inherit; font-family: inherit; color: var(--fg); background: var(--field); border: 1px solid var(--line); border-radius: 8px; resize: vertical; }
+.report textarea:focus { outline: none; border-color: var(--accent); }
+.report [data-report-progress] { margin-top: 6px; }
+.report [data-report-progress].error { margin: 6px 0 0; }
+.report .plan + .group, .report .group:first-child { margin-top: 10px; }
+.plan button:disabled { opacity: .5; cursor: default; filter: none; }
 `;
 
 const HOLST_KEY_TITLES = {
@@ -154,6 +161,13 @@ const HOLST_KEY_TITLES = {
   error: 'Вход в Holst: сохранён, проверить не получилось',
 };
 
+const TIME_KEY_TITLES = {
+  none: 'Time: не подключён',
+  checking: 'Time: подключаю…',
+  ok: 'Time: подключён',
+  rejected: 'Time: не работает',
+};
+
 const PANEL_INPUT = (path, placeholder) => `<input type="text" inputmode="decimal" autocomplete="off" data-set="${path}" placeholder="${placeholder}">`;
 
 const PANEL_HTML = `
@@ -161,7 +175,8 @@ const PANEL_HTML = `
   <header>
     <select class="board" data-act="board" title="Доска"></select>
     <span class="time"></span>
-    <button type="button" class="icon key" data-act="holst-login" title="Вход в Holst"><i></i></button>
+    <button type="button" class="icon key" data-act="holst-login" title="Вход в Holst">H</button>
+    <button type="button" class="icon key" data-act="time-login" title="Time">T</button>
     <button type="button" class="icon" data-act="refresh" title="Обновить"><span>↻</span></button>
     <button type="button" class="icon" data-act="collapse" title="Свернуть">–</button>
     <button type="button" class="icon" data-act="close" title="Закрыть">×</button>
@@ -169,6 +184,7 @@ const PANEL_HTML = `
   <div class="status"></div>
   <div class="summary"></div>
   <div class="holst-login" hidden></div>
+  <div class="time-login" hidden></div>
   <div class="body">
     <details class="settings">
       <summary>Команда и дни</summary>
@@ -184,6 +200,16 @@ const PANEL_HTML = `
           <label>праздников ${PANEL_INPUT('holidays', '0')}</label>
           <label>SP в день ${PANEL_INPUT('coefficient', '1')}</label>
         </div>
+      </div>
+    </details>
+    <details class="report" hidden>
+      <summary>Сводка спринта</summary>
+      <div class="inner">
+        <div class="plan"><select data-report-sprint title="Спринт"></select><button type="button" data-act="report-run">Посчитать</button></div>
+        <div class="muted" data-report-progress></div>
+        <textarea data-report-text spellcheck="false" placeholder="Выберите спринт и нажмите «Посчитать». Текст можно поправить перед отправкой"></textarea>
+        <div class="plan"><button type="button" data-act="report-send">В Time</button><button type="button" data-act="report-copy" class="again">Скопировать</button></div>
+        <div data-report-notes></div>
       </div>
     </details>
     <details class="warnings"></details>
@@ -234,6 +260,10 @@ function sprintCapacityMount(config) {
     holstHandoff();
     return;
   }
+  if (TIME_HOST.test(window.location.hostname)) {
+    timeHandoff();
+    return;
+  }
   if (window.__sprintCapacity) {
     window.__sprintCapacity.close();
     return;
@@ -247,6 +277,9 @@ function sprintCapacityMount(config) {
   const REFRESH_MS = 60000;
   const HOLST_WAIT_MS = 300000;
   const HOLST_PING_MS = 500;
+  const TIME_WAIT_MS = 300000;
+  const TIME_WATCH_MS = 1000;
+  const TIME_SEND_MS = 30000;
   let storageBroken = false;
   const readStored = (key, fallback) => {
     let raw = null;
@@ -286,6 +319,12 @@ function sprintCapacityMount(config) {
   let holstSend = false;
   let holstStatus = null;
   let holstBoxStatus = false;
+  let timeLink = null;
+  let timeTimer = null;
+  let timeStatus = { state: 'none', message: '', channel: '', user: '', since: 0 };
+  const timeSends = new Map();
+  let reportSprintList = [];
+  let reportRun = { busy: false, sending: false, failed: false, progress: '', notes: [] };
   const data = { cards: null, loadedAt: null, error: null, snapshotError: null, busy: false };
   try {
     window.localStorage.removeItem(STORAGE_PREFIX + 'snapshot');
@@ -380,6 +419,8 @@ function sprintCapacityMount(config) {
     renderSummary();
     renderWarnings();
     renderHolstKey();
+    renderTimeKey();
+    renderReport();
   };
 
   const applyCollapsed = () => {
@@ -706,6 +747,10 @@ function sprintCapacityMount(config) {
       const now = Date.now();
       const current = buildReport({ cards, settings, snapshot, planEnd, config: settingsNow });
       const columns = holstColumns(boardJson);
+      const capacity = DIRECTIONS.filter((direction) => settings.team[direction].people > 0).map((direction) => ({ label: settingsNow.labels[direction], days: personDaysOf(settings, direction) }));
+      const sprintJob = sprintReportLoad({ cards, boardId: board, now, columns, load: kaitenSprint, store: { read: (key) => readStored(key, null), write: writeStored } })
+        .then((loaded) => ({ lines: sprintReportLines({ ...loaded, capacity: capacity.length ? capacity : null, now }) }))
+        .catch((error) => ({ problem: error.message || String(error) }));
       const since = holstLookback(now);
       const historyIds = holstHistoryIds(cards, since);
       const [historyList, activityList] = await Promise.all([
@@ -718,6 +763,7 @@ function sprintCapacityMount(config) {
       const foreignList = await Promise.all(foreignIds.map((id) => kaitenBoard(id)));
       const boards = Object.fromEntries(foreignIds.map((id, index) => [id, foreignList[index].title]));
       const payload = holstPayload({ cards, report: current, doneAtStart: snapshot ? snapshot.doneIds : [], histories, columns, boards, renames, now, config: settingsNow, holst: settingsNow.holst, kaiten: location.origin, title: boardTitle(board, config) });
+      payload.sprint = await sprintJob;
       sprintToast(`${payload.title}: пишу в Holst…`);
       const result = await holstApply(payload, token);
       markHolst(token, settingsNow.holst.board, 'ok');
@@ -746,6 +792,223 @@ function sprintCapacityMount(config) {
     if (event.data.type === 'sprint-capacity:login') takeHolstLogin(event.data.token, event.source);
   };
   window.addEventListener('message', onHolstMessage);
+
+
+  const timeReason = () => {
+    const { state, message, channel, user } = timeStatus;
+    if (state === 'ok') return [`Time подключён: канал «${channel}», отправитель ${user}`, false];
+    if (state === 'checking') return ['Жду Time: в открывшейся вкладке Time нажмите закладку «Ёмкость спринта»', false];
+    if (state === 'rejected') return [message, true];
+    return [message || 'Сводка уходит в Time через открытую вкладку Time — вставьте ссылку на канал и нажмите «Открыть Time»', false];
+  };
+
+  const renderTimeKey = () => {
+    const key = $('[data-act="time-login"]');
+    key.hidden = !boardConfig(boardId, config).report;
+    key.dataset.state = timeStatus.state;
+    key.title = TIME_KEY_TITLES[timeStatus.state];
+    const line = $('.time-login').hidden ? null : $('.time-login').querySelector('[data-time-reason]');
+    if (!line) return;
+    const [text, failed] = timeReason();
+    line.className = failed ? 'error' : 'why';
+    line.textContent = text;
+  };
+
+  const setTime = (state, message, extra) => {
+    timeStatus = { state, message: message || '', channel: (extra && extra.channel) || '', user: (extra && extra.user) || '', since: Date.now() };
+    renderTimeKey();
+  };
+
+  const showTimeLogin = () => {
+    const box = $('.time-login');
+    const [text, failed] = timeReason();
+    box.hidden = false;
+    box.innerHTML = `<div class="${failed ? 'error' : 'why'}" data-time-reason>${escapeHtml(text)}</div>`
+      + `<input type="text" autocomplete="off" spellcheck="false" data-time-channel placeholder="ссылка на канал Time" value="${escapeHtml(readStored('timeChannel', '') || '')}">`
+      + '<div class="note">Откройте канал в Time, скопируйте адрес из строки браузера и вставьте сюда. В открывшейся вкладке Time нажмите закладку <b>«Ёмкость спринта»</b> и не закрывайте её — через неё уходят сводки.</div>'
+      + `<div class="plan"><button type="button" data-act="time-open"${timeLink ? ' class="again"' : ''}>${timeLink ? 'Открыть Time ещё раз' : 'Открыть Time'}</button><button type="button" data-act="time-cancel" class="again">Отмена</button></div>`;
+  };
+
+  const hideTimeLogin = () => {
+    const box = $('.time-login');
+    box.hidden = true;
+    box.innerHTML = '';
+  };
+
+  const toggleTimeLogin = () => {
+    if (!$('.time-login').hidden) {
+      hideTimeLogin();
+      return;
+    }
+    showTimeLogin();
+  };
+
+  const stopTimeWatch = () => {
+    window.clearInterval(timeTimer);
+    timeTimer = null;
+  };
+
+  const watchTime = () => {
+    if (timeTimer) return;
+    timeTimer = window.setInterval(() => {
+      if (!timeLink) {
+        stopTimeWatch();
+        return;
+      }
+      if (timeLink.tab.closed) {
+        timeLink = null;
+        stopTimeWatch();
+        setTime('none', 'Вкладку Time закрыли — откройте Time ещё раз');
+        return;
+      }
+      if (timeStatus.state === 'checking' && Date.now() - timeStatus.since > TIME_WAIT_MS) setTime('rejected', 'Time не ответил за 5 минут — нажмите закладку «Ёмкость спринта» во вкладке Time');
+    }, TIME_WATCH_MS);
+  };
+
+  const timePing = () => {
+    if (timeLink) timeLink.tab.postMessage({ type: 'sprint-capacity:time-ping', channel: readStored('timeChannel', '') }, timeLink.origin);
+  };
+
+  const openTime = () => {
+    const input = $('[data-time-channel]');
+    const url = String((input && input.value) || readStored('timeChannel', '') || '').trim();
+    const place = timeChannelPlace(url);
+    if (!place) {
+      setTime('rejected', 'Нужна ссылка на канал Time вида https://…time-messenger.ru/команда/channels/канал — откройте канал в Time и скопируйте адрес из строки браузера');
+      return;
+    }
+    writeStored('timeChannel', url);
+    const tab = window.open(url, 'sprint-capacity-time');
+    if (!tab) {
+      setTime('rejected', 'Браузер не дал открыть Time — разрешите всплывающие окна для Kaiten');
+      return;
+    }
+    timeLink = { tab, origin: place.origin };
+    setTime('checking');
+    watchTime();
+    showTimeLogin();
+  };
+
+  const onTimeMessage = (event) => {
+    if (!TIME_ORIGIN.test(event.origin) || !event.data || !event.source) return;
+    const message = event.data;
+    if (message.type === 'sprint-capacity:time-hello') {
+      const known = timeLink && timeLink.tab === event.source;
+      if (known && timeStatus.state !== 'checking') return;
+      timeLink = { tab: event.source, origin: event.origin };
+      if (!known) setTime('checking');
+      watchTime();
+      timePing();
+    }
+    if (message.type === 'sprint-capacity:time-ready' && timeLink && timeLink.tab === event.source) {
+      if (message.url !== readStored('timeChannel', '')) return;
+      if (message.error) {
+        setTime('rejected', message.error);
+        return;
+      }
+      setTime('ok', '', message);
+      hideTimeLogin();
+      sprintToast(`Time подключён: канал «${message.channel}»`);
+    }
+    if (message.type === 'sprint-capacity:time-result' && timeSends.has(message.id)) {
+      const wait = timeSends.get(message.id);
+      timeSends.delete(message.id);
+      window.clearTimeout(wait.timer);
+      wait.resolve(message);
+    }
+  };
+  window.addEventListener('message', onTimeMessage);
+
+  const reportDraft = () => String($('[data-report-text]').value || '').trim();
+
+  const fillReport = () => {
+    const box = $('.report');
+    box.hidden = !boardConfig(boardId, config).report;
+    if (box.hidden) return;
+    reportSprintList = reportSprints(Date.now());
+    $('[data-report-sprint]').innerHTML = reportSprintList.map((sprint, index) => `<option value="${index}"${index === 1 ? ' selected' : ''}>${reportShortDate(sprint.from)}–${reportShortDate(sprint.to)}${sprint.current ? ' — идёт' : ''}</option>`).join('');
+  };
+
+  const renderReport = () => {
+    if (!boardConfig(boardId, config).report) return;
+    const progress = $('[data-report-progress]');
+    progress.className = reportRun.failed ? 'error' : 'muted';
+    progress.textContent = reportRun.progress;
+    $('[data-act="report-run"]').disabled = reportRun.busy;
+    $('[data-act="report-send"]').disabled = reportRun.busy || reportRun.sending;
+    $('[data-report-notes]').innerHTML = reportRun.notes.map((group) => {
+      const items = group.items.map((item) => `<li><a href="${window.location.origin}/${item.id}" target="_blank" rel="noopener">${item.id}</a>${item.note ? ` — ${escapeHtml(item.note)}` : ''}</li>`).join('');
+      return `<div class="group"><div class="group-title">${escapeHtml(group.label)}</div><ul>${items}</ul></div>`;
+    }).join('');
+  };
+
+  const runReport = async () => {
+    if (reportRun.busy) return;
+    const sprint = reportSprintList[Number($('[data-report-sprint]').value)] || reportSprintList[1];
+    reportRun = { busy: true, sending: false, failed: false, progress: 'Загружаю карточки…', notes: [] };
+    renderReport();
+    try {
+      const loaded = await reportLoad(sprint, (text) => {
+        reportRun.progress = text;
+        if (!closed) $('[data-report-progress]').textContent = text;
+      });
+      const built = reportBuild(loaded, sprint);
+      if (closed) return;
+      $('[data-report-text]').value = built.text;
+      reportRun.notes = reportNotes(built.current);
+      reportRun.progress = sprint.current
+        ? 'Спринт ещё идёт — цифры неполные'
+        : `Посчитано в ${clockTime(new Date())}. Баги — на сегодня: открытые войдут, когда дойдут до Done или Backlog`;
+    } catch (error) {
+      reportRun.failed = true;
+      reportRun.progress = `Не посчиталось: ${error.message || error}`;
+    }
+    reportRun.busy = false;
+    renderReport();
+  };
+
+  const copyReport = async () => {
+    const text = reportDraft();
+    if (!text) {
+      sprintToast('Сводка пустая — сначала нажмите «Посчитать»', true);
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      sprintToast('Сводка скопирована');
+    } catch (error) {
+      sprintToast('Браузер не дал скопировать — выделите текст и нажмите Cmd+C', true);
+    }
+  };
+
+  const sendReport = async () => {
+    const text = reportDraft();
+    if (!text) {
+      sprintToast('Сводка пустая — сначала нажмите «Посчитать»', true);
+      return;
+    }
+    if (timeStatus.state !== 'ok' || !timeLink || timeLink.tab.closed) {
+      showTimeLogin();
+      sprintToast('Сначала подключите Time — буква T вверху панели', true);
+      return;
+    }
+    if (!window.confirm(`Отправить сводку в Time, в канал «${timeStatus.channel}»?`)) return;
+    reportRun.sending = true;
+    renderReport();
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const result = await new Promise((resolve) => {
+      const timer = window.setTimeout(() => {
+        timeSends.delete(id);
+        resolve({ ok: false, text: 'Вкладка Time не ответила за 30 секунд — загляните в канал, прежде чем отправлять ещё раз' });
+      }, TIME_SEND_MS);
+      timeSends.set(id, { resolve, timer });
+      timeLink.tab.postMessage({ type: 'sprint-capacity:time-send', id, channel: readStored('timeChannel', ''), text }, timeLink.origin);
+    });
+    reportRun.sending = false;
+    if (closed) return;
+    renderReport();
+    sprintToast(result.text, !result.ok, result.ok ? 'ok' : 'fail');
+  };
 
   const timer = window.setInterval(() => {
     if (!document.hidden) refresh();
@@ -881,7 +1144,11 @@ function sprintCapacityMount(config) {
     window.clearInterval(chaosWords);
     document.removeEventListener('visibilitychange', onVisible);
     window.removeEventListener('message', onHolstMessage);
+    window.removeEventListener('message', onTimeMessage);
     stopHolstWait();
+    stopTimeWatch();
+    for (const wait of timeSends.values()) window.clearTimeout(wait.timer);
+    timeSends.clear();
     host.remove();
     delete window.__sprintCapacity;
   };
@@ -899,6 +1166,12 @@ function sprintCapacityMount(config) {
     if (act === 'holst-open') openHolstLogin();
     if (act === 'holst-save') saveHolstLogin();
     if (act === 'holst-cancel') hideHolstLogin();
+    if (act === 'time-login') toggleTimeLogin();
+    if (act === 'time-open') openTime();
+    if (act === 'time-cancel') hideTimeLogin();
+    if (act === 'report-run') runReport();
+    if (act === 'report-send' && !reportRun.sending) sendReport();
+    if (act === 'report-copy') copyReport();
     if (act === 'collapse') {
       collapsed = !collapsed;
       writeStored('collapsed', collapsed);
@@ -916,6 +1189,7 @@ function sprintCapacityMount(config) {
     chaosBefore = false;
     Object.assign(data, { cards: null, loadedAt: null, error: null, snapshotError: null });
     fillSettings();
+    fillReport();
     $('.settings').open = DIRECTIONS.some((direction) => settings.team[direction].people === 0);
     recompute();
     render();
@@ -937,6 +1211,7 @@ function sprintCapacityMount(config) {
 
   shadow.addEventListener('keydown', (event) => {
     if (event.key === 'Enter' && event.target.dataset.holstToken !== undefined) saveHolstLogin();
+    if (event.key === 'Enter' && event.target.dataset.timeChannel !== undefined) openTime();
   });
 
   for (const type of ['keydown', 'keyup', 'keypress', 'paste', 'copy', 'cut']) {
@@ -947,6 +1222,7 @@ function sprintCapacityMount(config) {
   $('.board').innerHTML = config.boards.map((board) => `<option value="${board.id}"${board.id === boardId ? ' selected' : ''}>${escapeHtml(board.title)}</option>`).join('');
   applyCollapsed();
   fillSettings();
+  fillReport();
   $('.settings').open = DIRECTIONS.some((direction) => settings.team[direction].people === 0);
   render();
   refresh();

@@ -263,6 +263,17 @@ async function holstApply(payload, token) {
     const percentProblem = !labelRoot && chart && chart.problem ? chart.problem : null;
     const labelMove = moveLabel && Boolean(place);
     const labelWrite = labelChanged && !percentProblem;
+    const sprintReport = payload.sprint || null;
+    const reportItems = sprintReport && sprintReport.lines ? holstReportItems(sprintReport.lines, now) : null;
+    const report = listRun.report ? objects.get(listRun.report) : null;
+    const reportRoot = report instanceof Y.Map ? documents.get(report.get('documentId')) || null : null;
+    const reportPlace = reportItems && !reportRoot ? holstReportPlace({ objects: holstChartObjects({ Y, objects, documents, payload }), group: payload.group, chart: payload.chart }) : null;
+    const reportWrite = Boolean(reportItems) && !(reportPlace && reportPlace.problem);
+    const reportChanged = reportWrite && (!reportRoot || stickerSignature(holstDocItems(Y, reportRoot)) !== stickerSignature(reportItems));
+    const reportProblem = !sprintReport ? null
+      : sprintReport.problem ? `Отчёт спринта не посчитал: ${sprintReport.problem}`
+      : reportPlace && reportPlace.problem ? `Отчёт спринта не написал: ${reportPlace.problem}`
+      : null;
     const leftovers = holstLeftovers(Y, objects);
     const cleanup = leftovers.lines.length + leftovers.labels.length + leftovers.bombs.length > 0;
     const marked = cards.filter((item) => item.mark);
@@ -272,9 +283,9 @@ async function holstApply(payload, token) {
     const percentLine = payload.percent === null ? 'Процент не написал: в спринте нет карт'
       : percentProblem ? `Процент не написал: ${percentProblem}`
       : `Спринт: ${payload.percent}%${labelWrite ? ' — написал над графиком' : ''}, в Done ${payload.done} из ${payload.of}`;
-    if (!listChanged && !labelWrite && !labelMove && !cleanup && !fit && !forcedFont) {
-      const why = payload.percent === null ? 'список как в Kaiten' : `над графиком уже ${payload.percent}%, список как в Kaiten`;
-      return { ok: !percentProblem, calm: !percentProblem, text: [`${payload.title}: обновлять нечего — ${why}`, ...(percentProblem ? [percentLine] : []), ...(unknown ? [`Прогресс: ${unknown}`] : [])].join('\n') };
+    if (!listChanged && !labelWrite && !labelMove && !cleanup && !fit && !forcedFont && !reportChanged) {
+      const why = `${payload.percent === null ? 'список как в Kaiten' : `над графиком уже ${payload.percent}%, список как в Kaiten`}${reportWrite ? ', отчёт спринта тот же' : ''}`;
+      return { ok: !percentProblem, calm: !percentProblem && !reportProblem, text: [`${payload.title}: обновлять нечего — ${why}`, ...(percentProblem ? [percentLine] : []), ...(reportProblem ? [reportProblem] : []), ...(unknown ? [`Прогресс: ${unknown}`] : [])].join('\n') };
     }
     const author = (sticker.get('updated') || sticker.get('created')).a;
     const updates = [];
@@ -282,11 +293,14 @@ async function holstApply(payload, token) {
       if (origin !== 'server') updates.push(update);
     };
     let labelId = labelRoot ? listRun.label : null;
+    let reportId = reportRoot ? listRun.report : null;
     doc.on('updateV2', listen);
     doc.transact(() => {
       if (labelWrite && labelRoot) holstReplaceText({ Y, object: label, root: labelRoot, items: labelItems, author, now });
       else if (labelWrite) labelId = holstCreateText({ Y, objects, documents, x: place.x, y: place.y, scale: place.textScale, zIndex: place.zIndex, author, now, items: labelItems });
       if (labelMove) label.set('position', { x: place.x, y: place.y });
+      if (reportWrite && reportRoot) holstReplaceText({ Y, object: report, root: reportRoot, items: reportItems, author, now });
+      else if (reportWrite) reportId = holstCreateText({ Y, objects, documents, x: reportPlace.x, y: reportPlace.y, scale: reportPlace.textScale, zIndex: reportPlace.zIndex, author, now, items: reportItems });
       for (const id of leftovers.lines) objects.delete(id);
       for (const id of leftovers.labels) {
         const documentId = objects.get(id).get('documentId');
@@ -304,12 +318,14 @@ async function holstApply(payload, token) {
         sticker.set('height', fit.height);
         sticker.set('textScale', fit.textScale);
       }
-      sticker.set('sprintcap', { t: payload.generatedAt, k: fit ? fit.k : scale, ...(labelId ? { label: labelId, placed: !moveLabel || labelMove } : {}) });
+      sticker.set('sprintcap', { t: payload.generatedAt, k: fit ? fit.k : scale, ...(labelId ? { label: labelId, placed: !moveLabel || labelMove } : {}), ...(reportId ? { report: reportId } : {}) });
       sticker.set('updated', { a: author, t: now });
     }, 'local');
     doc.off('updateV2', listen);
     for (const update of updates) await send(update);
     const result = [`${payload.title}: готово`, percentLine];
+    if (reportProblem) result.push(reportProblem);
+    else if (reportWrite) result.push(!reportRoot ? 'Отчёт спринта: написал под графиком' : reportChanged ? 'Отчёт спринта: обновил' : 'Отчёт спринта: цифры те же');
     result.push(markedText);
     result.push(`Список: ${plan.stats.cards} карт, оставил на месте ${plan.stats.kept}`);
     if (labelMove) result.push('Передвинул процент под заголовок графика');

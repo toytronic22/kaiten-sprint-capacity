@@ -44,6 +44,10 @@ async function kaitenBoard(boardId) {
   return kaitenJson(`/api/boards/${boardId}`);
 }
 
+async function kaitenSprint(sprintId) {
+  return kaitenJson(`/api/sprints/${sprintId}`);
+}
+
 async function kaitenLocationHistory(cardId) {
   const history = await kaitenJson(`/api/cards/${cardId}/location-history`);
   if (!Array.isArray(history)) throw new Error('Kaiten вернул историю карты не списком');
@@ -54,4 +58,18 @@ async function kaitenCardActivity(cardId) {
   const activity = await kaitenJson(`/api/cards/${cardId}/activity`);
   if (!Array.isArray(activity)) throw new Error('Kaiten вернул историю изменений карты не списком');
   return activity;
+}
+
+async function kaitenCards(query) {
+  const cards = {};
+  for (const condition of [1, 2]) {
+    for (let offset = 0; ; offset += 100) {
+      if (offset >= 10000) throw new Error('По запросу больше 10000 карт — остановился');
+      const page = await kaitenJson(`/api/cards?${query}&condition=${condition}&limit=100&offset=${offset}`);
+      if (!Array.isArray(page)) throw new Error('Kaiten вернул карты не списком');
+      for (const card of page) cards[card.id] = card;
+      if (page.length < 100) break;
+    }
+  }
+  return cards;
 }

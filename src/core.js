@@ -1,6 +1,6 @@
 const SPRINT_CAPACITY = {
   boards: [
-    { id: 68084, title: 'Staff Core', holst: { board: '67165a75-56cd-40d4-aeb8-c6f05ae5c057', group: '8686c163-2c4c-4dd4-b86a-9272dde08876', sticker: '48d1ad3f-be39-4601-9680-fca941dbf8cb', labels: '5011ab61-2907-426f-ad03-04bc4e62d43b' } },
+    { id: 68084, title: 'Staff Core', report: true, holst: { board: '67165a75-56cd-40d4-aeb8-c6f05ae5c057', group: '8686c163-2c4c-4dd4-b86a-9272dde08876', sticker: '48d1ad3f-be39-4601-9680-fca941dbf8cb', labels: '5011ab61-2907-426f-ad03-04bc4e62d43b' } },
     { id: 1321013, title: 'Staff Mobile', platform: { back: 16232407, front: 16237830 }, platformTags: { back: 'Backend', front: 'Mobile' }, labels: { front: 'Mobile' }, holst: { board: '67165a75-56cd-40d4-aeb8-c6f05ae5c057', group: '5e307012-f88c-4d6e-ab3f-559114026ebd', sticker: 'f78f383c-1b8a-4adf-be02-b9971043f4d0', labels: 'a607f507-027d-41b9-aa7d-6f791a52f052' } },
   ],
   snapshotCardId: 71238243,
@@ -134,10 +134,14 @@ function normalizeSettings(raw) {
   };
 }
 
-function capacityOf(settings, direction) {
+function personDaysOf(settings, direction) {
   const days = Math.max(0, settings.workDays - settings.holidays);
   const team = settings.team[direction];
-  return Math.max(0, team.people * days - team.absence) * settings.coefficient;
+  return Math.max(0, team.people * days - team.absence);
+}
+
+function capacityOf(settings, direction) {
+  return personDaysOf(settings, direction) * settings.coefficient;
 }
 
 function percentOf(part, whole) {
@@ -232,6 +236,7 @@ function boardConfig(boardId, config = SPRINT_CAPACITY) {
     platformTags: board.platformTags || config.platformTags,
     labels: { ...DIRECTION_LABELS, ...config.labels, ...board.labels },
     holst: board.holst || null,
+    report: Boolean(board.report),
   };
 }
 
@@ -334,4 +339,4 @@ function planEndFromComments(comments, snapshot) {
   return null;
 }
 
-if (typeof module !== 'undefined') module.exports = { SPRINT_CAPACITY, DIRECTIONS, DIRECTION_LABELS, toNumber, round1, formatNumber, plural, readEstimate, platformOf, needsQa, isBug, splitEstimate, progressStage, progressWeight, estimateIssues, defaultSettings, normalizeSettings, capacityOf, buildReport, boardConfig, isChaos, chaosNames, formatRow, takeSnapshot, takePlanEnd, normalizeSnapshot, boardTitle, snapshotComment, snapshotFromComments, planEndComment, planEndFromComments };
+if (typeof module !== 'undefined') module.exports = { SPRINT_CAPACITY, DIRECTIONS, DIRECTION_LABELS, toNumber, round1, formatNumber, plural, readEstimate, platformOf, needsQa, isBug, splitEstimate, progressStage, progressWeight, estimateIssues, defaultSettings, normalizeSettings, personDaysOf, capacityOf, buildReport, boardConfig, isChaos, chaosNames, formatRow, takeSnapshot, takePlanEnd, normalizeSnapshot, boardTitle, snapshotComment, snapshotFromComments, planEndComment, planEndFromComments };

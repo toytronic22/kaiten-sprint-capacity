@@ -123,12 +123,14 @@ const fakeTab = () => {
   return tab;
 };
 
-const page = ({ hostname, stored = {}, opener = null, clipboard = true, holst = 'ok', fetch = () => Promise.reject(new Error('нет сети в тесте')) }) => {
-  const env = { stored: new Map(Object.entries(stored)), timers: [], listeners: {}, opened: [], alerts: [], copied: [], blockPopups: false, holst, sockets: [] };
-  const shadow = remember(fakeElement(), new Map([['.holst-login', remember(Object.assign(fakeElement(), { hidden: true }))], ['.geese', null]]));
+const page = ({ hostname, stored = {}, opener = null, clipboard = true, holst = 'ok', answer = false, cookie = '', fetch = () => Promise.reject(new Error('нет сети в тесте')) }) => {
+  const env = { stored: new Map(Object.entries(stored)), timers: [], listeners: {}, opened: [], alerts: [], copied: [], confirms: [], blockPopups: false, holst, sockets: [] };
+  const hiddenBox = () => remember(Object.assign(fakeElement(), { hidden: true }));
+  const shadow = remember(fakeElement(), new Map([['.holst-login', hiddenBox()], ['.time-login', hiddenBox()], ['.geese', null]]));
   const body = fakeElement();
   const document = {
     hidden: false,
+    cookie,
     body,
     head: fakeElement(),
     createElement: (tag) => {
@@ -150,6 +152,7 @@ const page = ({ hostname, stored = {}, opener = null, clipboard = true, holst = 
   };
   const context = {
     console,
+    URL,
     document,
     location: { hostname, origin: `https://${hostname}` },
     localStorage: {
@@ -180,7 +183,10 @@ const page = ({ hostname, stored = {}, opener = null, clipboard = true, holst = 
     },
     alert: (text) => env.alerts.push(text),
     prompt: (text) => env.alerts.push(text),
-    confirm: () => false,
+    confirm: (text) => {
+      env.confirms.push(text);
+      return answer;
+    },
     opener,
   };
   context.window = context;
@@ -234,7 +240,7 @@ test('Перегруз: гуси бегут при каждом открытии
   assert.equal(reopened.geese(), 1);
 });
 
-test('Панель на Kaiten: красная точка без входа открывает вход через Holst', () => {
+test('Панель на Kaiten: красная буква H без входа открывает вход через Holst', () => {
   // Arrange
   const kaiten = page({ hostname: 'dodopizza.kaiten.ru' });
 
@@ -251,7 +257,7 @@ test('Панель на Kaiten: красная точка без входа от
   assert.deepEqual(kaiten.sockets, []);
 });
 
-test('Вход из вкладки Holst: панель отвечает на приветствие, сохраняет и проверяет вход, точка зеленеет', async () => {
+test('Вход из вкладки Holst: панель отвечает на приветствие, сохраняет и проверяет вход, буква H зеленеет', async () => {
   // Arrange
   const kaiten = page({ hostname: 'dodopizza.kaiten.ru' });
   const holstTab = fakeTab();
@@ -272,7 +278,7 @@ test('Вход из вкладки Holst: панель отвечает на п�
   assert.equal(kaiten.toast(), 'Вход в Holst работает');
 });
 
-test('Свежий вход из Holst не пустили — вкладка Holst узнаёт, что проверить, точка красная, вход не стёрт', async () => {
+test('Свежий вход из Holst не пустили — вкладка Holst узнаёт, что проверить, буква H красная, вход не стёрт', async () => {
   // Arrange
   const kaiten = page({ hostname: 'dodopizza.kaiten.ru', holst: 'reject' });
   const holstTab = fakeTab();
@@ -289,7 +295,7 @@ test('Свежий вход из Holst не пустили — вкладка Ho
   assert.equal(kaiten.stored.get(TOKEN_KEY), JSON.stringify('test-login-8'));
 });
 
-test('Сохранённый вход работает — точка зелёная, а в окошке так и написано', async () => {
+test('Сохранённый вход работает — буква H зелёная, а в окошке так и написано', async () => {
   // Arrange
   const kaiten = page({ hostname: 'dodopizza.kaiten.ru', stored: { [TOKEN_KEY]: JSON.stringify('test-login-5') } });
   const checking = kaiten.$('[data-act="holst-login"]').dataset.state;
@@ -307,7 +313,7 @@ test('Сохранённый вход работает — точка зелён
   assert.match(kaiten.$('.holst-login').innerHTML, /Вход в Holst работает — входить заново не нужно/);
 });
 
-test('Holst не пускает с сохранённым входом — точка красная, в окошке подсказка, вход не стёрт', async () => {
+test('Holst не пускает с сохранённым входом — буква H красная, в окошке подсказка, вход не стёрт', async () => {
   // Arrange
   const kaiten = page({ hostname: 'dodopizza.kaiten.ru', stored: { [TOKEN_KEY]: JSON.stringify('test-login-6') }, holst: 'reject' });
 
@@ -323,7 +329,7 @@ test('Holst не пускает с сохранённым входом — то�
   assert.equal(kaiten.stored.get(TOKEN_KEY), JSON.stringify('test-login-6'));
 });
 
-test('Проверить вход не вышло — серое кольцо, нажатие на точку проверяет ещё раз', async () => {
+test('Проверить вход не вышло — серая буква H, нажатие на неё проверяет ещё раз', async () => {
   // Arrange
   const kaiten = page({ hostname: 'dodopizza.kaiten.ru', stored: { [TOKEN_KEY]: JSON.stringify('test-login-7') }, holst: 'offline' });
   await flush();
@@ -343,7 +349,7 @@ test('Проверить вход не вышло — серое кольцо, �
   assert.match(kaiten.$('.holst-login').querySelector('[data-holst-reason]').textContent, /^Вход в Holst работает/);
 });
 
-test('Вход вставили вручную — панель проверяет его, сохраняет и красит точку зелёным', async () => {
+test('Вход вставили вручную — панель проверяет его, сохраняет и красит букву H зелёным', async () => {
   // Arrange
   const kaiten = page({ hostname: 'dodopizza.kaiten.ru' });
   kaiten.click('holst-login');
@@ -534,4 +540,342 @@ test('Закладка на Holst без входа в Holst — просит в
   // Assert
   assert.match(holst.alerts[0], /вы не вошли в Holst/);
   assert.deepEqual(opener.sent, []);
+});
+
+const TIME = 'https://team.time-messenger.ru';
+const CHANNEL = `${TIME}/test-team/channels/test-channel`;
+const CHANNEL_KEY = 'sprintCapacity.v1.timeChannel';
+
+const timeKey = (env) => env.$('[data-act="time-login"]');
+
+const connectedKaiten = (options = {}) => {
+  const kaiten = page({ hostname: 'dodopizza.kaiten.ru', stored: { [CHANNEL_KEY]: JSON.stringify(CHANNEL) }, ...options });
+  const timeTab = fakeTab();
+  kaiten.message(TIME, { type: 'sprint-capacity:time-hello' }, timeTab);
+  kaiten.message(TIME, { type: 'sprint-capacity:time-ready', user: 'tester', channel: 'Тестовый канал', url: CHANNEL }, timeTab);
+  return { kaiten, timeTab };
+};
+
+test('Шапка панели: на Staff Core — буквы H и T, обе красные, пока ничего не подключено', () => {
+  // Act
+  const kaiten = page({ hostname: 'dodopizza.kaiten.ru' });
+
+  // Assert
+  assert.equal(timeKey(kaiten).hidden, false);
+  assert.equal(timeKey(kaiten).dataset.state, 'none');
+  assert.equal(timeKey(kaiten).title, 'Time: не подключён');
+  assert.equal(kaiten.$('[data-act="holst-login"]').dataset.state, 'none');
+  assert.equal(kaiten.$('.report').hidden, false);
+});
+
+test('Шапка панели: на Staff Mobile сводки нет — буква T и блок сводки скрыты', () => {
+  // Act
+  const kaiten = page({ hostname: 'dodopizza.kaiten.ru', stored: { 'sprintCapacity.v1.board': '1321013' } });
+
+  // Assert
+  assert.equal(timeKey(kaiten).hidden, true);
+  assert.equal(kaiten.$('.report').hidden, true);
+});
+
+test('Подключение Time: ссылка на канал → вкладка Time → приветствие → канал проверен, буква T зелёная', () => {
+  // Arrange
+  const kaiten = page({ hostname: 'dodopizza.kaiten.ru' });
+  kaiten.click('time-login');
+  kaiten.$('[data-time-channel]').value = CHANNEL;
+
+  // Act
+  kaiten.click('time-open');
+  const checking = timeKey(kaiten).dataset.state;
+  const timeTab = kaiten.opened[0];
+  kaiten.message(TIME, { type: 'sprint-capacity:time-hello' }, timeTab);
+  kaiten.message(TIME, { type: 'sprint-capacity:time-ready', user: 'tester', channel: 'Тестовый канал', url: CHANNEL }, timeTab);
+
+  // Assert
+  assert.equal(timeTab.url, CHANNEL);
+  assert.equal(checking, 'checking');
+  assert.equal(kaiten.stored.get(CHANNEL_KEY), JSON.stringify(CHANNEL));
+  assert.deepEqual(plain(timeTab.sent), [{ message: { type: 'sprint-capacity:time-ping', channel: CHANNEL }, origin: TIME }]);
+  assert.equal(timeKey(kaiten).dataset.state, 'ok');
+  assert.equal(timeKey(kaiten).title, 'Time: подключён');
+  assert.equal(kaiten.$('.time-login').hidden, true);
+  assert.equal(kaiten.toast(), 'Time подключён: канал «Тестовый канал»');
+});
+
+test('Подключение Time: не та ссылка — буква T красная с подсказкой, вкладка не открывается', () => {
+  // Arrange
+  const kaiten = page({ hostname: 'dodopizza.kaiten.ru' });
+  kaiten.click('time-login');
+  kaiten.$('[data-time-channel]').value = 'https://team.time-messenger.ru/test-team/messages/@tester';
+
+  // Act
+  kaiten.click('time-open');
+
+  // Assert
+  assert.deepEqual(kaiten.opened, []);
+  assert.equal(timeKey(kaiten).dataset.state, 'rejected');
+  assert.equal(timeKey(kaiten).title, 'Time: не работает');
+  assert.match(kaiten.$('.time-login').querySelector('[data-time-reason]').textContent, /^Нужна ссылка на канал Time вида/);
+  assert.equal(kaiten.stored.has(CHANNEL_KEY), false);
+});
+
+test('Подключение Time: Time не пустил в канал — буква T красная, причина в окошке', () => {
+  // Arrange
+  const kaiten = page({ hostname: 'dodopizza.kaiten.ru', stored: { [CHANNEL_KEY]: JSON.stringify(CHANNEL) } });
+  const timeTab = fakeTab();
+
+  // Act
+  kaiten.message(TIME, { type: 'sprint-capacity:time-hello' }, timeTab);
+  kaiten.message(TIME, { type: 'sprint-capacity:time-ready', error: 'Time не пускает в этот канал — проверьте, что вы в нём состоите', url: CHANNEL }, timeTab);
+  kaiten.click('time-login');
+
+  // Assert
+  assert.equal(timeKey(kaiten).dataset.state, 'rejected');
+  assert.match(kaiten.$('.time-login').innerHTML, /Time не пускает в этот канал/);
+});
+
+test('Подключение Time: приветствия с чужих сайтов панель не слушает', () => {
+  // Arrange
+  const kaiten = page({ hostname: 'dodopizza.kaiten.ru', stored: { [CHANNEL_KEY]: JSON.stringify(CHANNEL) } });
+  const stranger = fakeTab();
+
+  // Act
+  kaiten.message('https://example.com', { type: 'sprint-capacity:time-hello' }, stranger);
+  kaiten.message('https://team.time-messenger.ru.example.com', { type: 'sprint-capacity:time-hello' }, stranger);
+  kaiten.message('http://team.time-messenger.ru', { type: 'sprint-capacity:time-hello' }, stranger);
+
+  // Assert
+  assert.deepEqual(stranger.sent, []);
+  assert.equal(timeKey(kaiten).dataset.state, 'none');
+});
+
+test('Подключение Time: вкладку Time закрыли — буква T снова красная', () => {
+  // Arrange
+  const { kaiten, timeTab } = connectedKaiten();
+
+  // Act
+  timeTab.closed = true;
+  kaiten.runTimers(1000);
+
+  // Assert
+  assert.equal(timeKey(kaiten).dataset.state, 'none');
+  kaiten.click('time-login');
+  assert.match(kaiten.$('.time-login').innerHTML, /Вкладку Time закрыли — откройте Time ещё раз/);
+});
+
+test('«В Time»: спрашивает подтверждение с каналом, шлёт текст во вкладку Time, итог — в тосте', async () => {
+  // Arrange
+  const { kaiten, timeTab } = connectedKaiten({ answer: true });
+  kaiten.$('[data-report-text]').value = 'Разработка P2P за спринт 14.09–27.09\n1. Тест';
+
+  // Act
+  kaiten.click('report-send');
+  const send = timeTab.sent.find((item) => item.message.type === 'sprint-capacity:time-send');
+  kaiten.message(TIME, { type: 'sprint-capacity:time-result', id: send.message.id, ok: true, text: 'Сводка отправлена в Time, канал «Тестовый канал»' }, timeTab);
+  await flush();
+
+  // Assert
+  assert.deepEqual(kaiten.confirms, ['Отправить сводку в Time, в канал «Тестовый канал»?']);
+  assert.deepEqual(plain(send), { message: { type: 'sprint-capacity:time-send', id: send.message.id, channel: CHANNEL, text: 'Разработка P2P за спринт 14.09–27.09\n1. Тест' }, origin: TIME });
+  assert.equal(kaiten.toast(), 'Сводка отправлена в Time, канал «Тестовый канал»');
+});
+
+test('«В Time»: отказались в подтверждении — ничего не уходит', () => {
+  // Arrange
+  const { kaiten, timeTab } = connectedKaiten({ answer: false });
+  kaiten.$('[data-report-text]').value = 'Разработка P2P за спринт 14.09–27.09';
+
+  // Act
+  kaiten.click('report-send');
+
+  // Assert
+  assert.equal(kaiten.confirms.length, 1);
+  assert.equal(timeTab.sent.some((item) => item.message.type === 'sprint-capacity:time-send'), false);
+});
+
+test('«В Time»: вкладка Time молчит 30 секунд — тост просит заглянуть в канал перед повтором', async () => {
+  // Arrange
+  const { kaiten } = connectedKaiten({ answer: true });
+  kaiten.$('[data-report-text]').value = 'Разработка P2P за спринт 14.09–27.09';
+
+  // Act
+  kaiten.click('report-send');
+  kaiten.runTimers(30000);
+  await flush();
+
+  // Assert
+  assert.equal(kaiten.toast(), 'Вкладка Time не ответила за 30 секунд — загляните в канал, прежде чем отправлять ещё раз');
+});
+
+test('«В Time» без подключения: открывает окошко T и подсказывает, ничего не спрашивает', () => {
+  // Arrange
+  const kaiten = page({ hostname: 'dodopizza.kaiten.ru', answer: true });
+  kaiten.$('[data-report-text]').value = 'Разработка P2P за спринт 14.09–27.09';
+
+  // Act
+  kaiten.click('report-send');
+
+  // Assert
+  assert.equal(kaiten.$('.time-login').hidden, false);
+  assert.equal(kaiten.toast(), 'Сначала подключите Time — буква T вверху панели');
+  assert.deepEqual(kaiten.confirms, []);
+});
+
+test('«В Time» и «Скопировать» с пустой сводкой — просят сначала посчитать', () => {
+  // Arrange
+  const kaiten = page({ hostname: 'dodopizza.kaiten.ru', answer: true });
+
+  // Act
+  kaiten.click('report-send');
+  const sent = kaiten.toast();
+  kaiten.click('report-copy');
+
+  // Assert
+  assert.equal(sent, 'Сводка пустая — сначала нажмите «Посчитать»');
+  assert.equal(kaiten.toast(), 'Сводка пустая — сначала нажмите «Посчитать»');
+  assert.deepEqual(kaiten.copied, []);
+});
+
+test('«Посчитать»: прошлый спринт по умолчанию, карточки досок и баги пространства, текст в поле', async () => {
+  // Arrange
+  const requests = [];
+  const kaiten = page({
+    hostname: 'dodopizza.kaiten.ru',
+    fetch: (url) => {
+      requests.push(url);
+      return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+    },
+  });
+  await flush();
+
+  // Act
+  kaiten.click('report-run');
+  await flush();
+
+  // Assert
+  const options = kaiten.$('[data-report-sprint]').innerHTML;
+  assert.match(options, /<option value="0">[0-9.]+–[0-9.]+ — идёт<\/option><option value="1" selected>/);
+  assert.match(kaiten.$('[data-report-text]').value, /^Разработка P2P за спринт \d\d\.\d\d–\d\d\.\d\d\n1\. Завершена разработка 0 задач/);
+  assert.match(kaiten.$('[data-report-progress]').textContent, /^Посчитано в \d\d:\d\d\. Баги — на сегодня/);
+  assert.ok(requests.some((url) => /^\/api\/cards\?board_id=68084&updated_after=\d{4}-\d\d-\d\dT\d\d%3A00%3A00\.000Z&condition=2&/.test(url)));
+  assert.ok(requests.some((url) => url.startsWith('/api/cards?board_id=1524136&updated_after=')));
+  assert.ok(requests.some((url) => url.startsWith('/api/cards?type_ids=446247&space_id=19143&updated_after=')));
+});
+
+test('«Посчитать»: Kaiten не пустил — причина под кнопкой, поле не тронуто', async () => {
+  // Arrange
+  const kaiten = page({ hostname: 'dodopizza.kaiten.ru', fetch: () => Promise.resolve({ ok: false, status: 401 }) });
+  await flush();
+
+  // Act
+  kaiten.click('report-run');
+  await flush();
+
+  // Assert
+  assert.equal(kaiten.$('[data-report-progress]').textContent, 'Не посчиталось: Kaiten не пускает — войдите в Kaiten и нажмите ↻');
+  assert.equal(kaiten.$('[data-report-progress]').className, 'error');
+  assert.equal(kaiten.$('[data-report-text]').value, undefined);
+});
+
+const timeFetch = (calls, { status = 200 } = {}) => (url, options) => {
+  calls.push({ url, options });
+  const answers = {
+    '/api/v4/users/me': { username: 'tester' },
+    '/api/v4/teams/name/test-team/channels/name/test-channel': { id: 'channel-1', name: 'test-channel', display_name: 'Тестовый канал' },
+    '/api/v4/posts': { id: 'post-1' },
+  };
+  return Promise.resolve({ ok: status === 200, status, json: () => Promise.resolve(answers[url]) });
+};
+
+test('Закладка во вкладке Time: здоровается с Kaiten и называет канал и отправителя', async () => {
+  // Arrange
+  const calls = [];
+  const opener = fakeTab();
+  const time = page({ hostname: 'team.time-messenger.ru', opener, fetch: timeFetch(calls) });
+  const kaitenTab = fakeTab();
+
+  // Act
+  time.message(KAITEN, { type: 'sprint-capacity:time-ping', channel: CHANNEL }, kaitenTab);
+  await flush();
+
+  // Assert
+  assert.deepEqual(plain(opener.sent), [{ message: { type: 'sprint-capacity:time-hello' }, origin: '*' }]);
+  assert.equal(time.toast(), 'Time подключён к панели в Kaiten. Не закрывайте эту вкладку — через неё уходят сводки');
+  assert.deepEqual(calls.map((call) => call.url), ['/api/v4/users/me', '/api/v4/teams/name/test-team/channels/name/test-channel']);
+  assert.deepEqual(plain(kaitenTab.sent), [{ message: { type: 'sprint-capacity:time-ready', user: 'tester', channel: 'Тестовый канал', url: CHANNEL }, origin: KAITEN }]);
+});
+
+test('Закладка во вкладке Time: пишет в канал с защитой от подделки запроса и отвечает Kaiten', async () => {
+  // Arrange
+  const calls = [];
+  const time = page({ hostname: 'team.time-messenger.ru', opener: fakeTab(), cookie: 'MMUSERID=u1; MMCSRF=csrf-test', fetch: timeFetch(calls) });
+  const kaitenTab = fakeTab();
+
+  // Act
+  time.message(KAITEN, { type: 'sprint-capacity:time-send', id: 'send-1', channel: CHANNEL, text: '  Разработка P2P\n1. Тест  ' }, kaitenTab);
+  await flush();
+
+  // Assert
+  const post = calls.find((call) => call.url === '/api/v4/posts');
+  assert.equal(post.options.method, 'POST');
+  assert.equal(post.options.credentials, 'include');
+  assert.equal(post.options.headers['x-csrf-token'], 'csrf-test');
+  assert.equal(post.options.headers['x-requested-with'], 'XMLHttpRequest');
+  assert.deepEqual(JSON.parse(post.options.body), { channel_id: 'channel-1', message: 'Разработка P2P\n1. Тест' });
+  assert.deepEqual(plain(kaitenTab.sent), [{ message: { type: 'sprint-capacity:time-result', id: 'send-1', ok: true, text: 'Сводка отправлена в Time, канал «Тестовый канал»' }, origin: KAITEN }]);
+});
+
+test('Закладка во вкладке Time: не вошли в Time — Kaiten узнаёт причину, пост не отправлен', async () => {
+  // Arrange
+  const calls = [];
+  const time = page({ hostname: 'team.time-messenger.ru', opener: fakeTab(), fetch: timeFetch(calls, { status: 401 }) });
+  const kaitenTab = fakeTab();
+
+  // Act
+  time.message(KAITEN, { type: 'sprint-capacity:time-send', id: 'send-2', channel: CHANNEL, text: 'Сводка' }, kaitenTab);
+  await flush();
+
+  // Assert
+  assert.equal(calls.some((call) => call.url === '/api/v4/posts'), false);
+  assert.deepEqual(plain(kaitenTab.sent), [{ message: { type: 'sprint-capacity:time-result', id: 'send-2', ok: false, text: 'В Time не отправилось: Вы не вошли в Time в этом браузере — войдите и нажмите закладку ещё раз' }, origin: KAITEN }]);
+});
+
+test('Закладка во вкладке Time: канал на другом Time — не пишет туда', async () => {
+  // Arrange
+  const calls = [];
+  const time = page({ hostname: 'team.time-messenger.ru', opener: fakeTab(), fetch: timeFetch(calls) });
+  const kaitenTab = fakeTab();
+
+  // Act
+  time.message(KAITEN, { type: 'sprint-capacity:time-send', id: 'send-3', channel: 'https://other.time-messenger.ru/test-team/channels/test-channel', text: 'Сводка' }, kaitenTab);
+  await flush();
+
+  // Assert
+  assert.deepEqual(calls, []);
+  assert.equal(kaitenTab.sent[0].message.ok, false);
+  assert.match(kaitenTab.sent[0].message.text, /Канал в панели — на https:\/\/other\.time-messenger\.ru, а эта вкладка — https:\/\/team\.time-messenger\.ru/);
+});
+
+test('Закладка во вкладке Time: просьбы не из Kaiten не выполняет', async () => {
+  // Arrange
+  const calls = [];
+  const time = page({ hostname: 'team.time-messenger.ru', opener: fakeTab(), fetch: timeFetch(calls) });
+  const stranger = fakeTab();
+
+  // Act
+  time.message('https://example.com', { type: 'sprint-capacity:time-send', id: 'x', channel: CHANNEL, text: 'Чужое' }, stranger);
+  time.message('https://kaiten.ru.example.com', { type: 'sprint-capacity:time-ping', channel: CHANNEL }, stranger);
+  await flush();
+
+  // Assert
+  assert.deepEqual(calls, []);
+  assert.deepEqual(stranger.sent, []);
+});
+
+test('Закладка во вкладке Time без панели Kaiten — подсказывает, откуда открыть', () => {
+  // Act
+  const time = page({ hostname: 'team.time-messenger.ru' });
+
+  // Assert
+  assert.equal(time.alerts.length, 1);
+  assert.match(time.alerts[0], /откройте Time кнопкой «Открыть Time» в панели на Kaiten/);
 });

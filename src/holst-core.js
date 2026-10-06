@@ -489,6 +489,18 @@ function holstChart({ objects, group, chart = {} }) {
   return { top: scale.position.y, left: title ? title.position.x : scale.position.x, textScale: scale.textScale || 1, zIndex: scale.zIndex || 0, problem: null };
 }
 
+function holstReportItems(lines, now) {
+  return [...lines.map((line) => ({ type: 'paragraph', runs: [line.bold ? { text: line.text, marks: { bold: true } } : { text: line.text }] })), updatedLine(now)];
+}
+
+function holstReportPlace({ objects, group, chart = {} }) {
+  const base = holstChart({ objects, group, chart });
+  if (base.problem) return { problem: base.problem };
+  const homes = new Set([group, ...objects.filter((item) => item.id === chart.labels).map((item) => item.parentId)].filter(Boolean));
+  const bottoms = objects.filter((item) => item.position && (item.id === chart.labels || homes.has(item.parentId))).map((item) => item.position.y + (item.type === 'simple-text' && item.lines ? item.lines.length * 1.5 * 16 * (item.textScale || 1) : item.height || 0));
+  return { x: Math.round(base.left), y: Math.round(Math.max(...bottoms) + 24 * base.textScale), textScale: base.textScale, zIndex: base.zIndex + 0.5, problem: null };
+}
+
 function charEm(char) {
   if (char === '️' || char === '‍') return 0;
   if (/\p{Ll}/u.test(char)) return 0.58;
@@ -539,4 +551,4 @@ function stickerFit({ items, width, height, textScale = 1, k = 1 }) {
 }
 
 
-if (typeof module !== 'undefined') module.exports = { HOLST_BLOCKS, HOLST_STYLE, normalizeTitle, blockOfColumn, blockInfo, blockOrder, shortTime, columnAt, holstLookback, holstCards, holstHistoryIds, holstPayload, unknownColumnsText, holstForeignBoards, holstColumns, holstOldTitles, readStickerLines, planSticker, kaitenCardId, stripMarker, updatedLine, stickerSignature, HOLST_NULL_DOC, HOLST_FIT, holstReadMessages, holstSyncQueue, holstChart, percentLabelItems, percentLabelPlace, runsEm, stickerFont, stickerScale, stickerFit, runsText };
+if (typeof module !== 'undefined') module.exports = { HOLST_BLOCKS, HOLST_STYLE, normalizeTitle, blockOfColumn, blockInfo, blockOrder, shortTime, columnAt, holstLookback, holstCards, holstHistoryIds, holstPayload, unknownColumnsText, holstForeignBoards, holstColumns, holstOldTitles, readStickerLines, planSticker, kaitenCardId, stripMarker, updatedLine, stickerSignature, HOLST_NULL_DOC, HOLST_FIT, holstReadMessages, holstSyncQueue, holstChart, percentLabelItems, percentLabelPlace, holstReportItems, holstReportPlace, runsEm, stickerFont, stickerScale, stickerFit, runsText };

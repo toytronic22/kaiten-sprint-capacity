@@ -231,13 +231,13 @@ test('Старое название карты узнаётся и меняет�
   const lastRun = Date.parse('2026-09-30T06:00:00Z');
   const items = [
     p(text('Как поймём, что задача выполнена:', { bold: true })),
-    li(text('Недельный график кухни. Показывать число сотрудников в свёрнутых станциях')),
+    li(text('Недельный отчёт склада. Показывать остаток на свёрнутых полках')),
     p(text('📋 To Do · 2', { bold: true })),
     li({ text: 'Старое имя по ссылке', link: url(61002) }),
-    li({ text: 'АГ кухни. Показывать число сотрудников в свёрнутых станциях', link: url(61001) }),
+    li({ text: 'Склад. Показывать остаток на свёрнутых полках', link: url(61001) }),
   ];
   const cards = [
-    card(61001, 'АГ кухни. Показывать число сотрудников в свёрнутых станциях', 'todo', { old: ['Недельный график кухни. Показывать число сотрудников в свёрнутых станциях'] }),
+    card(61001, 'Склад. Показывать остаток на свёрнутых полках', 'todo', { old: ['Недельный отчёт склада. Показывать остаток на свёрнутых полках'] }),
     card(61002, 'Новое имя по ссылке', 'todo'),
   ];
   const { items: out, stats } = H.planSticker({ items, cards, lastRun, cardUrl: url });
@@ -245,7 +245,7 @@ test('Старое название карты узнаётся и меняет�
     'Как поймём, что задача выполнена:',
     '📋 To Do · 2',
     'Новое имя по ссылке',
-    'АГ кухни. Показывать число сотрудников в свёрнутых станциях',
+    'Склад. Показывать остаток на свёрнутых полках',
   ]);
   assert.equal(stats.renamed, 2);
   assert.equal(stats.cards, 2);
@@ -529,6 +529,40 @@ test('График: заголовка нет — процент по левом
   const objects = chartObjects().filter((item) => item.id !== 'title');
   assert.equal(H.holstChart({ objects, group: 'g', chart: { labels: 'scale' } }).left, 0);
   assert.match(H.holstChart({ objects, group: 'other', chart: {} }).problem, /шкалу/);
+});
+
+test('Отчёт спринта: строка — абзац, заголовок жирный, в конце «Обновлено», которое не меняет подпись текста', () => {
+  // Arrange
+  const lines = [{ text: 'Итоги спринта 14.09–27.09', bold: true }, { text: 'План: 8 SP, 1 карта' }];
+
+  // Act
+  const items = H.holstReportItems(lines, Date.parse('2026-10-06T10:00:00Z'));
+  const later = H.holstReportItems(lines, Date.parse('2026-10-06T12:30:00Z'));
+
+  // Assert
+  assert.deepEqual(items.slice(0, 2), [p(text('Итоги спринта 14.09–27.09', { bold: true })), p(text('План: 8 SP, 1 карта'))]);
+  assert.match(lineTexts(items)[2], /^Обновлено /);
+  assert.equal(H.stickerSignature(items), H.stickerSignature(later));
+  assert.notEqual(H.stickerSignature(items), H.stickerSignature(H.holstReportItems([lines[0]], Date.parse('2026-10-06T10:00:00Z'))));
+});
+
+test('Отчёт спринта: место — под нижним краем графика, по левому краю заголовка; чужие группы не в счёт', () => {
+  // Arrange
+  const objects = [...chartObjects(), { id: 'mobile', type: 'simple-text', parentId: 'other', position: { x: 0, y: 5000 }, lines: ['Чужой график'], textScale: 2 }];
+  const framed = [...objects, { id: 'frame', type: 'shape', parentId: 'g', position: { x: 0, y: -300 }, width: 2000, height: 900, zIndex: 0 }];
+
+  // Act
+  const place = H.holstReportPlace({ objects, group: 'g', chart: { labels: 'scale' } });
+  const below = H.holstReportPlace({ objects: framed, group: 'g', chart: { labels: 'scale' } });
+
+  // Assert
+  assert.deepEqual(place, { x: 30, y: 400 + 1.5 * 16 * 2 + 24 * 2, textScale: 2, zIndex: 3.5, problem: null });
+  assert.equal(below.y, 600 + 24 * 2);
+});
+
+test('Отчёт спринта: шкалы графика нет — места нет, объясняю почему', () => {
+  const objects = chartObjects().filter((item) => item.id !== 'scale');
+  assert.deepEqual(H.holstReportPlace({ objects, group: 'g', chart: {} }), { problem: 'не нашёл на доске шкалу графика «100 … 0»' });
 });
 
 test('Стикер: длинный список — шрифт мельче, место на доске то же; короткий — не трогаю', () => {
