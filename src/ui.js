@@ -670,7 +670,7 @@ function sprintCapacityMount(config) {
     const start = snapshot;
     try {
       const cards = await kaitenBoardCards(board);
-      await kaitenAddComment(config.snapshotCardId, planEndComment(takePlanEnd({ cards, snapshot: start, now: Date.now(), boardId: board, config: boardConfig(board, config) }), config));
+      await kaitenAddComment(config.snapshotCardId, planEndComment(takePlanEnd({ cards, snapshot: start, settings, now: Date.now(), boardId: board, config: boardConfig(board, config) }), config));
     } catch (error) {
       window.alert(`Конец планирования не сохранился: ${error.message || error}`);
     }
@@ -899,9 +899,9 @@ function sprintCapacityMount(config) {
       const now = Date.now();
       const current = buildReport({ cards, settings, snapshot, planEnd, config: settingsNow });
       const columns = holstColumns(boardJson);
-      const capacity = DIRECTIONS.filter((direction) => settings.team[direction].people > 0).map((direction) => ({ label: settingsNow.labels[direction], days: personDaysOf(settings, direction) }));
-      const sprintJob = sprintReportLoad({ cards, boardId: board, now, columns, load: kaitenSprint, store: { read: (key) => readStored(key, null), write: writeStored } })
-        .then((loaded) => ({ lines: sprintReportLines({ ...loaded, capacity: capacity.length ? capacity : null, now }) }))
+      const capacityLog = kaitenCardComments(config.snapshotCardId).then(capacityLogFromComments).catch(() => null);
+      const sprintJob = Promise.all([sprintReportLoad({ cards, boardId: board, now, columns, load: kaitenSprint, store: { read: (key) => readStored(key, null), write: writeStored } }), capacityLog])
+        .then(([loaded, log]) => ({ lines: sprintReportLines({ ...loaded, capacity: capacityDays(settings), capacityLog: log, labels: settingsNow.labels, now }) }))
         .catch((error) => ({ problem: error.message || String(error) }));
       const since = holstLookback(now);
       const historyIds = holstHistoryIds(cards, since);

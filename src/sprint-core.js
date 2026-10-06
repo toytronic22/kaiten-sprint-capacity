@@ -10,7 +10,10 @@ const SPRINT_REPORT = {
   escapeSources: [217075, 16194797, 217080],
   notEscape: [69403781, 69525693],
   history: 3,
-  cacheVersion: 1,
+  cacheVersion: 2,
+  capacityBeforeMs: 259200000,
+  capacityAfterMs: 604800000,
+  labels: { back: 'Бэк', front: 'Фронт', qa: 'QA' },
   stageOrder: ['to do', 'doing', 'review', 'design review', 'test', 'waiting for release', 'done'],
   stageMin: 0.05,
   stageTop: 4,
@@ -177,22 +180,24 @@ function sprintSummary({ sprint, now, columns = {}, cfg = SPRINT_REPORT }) {
   for (const [cardId, list] of sprintVersions(sprint)) {
     const c = list.filter((version) => version.at <= close);
     const a = c.filter((version) => version.at <= compCut);
-    const fi = a.findIndex((version) => version.sprint === id);
+    const early = a.findIndex((version) => version.sprint === id);
+    const fi = early >= 0 ? early : c.findIndex((version) => version.sprint === id);
     if (fi < 0) continue;
-    const card = cards.get(cardId) || { id: cardId };
-    const bug = sprintIsBug(card, cfg);
-    const first = a[fi];
     let li = fi;
     for (let index = fi; index < a.length; index += 1) if (a[index].sprint === id) li = index;
-    if (li === a.length - 1) for (let index = li; index < c.length; index += 1) if (c[index].sprint === id) li = index;
+    if (li >= a.length - 1) for (let index = li; index < c.length; index += 1) if (c[index].sprint === id) li = index;
     const inSprint = c[li];
     const exit = c[li + 1] || null;
     const stays = exit === null || (exit.archived && inSprint.state === cfg.doneState);
     const done = stays && inSprint.state === cfg.doneState;
+    if (early < 0 && !done) continue;
+    const card = cards.get(cardId) || { id: cardId };
+    const bug = sprintIsBug(card, cfg);
+    const first = c[fi];
     const plan = Math.abs(first.at - created) < cfg.planGapMs;
     const sp0 = first.size;
     const sp = inSprint.size;
-    const before = a.slice(0, fi).reverse().find((version) => version.sprint && version.sprint !== id);
+    const before = c.slice(0, fi).reverse().find((version) => version.sprint && version.sprint !== id);
     if (before && before.sprint < id) {
       if (plan) bump(planVotes, before.sprint);
       bump(allVotes, before.sprint);
@@ -210,7 +215,7 @@ function sprintSummary({ sprint, now, columns = {}, cfg = SPRINT_REPORT }) {
         addedTasks.push({ parents: card.parents_ids || [], sp });
       }
       result.added.sp += sp;
-      bump(from, sprintOrigin({ previous: a[fi - 1] || null, born: sprintTime(card.created), start, sprintId: id, boardId, cfg }));
+      bump(from, sprintOrigin({ previous: c[fi - 1] || null, born: sprintTime(card.created), start, sprintId: id, boardId, cfg }));
     }
     if (bug && sprintEscaped(card, cfg)) {
       result.escaped.count += 1;
@@ -386,10 +391,50 @@ function sprintEscapedLine(summary) {
   return `Баги из прода: ${escaped.count}, исправлено ${escaped.done}`;
 }
 
-function sprintCapacityLine(capacity, head) {
-  if (!capacity || !capacity.length) return `${head}: «Команда и дни» в панели не заполнены`;
-  const days = capacity.reduce((sum, item) => sum + item.days, 0);
-  return `${head} по «Команде и дням»: ${sprintNumber(days)} чел.-дн. — ${capacity.map((item) => `${item.label} ${sprintNumber(item.days)}`).join(', ')}`;
+function sprintCapacitySum(days) {
+  return Object.values(days).reduce((sum, value) => sum + value, 0);
+}
+
+function sprintCapacityParts(days, labels) {
+  return Object.keys(labels).filter((key) => days[key] !== undefined).map((key) => `${labels[key]} ${sprintNumber(days[key])}`).join(', ');
+}
+
+function sprintCapacityChange(from, to, labels) {
+  return Object.keys(labels)
+    .filter((key) => from[key] !== undefined || to[key] !== undefined)
+    .map((key) => {
+      const before = from[key] || 0;
+      const after = to[key] || 0;
+      return `${labels[key]} ${sprintNumber(before)}${before === after ? '' : ` → ${sprintNumber(after)}`}`;
+    })
+    .join(', ');
+}
+
+function sprintCapacityRecord(log, kind, boardId, around, latest, cfg = SPRINT_REPORT) {
+  const found = log.filter((item) => item.kind === kind && item.boardId === boardId && item.at >= around - cfg.capacityBeforeMs && item.at < around + cfg.capacityAfterMs).sort((x, y) => x.at - y.at);
+  return found.length ? found[latest ? found.length - 1 : 0] : null;
+}
+
+function sprintCapacityLine(capacity, labels, head) {
+  if (!capacity) return `${head}: «Команда и дни» в панели не заполнены`;
+  return `${head} по «Команде и дням»: ${sprintNumber(sprintCapacitySum(capacity))} чел.-дн. — ${sprintCapacityParts(capacity, labels)}`;
+}
+
+function sprintCapacityDoneLine(summary, log, labels, cfg = SPRINT_REPORT) {
+  const plan = sprintCapacityRecord(log, 'end', summary.boardId, summary.start, true, cfg);
+  const fact = sprintCapacityRecord(log, 'start', summary.boardId, summary.end, false, cfg);
+  if (!plan && !fact) return 'Capacity: план и факт не записаны — их пишут кнопки «Закончить планирование» и «Начать планирование»';
+  if (!fact) return `Capacity, чел.-дн.: план ${sprintNumber(sprintCapacitySum(plan.days))} — ${sprintCapacityParts(plan.days, labels)}; факт не записан — его пишет «Начать планирование» следующего спринта`;
+  if (!plan) return `Capacity, чел.-дн.: факт ${sprintNumber(sprintCapacitySum(fact.days))} — ${sprintCapacityParts(fact.days, labels)}; план не записан — его пишет «Закончить планирование»`;
+  return `Capacity, чел.-дн.: план ${sprintNumber(sprintCapacitySum(plan.days))}, факт ${sprintNumber(sprintCapacitySum(fact.days))} — ${sprintCapacityChange(plan.days, fact.days, labels)}`;
+}
+
+function sprintCapacityRunningLine(summary, capacity, log, labels, cfg = SPRINT_REPORT) {
+  const plan = log ? sprintCapacityRecord(log, 'end', summary.boardId, summary.start, true, cfg) : null;
+  if (!plan) return sprintCapacityLine(capacity, labels, 'Capacity');
+  const head = `Capacity, чел.-дн.: план ${sprintNumber(sprintCapacitySum(plan.days))}`;
+  if (!capacity) return `${head} — ${sprintCapacityParts(plan.days, labels)}; сейчас «Команда и дни» в панели не заполнены`;
+  return `${head}, сейчас по «Команде и дням» ${sprintNumber(sprintCapacitySum(capacity))} — ${sprintCapacityChange(plan.days, capacity, labels)}`;
 }
 
 function sprintGoalLine(summary) {
@@ -402,7 +447,8 @@ function sprintRange(summary, cfg = SPRINT_REPORT) {
   return `${sprintDate(summary.start, cfg)}–${sprintDate(summary.end, cfg)}`;
 }
 
-function sprintReportLines({ last = null, running = null, history = [], historyProblem = null, capacity = null, now, cfg = SPRINT_REPORT }) {
+function sprintReportLines({ last = null, running = null, history = [], historyProblem = null, capacity = null, capacityLog = null, labels = null, now, cfg = SPRINT_REPORT }) {
+  const names = labels || cfg.labels;
   const lines = [];
   const add = (text, bold) => {
     if (text) lines.push(bold ? { text, bold: true } : { text });
@@ -411,6 +457,7 @@ function sprintReportLines({ last = null, running = null, history = [], historyP
   if (last) {
     add(`Итоги спринта ${sprintRange(last, cfg)}${last.closedAt === null ? ' — предварительные: в Kaiten ещё не завершён' : ''}`, true);
     add(sprintGoalLine(last));
+    if (capacityLog) add(sprintCapacityDoneLine(last, capacityLog, names, cfg));
     add(sprintPlanLine(last, older));
     for (const text of sprintAddedLines(last)) add(text);
     add(sprintLeftLine(last));
@@ -421,13 +468,13 @@ function sprintReportLines({ last = null, running = null, history = [], historyP
     add(sprintLeadLine(last, older));
     add(sprintStagesLine(last));
     add(sprintEscapedLine(last));
-    if (!running) add(sprintCapacityLine(capacity, 'Следующий спринт, capacity'));
+    if (!running) add(sprintCapacityLine(capacity, names, 'Следующий спринт, capacity'));
   }
   if (running) {
     add(`Идёт спринт ${sprintRange(running, cfg)} — осталось ${sprintCount(sprintDaysLeft(now, running.end, cfg), SPRINT_WORDS.day)} с сегодняшним`, true);
     add(sprintGoalLine(running));
+    add(sprintCapacityRunningLine(running, capacity, capacityLog, names, cfg));
     add(sprintPlanLine(running, last ? [...older.slice(-2), last] : []));
-    add(sprintCapacityLine(capacity, 'Capacity'));
     for (const text of sprintAddedLines(running)) add(text);
     add(sprintLeftLine(running));
     add(sprintReestimateLine(running));

@@ -414,6 +414,60 @@ test('конец планирования: пишется комментарие
   assert.equal(core.planEndFromComments(comments, null), null);
 });
 
+test('capacity в снимке и конце планирования: чел.-дни направлений с людьми из «Команды и дней», без людей — ключа нет', () => {
+  // Arrange
+  const settings = settingsWith({ back: { people: 2 }, qa: { people: 1, absence: 2.5 } });
+  const cards = [card(1, { size: 6, sp: 3, platforms: [BACK] })];
+
+  // Act
+  const snapshot = core.takeSnapshot({ cards, settings, now: Date.parse('2026-09-29T09:00:00.000Z'), boardId: MOBILE_BOARD });
+  const planEnd = core.takePlanEnd({ cards, snapshot, settings: settingsWith({ back: { people: 2, absence: 4 } }), now: Date.parse('2026-09-29T11:00:00.000Z'), boardId: MOBILE_BOARD });
+  const empty = core.takeSnapshot({ cards, settings: core.defaultSettings(), now: 0, boardId: MOBILE_BOARD });
+
+  // Assert
+  assert.deepEqual([snapshot.capacity, planEnd.capacity, 'capacity' in empty], [{ back: 20, qa: 7.5 }, { back: 16 }, false]);
+  assert.ok(core.snapshotComment(snapshot).startsWith('Снимок начала планирования, Staff Mobile. Осталось: Бэк 3 · Mobile 0 · QA 3. Capacity, чел.-дн.: Бэк 20 · QA 7,5.\n'));
+  assert.ok(core.planEndComment(planEnd).startsWith('Конец планирования, Staff Mobile. После планирования: Бэк 3 · Mobile 0 · QA 3. Capacity, чел.-дн.: Бэк 16.\n'));
+  assert.ok(core.snapshotComment(empty).startsWith('Снимок начала планирования, Staff Mobile. Осталось: Бэк 3 · Mobile 0 · QA 3.\n'));
+});
+
+test('capacity в снимке: хорошая читается обратно, отрицательная, нечисловая и пустая отбрасываются без порчи снимка', () => {
+  // Arrange
+  const good = { boardId: CORE_BOARD, takenAt: '2026-09-29T09:00:00.000Z', totals: { back: 3, front: 0, qa: 1 }, doneIds: [] };
+  const bad = [{ back: -1, qa: 5 }, { back: 'много' }, {}, 'capacity', null];
+
+  // Act
+  const kept = core.normalizeSnapshot({ ...good, capacity: { back: '36', front: 18, qa: 0, extra: 5 } });
+  const dropped = bad.map((capacity) => core.normalizeSnapshot({ ...good, capacity }));
+
+  // Assert
+  assert.deepEqual(kept.capacity, { back: 36, front: 18, qa: 0 });
+  assert.deepEqual(dropped, bad.map(() => good));
+});
+
+test('журнал capacity из служебной карты: старт из снимков, конец из «Конца планирования», без capacity, удалённые и испорченные пропускаются', () => {
+  // Arrange
+  const start = { boardId: CORE_BOARD, takenAt: '2026-09-28T09:00:00.000Z', totals: { back: 1, front: 1, qa: 1 }, doneIds: [], capacity: { back: 30, front: 18 } };
+  const end = { boardId: MOBILE_BOARD, takenAt: '2026-09-28T12:00:00.000Z', startedAt: start.takenAt, totals: { back: 2, front: 2, qa: 2 }, capacity: { back: 20, qa: 7.5 } };
+  const comments = [
+    { text: core.snapshotComment(start), created: '2026-09-28T09:00:01Z', author: { full_name: 'Aleksey Martynov' } },
+    { text: core.planEndComment(end), created: '2026-09-28T12:00:01Z' },
+    { text: core.snapshotComment({ ...start, capacity: undefined }), created: '2026-09-28T10:00:00Z' },
+    { text: core.planEndComment({ ...end, capacity: { back: 99 } }), created: '2026-09-28T13:00:00Z', deleted: true },
+    { text: 'Конец планирования. ```json\n{"totals":\n```', created: '2026-09-28T14:00:00Z' },
+  ];
+
+  // Act
+  const log = core.capacityLogFromComments(comments);
+
+  // Assert
+  assert.deepEqual(log, [
+    { kind: 'start', at: Date.parse(start.takenAt), boardId: CORE_BOARD, days: { back: 30, front: 18 } },
+    { kind: 'end', at: Date.parse(end.takenAt), boardId: MOBILE_BOARD, days: { back: 20, qa: 7.5 } },
+  ]);
+  assert.deepEqual([core.capacityLogFromComments([]), core.capacityLogFromComments(null)], [[], []]);
+});
+
 test('процент Done по SP: SP в Done от SP доски, баги не считаются', () => {
   // Arrange
   const cards = [card(1, { size: 6, sp: 3, platforms: [BACK], state: DONE }), card(2, { size: 2, platforms: [FRONT] }), card(3, { size: 1, platforms: [FRONT] }), card(4, { size: 8, state: DONE, type: WEB_BUG })];

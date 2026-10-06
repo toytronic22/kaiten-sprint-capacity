@@ -23,6 +23,7 @@ const NOW = Date.parse('2026-10-06T15:00:00.000Z');
 const card = (id, extra = {}) => ({ id, type_id: 1, created: '2026-09-01T05:00:00.000Z', blocked: false, parents_ids: [], properties: {}, first_moved_to_in_progress_at: null, ...extra });
 const bug = (id, source, extra = {}) => card(id, { type_id: BUG, properties: { id_425359: source }, ...extra });
 const version = (id, updated, sprintId, column, state, size, extra = {}) => ({ id, updated, sprint_id: sprintId, board_id: DEV, column_id: column, state, size, archived: false, version: 1, ...extra });
+const record = (kind, at, days, boardId = DEV) => ({ kind, at: Date.parse(at), boardId, days });
 const only = (data, ids) => ({ ...data, cards: data.cards.filter((item) => ids.includes(item.id)), cardUpdates: data.cardUpdates.filter((item) => ids.includes(item.id)) });
 
 function sprintData(extra = {}) {
@@ -235,6 +236,25 @@ test('Done в понедельник до закрытия в Kaiten — это�
   assert.deepEqual([carried.done.sp, carried.carry.cards, carried.carry.columns[0].title], [0, 1, 'Review']);
 });
 
+test('Карта, положенная в спринт после воскресенья: дошла до Done к завершению в Kaiten — во влёте и в проде этого спринта, не дошла — не считается', () => {
+  // Arrange
+  const data = only(sprintData(), [109]);
+  data.cards.push(card(113));
+  data.cardUpdates.push(
+    version(113, '2026-09-28T04:00:00.000Z', null, 21, 1, 2, { board_id: INBOX }),
+    version(113, '2026-09-28T05:00:00.000Z', SPRINT_ID, 1, 1, 2),
+    version(113, '2026-09-28T05:30:00.000Z', SPRINT_ID, 2, 2, 2),
+    version(113, '2026-09-28T06:30:00.000Z', SPRINT_ID, 4, 3, 2),
+  );
+
+  // Act
+  const result = sprint.sprintSummary({ sprint: data, now: NOW, columns: COLUMNS, cfg: CFG });
+
+  // Assert
+  assert.deepEqual([result.plan.cards, result.added.tasks, result.added.sp, result.added.from], [0, 1, 2, [{ label: 'Inbox', count: 1 }]]);
+  assert.deepEqual([result.done.tasks, result.done.sp, result.done.addedSp, result.carry.cards, result.left.cards], [1, 2, 2, 0, 0]);
+});
+
 test('Конец спринта — завершение в Kaiten: снятые после воскресенья карты — в «Ушло», Done, ушедшая в архив, и вернувшаяся из архива до завершения — в проде', () => {
   // Arrange
   const data = only(sprintData(), [109]);
@@ -405,7 +425,7 @@ test('Текст при идущем спринте: итоги прошлого
   // Arrange
   const { load } = loader(chain());
   const loaded = await sprint.sprintReportLoad({ cards: [{ sprint_id: 503 }], boardId: DEV, now: NOW, columns: COLUMNS, load, store: memoryStore(), cfg: CFG });
-  const capacity = [{ label: 'Бэк', days: 20 }, { label: 'QA', days: 7.5 }];
+  const capacity = { back: 20, qa: 7.5 };
 
   // Act
   const lines = sprint.sprintReportLines({ ...loaded, capacity, now: NOW, cfg: CFG });
@@ -416,10 +436,67 @@ test('Текст при идущем спринте: итоги прошлого
   assert.ok(texts.includes('Цель — из названия спринта: Спринт 502'));
   assert.ok(texts.includes('План: 8 SP, 1 карта · velocity двух прошлых спринтов: 4, 6 SP, в среднем 5'));
   assert.ok(texts.includes('План: 5 SP, 1 карта · velocity трёх прошлых спринтов: 4, 6, 8 SP, в среднем 6'));
-  assert.ok(texts.includes('Capacity по «Команде и дням»: 27,5 чел.-дн. — Бэк 20, QA 7,5'));
+  assert.equal(texts[texts.indexOf('Capacity по «Команде и дням»: 27,5 чел.-дн. — Бэк 20, QA 7,5') - 1], 'Цель — из названия спринта: Спринт 503');
   assert.ok(texts.includes('Не в проде: нет'));
   assert.ok(texts.includes('Время до прода: у задач в проде нет даты начала работы'));
   assert.ok(!texts.some((text) => text.startsWith('Следующий спринт')));
+});
+
+test('Capacity из служебной карты: план — последний «Конец планирования» у начала спринта, факт — первое «Начать планирование» у конца, чужая доска и далёкие записи не в счёт', () => {
+  // Arrange
+  const last = sprint.sprintSummary({ sprint: sprintData(), now: NOW, columns: COLUMNS, cfg: CFG });
+  const log = [
+    record('end', '2026-09-14T10:00:00.000Z', { back: 36, front: 18, qa: 18 }),
+    record('end', '2026-09-14T12:00:00.000Z', { back: 40, front: 18, qa: 18 }),
+    record('end', '2026-09-14T12:30:00.000Z', { back: 99 }, OTHER),
+    record('end', '2026-09-01T10:00:00.000Z', { back: 1 }),
+    record('start', '2026-09-15T07:00:00.000Z', { back: 5 }),
+    record('start', '2026-09-28T07:00:00.000Z', { back: 30, front: 18 }),
+    record('start', '2026-09-28T09:00:00.000Z', { back: 50, front: 18, qa: 18 }),
+  ];
+
+  // Act
+  const texts = sprint.sprintReportLines({ last, capacityLog: log, now: NOW, cfg: CFG }).map((line) => line.text);
+
+  // Assert
+  assert.deepEqual(texts.slice(1, 4), ['Цель: Выпустить экран заказов', 'Capacity, чел.-дн.: план 76, факт 48 — Бэк 40 → 30, Фронт 18, QA 18 → 0', 'План: 19 SP, 5 карт']);
+});
+
+test('Capacity из служебной карты: записан только план, только факт, ничего; служебная карта не загрузилась — строки нет', () => {
+  // Arrange
+  const last = sprint.sprintSummary({ sprint: sprintData(), now: NOW, columns: COLUMNS, cfg: CFG });
+  const plan = record('end', '2026-09-14T12:00:00.000Z', { back: 40, front: 18, qa: 18 });
+  const fact = record('start', '2026-09-28T07:00:00.000Z', { back: 30, front: 18 });
+  const labels = { back: 'Бэк', front: 'Mobile', qa: 'QA' };
+  const line = (capacityLog) => sprint.sprintReportLines({ last, capacityLog, labels, now: NOW, cfg: CFG }).map((item) => item.text).filter((text) => text.startsWith('Capacity'));
+
+  // Act
+  const texts = [line([plan]), line([fact]), line([]), line(null)];
+
+  // Assert
+  assert.deepEqual(texts, [
+    ['Capacity, чел.-дн.: план 76 — Бэк 40, Mobile 18, QA 18; факт не записан — его пишет «Начать планирование» следующего спринта'],
+    ['Capacity, чел.-дн.: факт 48 — Бэк 30, Mobile 18; план не записан — его пишет «Закончить планирование»'],
+    ['Capacity: план и факт не записаны — их пишут кнопки «Закончить планирование» и «Начать планирование»'],
+    [],
+  ]);
+});
+
+test('Capacity идущего спринта: план из служебной карты рядом с тем, что сейчас в «Команде и днях»', () => {
+  // Arrange
+  const running = sprint.sprintSummary({ sprint: sprintData({ actual_finish_date: null }), now: Date.parse('2026-09-20T12:00:00.000Z'), columns: COLUMNS, cfg: CFG });
+  const log = [record('end', '2026-09-14T12:00:00.000Z', { back: 40, front: 18, qa: 18 })];
+  const line = (capacity, capacityLog) => sprint.sprintReportLines({ running, capacity, capacityLog, now: Date.parse('2026-09-20T12:00:00.000Z'), cfg: CFG })[2].text;
+
+  // Act
+  const texts = [line({ back: 33, front: 18, qa: 18 }, log), line(null, log), line({ back: 33 }, [])];
+
+  // Assert
+  assert.deepEqual(texts, [
+    'Capacity, чел.-дн.: план 76, сейчас по «Команде и дням» 69 — Бэк 40 → 33, Фронт 18, QA 18',
+    'Capacity, чел.-дн.: план 76 — Бэк 40, Фронт 18, QA 18; сейчас «Команда и дни» в панели не заполнены',
+    'Capacity по «Команде и дням»: 33 чел.-дн. — Бэк 33',
+  ]);
 });
 
 test('Текст: прошлые спринты не загрузились — строка с причиной в конце', () => {

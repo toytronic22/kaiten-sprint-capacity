@@ -144,6 +144,11 @@ function capacityOf(settings, direction) {
   return personDaysOf(settings, direction) * settings.coefficient;
 }
 
+function capacityDays(settings) {
+  const directions = DIRECTIONS.filter((direction) => settings.team[direction].people > 0);
+  return directions.length ? Object.fromEntries(directions.map((direction) => [direction, round1(personDaysOf(settings, direction))])) : null;
+}
+
 function percentOf(part, whole) {
   return whole > 0 ? Math.round((part / whole) * 100) : null;
 }
@@ -267,14 +272,28 @@ function takeSnapshot({ cards, settings, now, boardId, config = SPRINT_CAPACITY 
   const totals = {};
   for (const row of report.rows) totals[row.direction] = row.total;
   const doneIds = cards.filter((card) => card.state === config.doneState).map((card) => card.id);
-  return { boardId, takenAt: new Date(now).toISOString(), totals, doneIds };
+  const capacity = capacityDays(settings);
+  return { boardId, takenAt: new Date(now).toISOString(), totals, doneIds, ...(capacity ? { capacity } : {}) };
 }
 
-function takePlanEnd({ cards, snapshot, now, boardId, config = SPRINT_CAPACITY }) {
+function takePlanEnd({ cards, snapshot, settings = defaultSettings(), now, boardId, config = SPRINT_CAPACITY }) {
   const report = buildReport({ cards, settings: defaultSettings(), snapshot, config });
   const totals = {};
   for (const row of report.rows) totals[row.direction] = row.total;
-  return { boardId, takenAt: new Date(now).toISOString(), startedAt: snapshot.takenAt, totals };
+  const capacity = capacityDays(settings);
+  return { boardId, takenAt: new Date(now).toISOString(), startedAt: snapshot.takenAt, totals, ...(capacity ? { capacity } : {}) };
+}
+
+function normalizeCapacity(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const capacity = {};
+  for (const direction of DIRECTIONS) {
+    if (raw[direction] === undefined) continue;
+    const number = toNumber(raw[direction]);
+    if (number === null || number < 0) return null;
+    capacity[direction] = number;
+  }
+  return Object.keys(capacity).length ? capacity : null;
 }
 
 function normalizeSnapshot(raw) {
@@ -286,7 +305,8 @@ function normalizeSnapshot(raw) {
     totals[direction] = number;
   }
   const doneIds = Array.isArray(raw.doneIds) ? raw.doneIds.filter((id) => Number.isInteger(id)) : [];
-  return { boardId: raw.boardId, takenAt: raw.takenAt, totals, doneIds };
+  const capacity = normalizeCapacity(raw.capacity);
+  return { boardId: raw.boardId, takenAt: raw.takenAt, totals, doneIds, ...(capacity ? { capacity } : {}) };
 }
 
 function boardTitle(boardId, config = SPRINT_CAPACITY) {
@@ -294,10 +314,15 @@ function boardTitle(boardId, config = SPRINT_CAPACITY) {
   return board ? board.title : `доска ${boardId}`;
 }
 
+function capacityText(capacity, labels) {
+  if (!capacity) return '';
+  return ` Capacity, чел.-дн.: ${DIRECTIONS.filter((direction) => capacity[direction] !== undefined).map((direction) => `${labels[direction]} ${formatNumber(capacity[direction])}`).join(' · ')}.`;
+}
+
 function snapshotComment(snapshot, config = SPRINT_CAPACITY) {
   const { labels } = boardConfig(snapshot.boardId, config);
   const left = DIRECTIONS.map((direction) => `${labels[direction]} ${formatNumber(snapshot.totals[direction])}`).join(' · ');
-  return `${SNAPSHOT_MARK}, ${boardTitle(snapshot.boardId, config)}. Осталось: ${left}.\n\n\`\`\`json\n${JSON.stringify(snapshot)}\n\`\`\``;
+  return `${SNAPSHOT_MARK}, ${boardTitle(snapshot.boardId, config)}. Осталось: ${left}.${capacityText(snapshot.capacity, labels)}\n\n\`\`\`json\n${JSON.stringify(snapshot)}\n\`\`\``;
 }
 
 function commentsWithJson(comments, mark) {
@@ -327,7 +352,7 @@ function snapshotFromComments(comments, boardId) {
 function planEndComment(planEnd, config = SPRINT_CAPACITY) {
   const { labels } = boardConfig(planEnd.boardId, config);
   const total = DIRECTIONS.map((direction) => `${labels[direction]} ${formatNumber(planEnd.totals[direction])}`).join(' · ');
-  return `${PLAN_END_MARK}, ${boardTitle(planEnd.boardId, config)}. После планирования: ${total}.\n\n\`\`\`json\n${JSON.stringify(planEnd)}\n\`\`\``;
+  return `${PLAN_END_MARK}, ${boardTitle(planEnd.boardId, config)}. После планирования: ${total}.${capacityText(planEnd.capacity, labels)}\n\n\`\`\`json\n${JSON.stringify(planEnd)}\n\`\`\``;
 }
 
 function planEndFromComments(comments, snapshot) {
@@ -339,4 +364,15 @@ function planEndFromComments(comments, snapshot) {
   return null;
 }
 
-if (typeof module !== 'undefined') module.exports = { SPRINT_CAPACITY, DIRECTIONS, DIRECTION_LABELS, toNumber, round1, formatNumber, plural, readEstimate, platformOf, needsQa, isBug, splitEstimate, progressStage, progressWeight, estimateIssues, defaultSettings, normalizeSettings, personDaysOf, capacityOf, buildReport, boardConfig, isChaos, chaosNames, formatRow, takeSnapshot, takePlanEnd, normalizeSnapshot, boardTitle, snapshotComment, snapshotFromComments, planEndComment, planEndFromComments };
+function capacityLogFromComments(comments) {
+  const log = [];
+  for (const [kind, mark] of [['start', SNAPSHOT_MARK], ['end', PLAN_END_MARK]]) {
+    for (const { raw } of commentsWithJson(comments, mark)) {
+      const record = normalizeSnapshot(raw);
+      if (record && record.capacity) log.push({ kind, at: Date.parse(record.takenAt), boardId: record.boardId, days: record.capacity });
+    }
+  }
+  return log;
+}
+
+if (typeof module !== 'undefined') module.exports = { SPRINT_CAPACITY, DIRECTIONS, DIRECTION_LABELS, toNumber, round1, formatNumber, plural, readEstimate, platformOf, needsQa, isBug, splitEstimate, progressStage, progressWeight, estimateIssues, defaultSettings, normalizeSettings, personDaysOf, capacityOf, capacityDays, buildReport, boardConfig, isChaos, chaosNames, formatRow, takeSnapshot, takePlanEnd, normalizeCapacity, normalizeSnapshot, boardTitle, snapshotComment, snapshotFromComments, planEndComment, planEndFromComments, capacityLogFromComments };
