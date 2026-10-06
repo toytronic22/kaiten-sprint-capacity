@@ -21,7 +21,7 @@ button { font: inherit; color: inherit; background: none; border: 0; border-radi
 .key[data-state="ok"]:hover { color: var(--good); background: var(--good-soft); }
 @keyframes pulse { to { opacity: .3; } }
 @keyframes spin { to { transform: rotate(360deg); } }
-.geese { position: fixed; inset: 0; z-index: 2147483001; overflow: hidden; cursor: pointer; background: #0b0c0e; --bang: 9.2s; animation: noir-in .6s ease-out both, noir-out .8s ease-in 11.6s forwards; }
+.geese { position: fixed; inset: 0; z-index: 2147483001; overflow: hidden; cursor: pointer; background: #0b0c0e; --bang: 9.2s; animation: noir-in .6s ease-out both, noir-out .8s ease-in var(--end, 11.6s) forwards; }
 .geese > svg { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
 .geese > div { position: absolute; inset: 0; pointer-events: none; }
 .geese .cam { animation: noir-shake .45s linear var(--bang) both; }
@@ -169,6 +169,211 @@ a:hover { text-decoration: underline; }
 .report [data-report-progress].error { margin: 6px 0 0; }
 .report .plan + .group, .report .group:first-child { margin-top: 10px; }
 .plan button:disabled { opacity: .5; cursor: default; filter: none; }
+.geese .lf-led { opacity: 0; animation: lf-on .01s linear var(--d) forwards; }
+.geese .lf text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
+.geese .lf-led text { font-family: "Courier New", monospace; font-weight: 700; text-anchor: middle; }
+.geese .lf-blink { animation: lf-blink .5s steps(1, end) infinite; }
+.geese .lf-in { animation: lf-in .32s ease-out var(--d) both; }
+.geese .lf-bent .sg-neck { transform: rotate(-38deg); }
+.geese .lf-tug { animation: lf-tug .12s ease-in 5.3s both; }
+.geese .lf-walk { animation: lf-walk 1s linear var(--d) both; }
+.geese .lf-bob { animation: lf-bob .25s ease-in-out infinite alternate; }
+.geese .lf-walk .sg-leg, .geese .lf-ga .sg-leg { animation: lf-step .25s ease-in-out infinite alternate; }
+.geese .lf-walk .sg-alt, .geese .lf-ga .sg-alt { animation-direction: alternate-reverse; }
+.geese .lf-ga .sg-leg { animation-duration: .1s; }
+.geese .lf-gate { animation: lf-gate 1.3s ease-in-out 4.3s both; }
+.geese .lf-tail { animation: lf-tail .1s linear 5.3s both; }
+.geese .lf-ga { animation: lf-ga 1s linear 5.6s both; }
+.geese .lf-gb { animation: lf-gb 1s ease-out 6.55s both; }
+.geese .lf-gc { animation: lf-gc 3.3s linear 7.2s both; }
+.geese .lf-gc .sg-neck { animation: lf-peek 1s ease-in-out 9.1s both; }
+.geese .lf-gc .sg-wing { animation: lf-shrug .5s ease-in-out 9.55s both, lf-reach .35s ease-out 10.12s forwards; }
+.geese .lf-gc .lf-run { animation: lf-tilt .5s ease-in-out 9.55s both; }
+.geese .lf-crowd { animation: lf-jostle .09s linear 6.75s 5; }
+.geese .lf-crowd .sg-eye { animation: lf-wide .2s ease-out 7.95s both; }
+.geese .lf-rope { animation: lf-rope .5s cubic-bezier(.1, .8, .3, 1) 8s both; }
+.geese .lf-cab { animation: lf-fall .6s cubic-bezier(.55, 0, 1, .45) 8.05s both; }
+.geese .lf-spark { opacity: 0; animation: lf-spark .35s ease-out 8s; }
+.geese .lf-zing { opacity: 0; animation: lf-flash .9s ease-out 8s; }
+.geese .lf-speed { opacity: 0; animation: lf-speed .7s linear 8.05s; }
+.geese .lf-whee { opacity: 0; animation: lf-flash 1s ease-in 8.1s; }
+.geese .lf-lit { opacity: 0; animation: lf-on .01s linear 10.3s forwards; }
+.geese .lf-boom { opacity: 0; animation: lf-flash 1.2s ease-out 10.45s; }
+.geese .lf-cam { animation: lf-shake .35s linear 10.45s both; }
+.geese .lf-zoom { animation: lf-zoom .6s ease-in-out 10.6s both; }
+.geese .lf-vig { background: radial-gradient(ellipse at 50% 45%, transparent 55%, rgba(0, 0, 0, .35)); }
+@keyframes lf-on { to { opacity: 1; } }
+@keyframes lf-blink { 50% { opacity: .15; } }
+@keyframes lf-in { from { opacity: 0; transform: scale(.6, .6); } 60% { opacity: 1; transform: scale(1.1, .92); } to { opacity: 1; transform: scale(1, 1); } }
+@keyframes lf-tug { to { transform: translate(36px, 0px); } }
+@keyframes lf-walk { 0% { opacity: 1; transform: translate(-320px, 0px) scale(1, 1); } 85% { opacity: 1; transform: translate(820px, 0px) scale(1, 1); } 100% { opacity: 0; transform: translate(900px, -50px) scale(.8, .8); } }
+@keyframes lf-bob { to { transform: translateY(-9px); } }
+@keyframes lf-step { from { transform: rotate(-24deg); } to { transform: rotate(24deg); } }
+@keyframes lf-gate { 0% { transform: scale(.08, 1); } 35% { transform: scale(.9, 1); } 45% { transform: scale(.865, 1); } 52% { transform: scale(.9, 1); } 60% { transform: scale(.86, 1); } 68% { transform: scale(.9, 1); } 80% { transform: scale(.9, 1); } 92% { transform: scale(1, 1); } 96% { transform: scale(.985, 1); } 100% { transform: scale(1, 1); } }
+@keyframes lf-tail { 0% { opacity: 1; transform: translate(0px, 0px); } 100% { opacity: 0; transform: translate(30px, 0px); } }
+@keyframes lf-ga { 0% { opacity: 1; transform: translate(-80px, 852px) scale(.38, .38); } 65% { opacity: 1; transform: translate(600px, 852px) scale(.38, .38); } 95% { opacity: 1; transform: translate(650px, 812px) scale(.08, .38); } 100% { opacity: 0; transform: translate(655px, 810px) scale(.08, .38); } }
+@keyframes lf-gb { 0% { opacity: 0; transform: translate(660px, 804px) scale(.08, .38); } 2% { opacity: 1; transform: translate(660px, 804px) scale(.08, .38); } 20% { opacity: 1; transform: translate(700px, 800px) scale(.43, .33); } 30% { opacity: 1; transform: translate(700px, 800px) scale(.35, .41); } 40% { opacity: 1; transform: translate(700px, 800px) scale(.38, .38); } 64% { opacity: 1; transform: translate(690px, 800px) scale(.25, .43); } 65% { opacity: 0; transform: translate(690px, 800px) scale(.25, .43); } 100% { opacity: 0; transform: translate(690px, 800px) scale(.25, .43); } }
+@keyframes lf-gc {
+  0% { opacity: 0; transform: translate(655px, 812px) rotate(0deg) scale(.08, .38); }
+  1.5% { opacity: 1; transform: translate(650px, 800px) rotate(0deg) scale(.12, .38); }
+  8% { opacity: 1; transform: translate(590px, 690px) rotate(-150deg) scale(.38, .38); }
+  15% { opacity: 1; transform: translate(500px, 790px) rotate(-330deg) scale(.38, .38); }
+  19.5% { opacity: 1; transform: translate(470px, 852px) rotate(-360deg) scale(.5, .27); }
+  24% { opacity: 1; transform: translate(470px, 852px) rotate(-360deg) scale(.38, .38); }
+  27% { opacity: 1; transform: translate(470px, 836px) rotate(-360deg) scale(.38, .38); }
+  30% { opacity: 1; transform: translate(470px, 852px) rotate(-360deg) scale(.38, .38); }
+  45% { opacity: 1; transform: translate(470px, 852px) rotate(-360deg) scale(.38, .38); }
+  57.5% { opacity: 1; transform: translate(600px, 852px) rotate(-360deg) scale(.38, .38); }
+  83% { opacity: 1; transform: translate(600px, 852px) rotate(-360deg) scale(.38, .38); }
+  86% { opacity: 1; transform: translate(600px, 852px) rotate(-360deg) scale(-.38, .38); }
+  91% { opacity: 1; transform: translate(600px, 852px) rotate(-360deg) scale(-.38, .38); }
+  95.5% { opacity: 1; transform: translate(600px, 781px) rotate(-360deg) scale(-.38, .38); }
+  100% { opacity: 1; transform: translate(600px, 852px) rotate(-360deg) scale(-.38, .38); }
+}
+@keyframes lf-peek { 0% { transform: rotate(0deg); } 30% { transform: rotate(40deg); } 75% { transform: rotate(40deg); } 100% { transform: rotate(0deg); } }
+@keyframes lf-shrug { 0% { transform: rotate(0deg); } 40% { transform: rotate(55deg); } 70% { transform: rotate(55deg); } 100% { transform: rotate(0deg); } }
+@keyframes lf-reach { 0% { transform: rotate(0deg); } 60% { transform: rotate(110deg); } 100% { transform: rotate(20deg); } }
+@keyframes lf-tilt { 0% { transform: translateY(0px) rotate(0deg); } 40% { transform: translateY(-10px) rotate(-6deg); } 70% { transform: translateY(-10px) rotate(-6deg); } 100% { transform: translateY(0px) rotate(0deg); } }
+@keyframes lf-jostle { 0%, 100% { transform: translate(0px, 0px); } 25% { transform: translate(-4px, 1px); } 75% { transform: translate(4px, -1px); } }
+@keyframes lf-wide { to { transform: scale(1.9, 1.9); } }
+@keyframes lf-rope { to { transform: translateY(-300px); } }
+@keyframes lf-fall { to { transform: translateY(1150px); } }
+@keyframes lf-spark { from { opacity: 1; transform: translate(800px, 266px) scale(.4, .4); } to { opacity: 0; transform: translate(800px, 266px) scale(1.6, 1.6); } }
+@keyframes lf-flash { 0% { opacity: 0; } 10% { opacity: 1; } 70% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes lf-speed { 0% { opacity: 0; transform: translateY(0px); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateY(-160px); } }
+@keyframes lf-shake { 0%, 100% { transform: translate(0px, 0px); } 20% { transform: translate(-5px, 3px); } 45% { transform: translate(4px, -3px); } 70% { transform: translate(-2px, 2px); } }
+@keyframes lf-zoom { from { transform: translate(800px, 157px) scale(1, 1) translate(-800px, -157px); } to { transform: translate(800px, 300px) scale(2.4, 2.4) translate(-800px, -157px); } }
+.geese .wl text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
+.geese .wl-zoom { animation: wl-zoom 10.6s linear both; }
+.geese .wl-cam { animation: wl-shake .45s linear 5.85s both; }
+.geese .wl-arm { animation: wl-arm 10.6s linear both; }
+.geese .wl-bar { animation: wl-bar 10.6s linear both; }
+.geese .wl-squash { animation: wl-squash 10.6s linear both; }
+.geese .wl-leg { animation: wl-leg 10.6s linear both; }
+.geese .wl-eye { animation: wl-eye 10.6s linear both; }
+.geese .wl-sag { animation: wl-sag 2s linear 3.6s both, wl-flat .12s ease-out 5.78s forwards; }
+.geese .wl-tremble { animation: wl-tremble .07s linear 3.9s 24 alternate both; }
+.geese .wl-red { opacity: 0; animation: wl-red 1.8s ease-in 3.7s forwards; }
+.geese .wl-sweat { opacity: 0; animation: wl-sweat .55s ease-in 4.1s 3 forwards; }
+.geese .wl-chalk { opacity: 0; transform-box: fill-box; transform-origin: center; animation: wl-chalk .35s ease-out .85s 3; }
+.geese .wl-feather { opacity: 0; animation: wl-feather 1s ease-out 3.65s forwards; }
+.geese .wl-drift { opacity: 0; animation: wl-drift 3.4s ease-in-out var(--d) forwards; }
+.geese .wl-flash { opacity: 0; transform-box: fill-box; transform-origin: center; animation: wl-flash .25s ease-out var(--d) forwards; }
+.geese .wl-hey { opacity: 0; transform-box: fill-box; transform-origin: center; animation: wl-pop 1s ease-out 3.68s forwards; }
+.geese .wl-bang { opacity: 0; transform-box: fill-box; transform-origin: center; animation: wl-bang 1s ease-out 5.86s forwards; }
+.geese .wl-crack { opacity: 0; animation: wl-on .01s linear 5.86s forwards; }
+.geese .wl-dust { opacity: 0; animation: wl-dust 1s ease-out 5.86s forwards; }
+.geese .wl-peek { opacity: 0; animation: wl-peek .3s ease-out 6.45s forwards; }
+.geese .wl-orbit { animation: wl-orbit 1.1s linear 6.5s infinite; }
+.geese .wl-blink { animation: wl-blink 1.3s linear 7.2s 2; }
+.geese .wl-wave { opacity: 0; animation: wl-on .01s linear 6s forwards, wl-wave .45s ease-in-out 9s 4 alternate; }
+.geese .wl-judge { animation: wl-judge .4s ease-out var(--d) both; }
+.geese .wl-card { animation: wl-card .45s cubic-bezier(.3, 1.5, .6, 1) var(--d) both; }
+.geese .wl-live, .geese .wl-third { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
+.geese .wl-live { inset: 3% auto auto 3%; height: fit-content; width: fit-content; padding: .3em .7em; border-radius: 4px; background: rgba(0, 0, 0, .55); color: #fff; font-size: clamp(12px, 1.6vw, 22px); font-weight: 700; letter-spacing: .08em; }
+.geese .wl-live b { color: #ff3b2f; animation: lf-blink 1s steps(1, end) infinite; }
+.geese .wl-third { inset: auto auto 3% 3%; height: fit-content; width: fit-content; max-width: 70%; display: flex; flex-direction: column; padding: .45em 1.1em .5em .9em; border-left: .4em solid #2f62c9; background: rgba(255, 255, 255, .94); color: #111; font-size: clamp(14px, 2.2vw, 32px); opacity: 0; animation: wl-third 5s ease-out .5s both; }
+.geese .wl-third b { font-size: 1.2em; font-weight: 900; }
+.geese .wl-third span { font-size: .72em; color: #3a4252; }
+@keyframes wl-on { to { opacity: 1; } }
+@keyframes wl-zoom {
+  0%, 33.96% { transform: translate(800px, 450px) scale(1) translate(-800px, -450px); }
+  36.8% { transform: translate(800px, 450px) scale(1.12) translate(-800px, -410px); }
+  52.83% { transform: translate(800px, 450px) scale(1.2) translate(-800px, -410px); }
+  55.19%, 86.8% { transform: translate(800px, 450px) scale(1) translate(-800px, -450px); }
+  95.3%, 100% { transform: translate(800px, 450px) scale(1.9) translate(-800px, -650px); }
+}
+@keyframes wl-shake {
+  0% { transform: translate(0, 0); } 15% { transform: translate(-14px, 10px); } 30% { transform: translate(12px, -8px); }
+  45% { transform: translate(-8px, 6px); } 60% { transform: translate(6px, -4px); } 80% { transform: translate(-3px, 2px); } 100% { transform: translate(0, 0); }
+}
+@keyframes wl-arm {
+  0%, 6.6% { transform: rotate(8deg); }
+  8.02% { transform: rotate(36deg); } 9.62% { transform: rotate(10deg); }
+  11.32% { transform: rotate(36deg); } 12.92% { transform: rotate(10deg); }
+  14.62% { transform: rotate(36deg); } 16.23% { transform: rotate(8deg); }
+  22.64% { transform: rotate(8deg); }
+  24.53%, 33.96% { transform: rotate(-25deg); }
+  35.66%, 52.83% { transform: rotate(-160deg); }
+  55.19%, 100% { transform: rotate(24deg); }
+}
+@keyframes wl-bar {
+  0%, 33.96% { transform: translateY(0) rotate(0); }
+  35.66% { transform: translateY(-272px) rotate(0); }
+  36.32% { transform: translateY(-258px) rotate(0); }
+  37.26% { transform: translateY(-268px) rotate(0); }
+  44% { transform: translateY(-264px) rotate(-2deg); }
+  48% { transform: translateY(-262px) rotate(2.5deg); }
+  52.83% { transform: translateY(-255px) rotate(-1deg); }
+  55.19% { transform: translateY(50px) rotate(0); }
+  55.85% { transform: translateY(34px) rotate(0); }
+  56.6%, 100% { transform: translateY(50px) rotate(0); }
+}
+@keyframes wl-squash {
+  0%, 22.64% { transform: scale(1, 1); }
+  24.53%, 33.02% { transform: scale(1.03, .92); }
+  34.15% { transform: scale(.96, 1.06); }
+  36.32% { transform: scale(1.05, .95); }
+  37.74% { transform: scale(1, 1); }
+  47.17% { transform: scale(1.02, .97); }
+  52.83% { transform: scale(1.04, .93); }
+  55.19% { transform: scale(1.7, .13); }
+  56.13% { transform: scale(1.6, .17); }
+  57.08%, 100% { transform: scale(1.7, .13); }
+}
+@keyframes wl-leg {
+  0%, 33.96% { transform: rotate(0); }
+  35.38%, 52.83% { transform: rotate(-26deg); }
+  55.19%, 100% { transform: rotate(-80deg); }
+}
+@keyframes wl-eye {
+  0%, 33.96% { transform: scale(1); }
+  35.1% { transform: scale(2.1); }
+  36.3% { transform: scale(1.7); }
+  40%, 44%, 48% { transform: scale(1.85); }
+  42%, 46%, 50% { transform: scale(1.65); }
+  52.83%, 100% { transform: scale(2); }
+}
+@keyframes wl-sag {
+  0% { transform: rotate(0); } 8% { transform: rotate(8deg); } 16% { transform: rotate(-3deg); }
+  24% { transform: rotate(4deg); } 32% { transform: rotate(2deg); } 100% { transform: rotate(10deg); }
+}
+@keyframes wl-flat { to { transform: rotate(0); } }
+@keyframes wl-tremble { from { transform: translate(-3px, 0); } to { transform: translate(3px, 1px); } }
+@keyframes wl-red { to { opacity: .85; } }
+@keyframes wl-sweat { 0% { opacity: 0; transform: translateY(0); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateY(34px); } }
+@keyframes wl-chalk { 0% { opacity: .95; transform: scale(.2); } 100% { opacity: 0; transform: scale(1.6); } }
+@keyframes wl-feather {
+  0% { opacity: 0; transform: translate(0, 0) rotate(0) scale(.3); }
+  10% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--dx), var(--dy)) rotate(var(--r)) scale(1.1); }
+}
+@keyframes wl-drift {
+  0% { opacity: 0; transform: translate(0, -220px) rotate(-30deg); }
+  15% { opacity: 1; }
+  40% { transform: translate(30px, -120px) rotate(25deg); }
+  70% { transform: translate(-25px, -30px) rotate(-20deg); }
+  90% { opacity: 1; }
+  100% { opacity: 0; transform: translate(10px, 20px) rotate(10deg); }
+}
+@keyframes wl-flash { 0% { opacity: 0; transform: scale(.2); } 30% { opacity: 1; transform: scale(1.6); } 100% { opacity: 0; transform: scale(.4); } }
+@keyframes wl-pop {
+  0% { opacity: 0; transform: rotate(-8deg) scale(.2); } 15% { opacity: 1; transform: rotate(-8deg) scale(1.25); }
+  25% { transform: rotate(-8deg) scale(1); } 75% { opacity: 1; transform: rotate(-8deg) scale(1.05); } 100% { opacity: 0; transform: rotate(-8deg) scale(1.1); }
+}
+@keyframes wl-bang {
+  0% { opacity: 0; transform: rotate(4deg) scale(.2); } 12% { opacity: 1; transform: rotate(4deg) scale(1.3); }
+  22% { transform: rotate(4deg) scale(1); } 75% { opacity: 1; transform: rotate(4deg) scale(1.05); } 100% { opacity: 0; transform: rotate(4deg) scale(1.1); }
+}
+@keyframes wl-dust { 0% { opacity: .95; transform: scale(.4, .6); } 100% { opacity: 0; transform: scale(1.6, 1.8); } }
+@keyframes wl-peek { 0% { opacity: 1; transform: translateY(40px) scaleY(.2); } 70% { opacity: 1; transform: translateY(-6px) scaleY(1.1); } 100% { opacity: 1; transform: translateY(0) scaleY(1); } }
+@keyframes wl-orbit { to { transform: rotate(360deg); } }
+@keyframes wl-blink { 0%, 86% { transform: scaleY(1); } 92% { transform: scaleY(.1); } 100% { transform: scaleY(1); } }
+@keyframes wl-wave { from { transform: rotate(0); } to { transform: rotate(-30deg); } }
+@keyframes wl-judge { from { transform: translateY(260px); } to { transform: translateY(0); } }
+@keyframes wl-card { from { transform: translateY(440px); } to { transform: translateY(0); } }
+@keyframes wl-third { 0% { opacity: 0; transform: translateX(-40px); } 8%, 90% { opacity: 1; transform: translateX(0); } 100% { opacity: 0; transform: translateX(0); } }
 `;
 
 const HOLST_KEY_TITLES = {
@@ -384,6 +589,190 @@ ${wing}
 <div class="grain"></div>
 <div class="vignette"></div>
 <div class="flash"></div>`;
+};
+
+const sideGoose = ({ body = '#f4f3ee', wing = '#dcdad2', line = '#aaa69a', beak = '#ee9433', jaw = '#cf7420', eye, head = '', chest = '', tuft = false } = {}) => {
+  const leg = `<path d="M0 0 V44" stroke="${beak}" stroke-width="7" stroke-linecap="round"/><path d="M-5 41 L25 46 Q19 53 -4 52 Z" fill="${beak}"/>`;
+  const dot = eye || '<circle r="5" fill="#1b1c20"/><circle cx="1.6" cy="-1.6" r="1.4" fill="#fff"/>';
+  const hair = tuft ? `<path d="M8 -119 q-2 -12 4 -16 M14 -120 q2 -12 9 -13 M2 -117 q-6 -9 -2 -15" fill="none" stroke="${line}" stroke-width="3" stroke-linecap="round"/>` : '';
+  const torso = 'M-96 -132 C-70 -120 -40 -126 -8 -126 C42 -126 72 -102 72 -78 C72 -52 46 -44 4 -44 C-50 -44 -84 -64 -90 -94 C-93 -108 -100 -120 -96 -132 Z';
+  const neck = 'M-22 6 C-26 -30 -12 -70 2 -92 L28 -90 C16 -66 12 -30 24 8 Z';
+  return `<g transform="translate(-16 -52)"><g class="sg-leg">${leg}</g></g>
+<g transform="translate(10 -52)"><g class="sg-leg sg-alt">${leg}</g></g>
+<path d="${torso}" fill="${body}" stroke="${line}" stroke-width="5" stroke-linejoin="round"/><path d="${torso}" fill="${body}"/>
+<path d="M-60 -60 C-30 -48 20 -48 52 -58" fill="none" stroke="#000" stroke-opacity=".08" stroke-width="6" stroke-linecap="round"/>
+${chest}
+<g transform="translate(36 -114)"><g class="sg-neck">
+<path d="${neck}" fill="${line}" stroke="${line}" stroke-width="5" stroke-linejoin="round"/><circle cx="14" cy="-96" r="27.5" fill="${line}"/>
+<path d="${neck}" fill="${body}"/><circle cx="14" cy="-96" r="25" fill="${body}"/>${hair}
+<g transform="translate(36 -96)"><g class="sg-jaw"><path d="M-4 5 C8 6 20 6 30 5 C20 12 8 14 -2 12 Z" fill="${jaw}"/></g></g>
+<path d="M32 -104 C46 -104 62 -100 72 -94 C60 -90 46 -88 32 -89 Z" fill="${beak}"/>
+<g transform="translate(22 -102)"><g class="sg-eye">${dot}</g></g>
+${head}
+</g></g>
+<g transform="translate(46 -100)"><g class="sg-wing"><path d="M0 0 C-26 -14 -84 -16 -126 0 C-118 6 -110 8 -104 10 C-112 16 -114 20 -110 24 C-96 22 -88 24 -82 26 C-86 32 -84 36 -78 38 C-40 40 -8 30 2 14 Z" fill="${wing}" stroke="${line}" stroke-width="2.5" stroke-linejoin="round"/></g></g>`;
+};
+
+const liftScene = () => {
+  const arrive = (index) => +(1.3 + .28 * index).toFixed(2);
+  const crowd = [[690, 800, .78, -1], [805, 800, .78, 1], [905, 800, .78, 1], [740, 708, .78, 1], [880, 708, .78, -1], [690, 618, .76, 1], [800, 618, .76, -1], [912, 618, .76, -1], [750, 528, .74, 1, 1], [868, 528, .74, -1, 1], [672, 802, .84, 1]]
+    .map(([x, y, s, dir, bent], index) => ({ y: index === 10 ? 999 : y, html: `<g transform="translate(${x} ${y}) scale(${s * dir} ${s})"><g class="lf-in" style="--d:${arrive(index)}s"><g class="${index === 10 ? 'lf-tug' : ''}${bent ? 'lf-bent' : ''}">${sideGoose()}</g></g></g>` }))
+    .sort((a, b) => a.y - b.y).map((goose) => goose.html).join('');
+  const walkers = Array.from({ length: 11 }, (_, index) => `<g class="lf-walk" style="--d:${(.3 + .28 * index).toFixed(2)}s"><g class="lf-bob">${sideGoose()}</g></g>`).join('');
+  const lattice = Array.from({ length: 10 }, (_, col) => {
+    const x = -400 + col * 40;
+    return Array.from({ length: 6 }, (_, row) => `M${x} ${row * 100} L${x + 40} ${row * 100 + 100} M${x} ${row * 100 + 100} L${x + 40} ${row * 100}`).join(' ');
+  }).join(' ');
+  const bars = Array.from({ length: 11 }, (_, col) => `M${-400 + col * 40} 0 V600`).join(' ');
+  const led = (text, size, color, delay, cls = '') => `<g class="lf-led" style="--d:${delay}s"><rect x="722" y="132" width="156" height="50" rx="4" fill="#0c0c0c"/><text class="${cls}" x="800" y="${157 + size * .36}" font-size="${size}" fill="${color}">${text}</text></g>`;
+  const counts = Array.from({ length: 11 }, (_, index) => led(`${index + 1}/4`, 34, index < 4 ? '#5be37f' : '#ff4b3a', arrive(index))).join('');
+  const speed = [640, 700, 760, 840, 900, 960].map((x, index) => `<path d="M${x} ${260 + (index % 3) * 90} v${160 + (index % 2) * 120}"/>`).join('');
+  const gosling = (cls) => `<g class="${cls}"><g class="lf-run">${sideGoose({ body: '#ffd84a', wing: '#f0bd2a', line: '#d39b1c', tuft: true })}</g></g>`;
+  return `<svg class="lf" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+<g class="lf-zoom"><g class="lf-cam">
+<rect x="600" y="200" width="400" height="600" fill="#17181b"/>
+<path d="M626 200 V800 M974 200 V800" stroke="#34363b" stroke-width="10"/>
+<path d="M600 330 H1000 M600 520 H1000 M600 710 H1000" stroke="#222327" stroke-width="6"/>
+<g class="lf-rope"><path d="M800 0 V266" stroke="#55565c" stroke-width="5"/><path d="M797 266 l-3 7 M800 266 l0 8 M803 266 l3 7" stroke="#55565c" stroke-width="2"/></g>
+<g class="lf-cab">
+<path d="M800 268 V284" stroke="#55565c" stroke-width="5"/><path d="M797 268 l-3 -7 M803 268 l3 -7" stroke="#55565c" stroke-width="2"/>
+<rect x="612" y="290" width="376" height="516" fill="#8e6038"/>
+<rect x="640" y="306" width="320" height="490" fill="#a87346"/>
+<path d="M720 306 V796 M800 306 V796 M880 306 V796" stroke="#7a5230" stroke-width="3"/>
+<ellipse cx="800" cy="330" rx="150" ry="34" fill="#ffe9a8" fill-opacity=".18"/>
+<rect x="782" y="294" width="36" height="9" rx="3" fill="#fff4c9"/>
+<rect x="604" y="278" width="392" height="14" fill="#4a3a2c"/>
+<circle cx="800" cy="278" r="7" fill="none" stroke="#55565c" stroke-width="4"/>
+<g class="lf-crowd">${crowd}</g>
+${gosling('lf-gb')}
+</g>
+<path d="M0 0 H1600 V800 H0 Z M600 200 V800 H1000 V200 Z" fill="#e8e2d0" fill-rule="evenodd"/>
+<path d="M0 480 H600 V800 H0 Z M1000 480 H1600 V800 H1000 Z" fill="#4e7d68"/>
+<path d="M0 480 H600 M1000 480 H1600" stroke="#3b5f4f" stroke-width="5"/>
+<path d="M0 140 Q400 120 560 170 M1080 60 Q1300 90 1600 70" fill="none" stroke="#000" stroke-opacity=".05" stroke-width="30"/>
+<rect x="593" y="193" width="414" height="614" fill="none" stroke="#3b2a1e" stroke-width="14"/>
+<rect x="714" y="124" width="172" height="66" rx="8" fill="#5c5348"/>
+${led('0/4', 34, '#5be37f', 0)}${counts}${led('12/4', 34, '#ff4b3a', 6.75)}${led('ПЕРЕГРУЗ', 23, '#ff4b3a', 6.9, 'lf-blink')}${led('▼', 34, '#ff4b3a', 8.05, 'lf-blink')}${led('Overload', 26, '#ff4b3a', 10.5, 'lf-blink')}
+<rect x="330" y="250" width="220" height="118" rx="10" fill="#f3f1ea" stroke="#2c5aa0" stroke-width="5"/>
+<text x="440" y="296" font-size="34" font-weight="800" fill="#2c5aa0" text-anchor="middle" letter-spacing="4">ЛИФТ</text>
+<text x="440" y="332" font-size="21" fill="#23324d" text-anchor="middle">не более</text>
+<text x="440" y="356" font-size="21" font-weight="700" fill="#23324d" text-anchor="middle">4 гусей</text>
+<rect x="547" y="676" width="32" height="50" rx="5" fill="#b08d4a" stroke="#6f5524" stroke-width="2"/>
+<circle cx="563" cy="701" r="9" fill="#5a4a2a"/><circle class="lf-lit" cx="563" cy="701" r="9" fill="#ffcf3a"/>
+<rect x="0" y="800" width="1600" height="100" fill="#8c6a4c"/>
+<path d="M0 820 H1600 M0 848 H1600 M0 880 H1600" stroke="#000" stroke-opacity=".12" stroke-width="2"/>
+<rect x="0" y="796" width="1600" height="8" fill="#3b2a1e"/>
+<g transform="translate(1000 200)"><g class="lf-gate">
+<path d="${lattice}" stroke="#2b2b2e" stroke-width="1.6" fill="none" vector-effect="non-scaling-stroke"/>
+<path d="${bars}" stroke="#202023" stroke-width="2" vector-effect="non-scaling-stroke"/>
+<path d="M-400 0 H0 M-400 600 H0" stroke="#202023" stroke-width="5" vector-effect="non-scaling-stroke"/>
+<path d="M-400 0 V600" stroke="#202023" stroke-width="5" vector-effect="non-scaling-stroke"/><rect x="-396" y="300" width="9" height="34" rx="3" fill="#b08d4a"/>
+</g></g>
+<path class="lf-tail" d="M650 700 C640 694 630 690 618 694 C628 700 630 708 626 716 C636 712 646 712 652 716 Z" fill="#f4f3ee"/>
+<g transform="translate(0 860) scale(.78)">${walkers}</g>
+${gosling('lf-ga')}${gosling('lf-gc')}
+<g class="lf-spark" transform="translate(800 266)"><polygon points="0,-26 6,-8 24,-14 10,0 26,10 6,8 0,28 -6,8 -24,12 -10,0 -26,-12 -6,-8" fill="#fff6b0"/><circle r="7" fill="#fff"/></g>
+<text class="lf-zing" x="830" y="262" font-size="34" font-weight="900" fill="#ffd23a" stroke="#3b2a1e" stroke-width="3" paint-order="stroke">ДЗЫНЬ!</text>
+<g class="lf-speed" stroke="#fff" stroke-opacity=".5" stroke-width="4" stroke-linecap="round">${speed}</g>
+<text class="lf-whee" x="800" y="560" font-size="44" font-style="italic" font-weight="700" fill="#cfd2d8" text-anchor="middle">фьюууу…</text>
+<text class="lf-boom" x="800" y="770" font-size="26" font-style="italic" fill="#7d8088" text-anchor="middle">бум</text>
+</g></g>
+</svg>
+<div class="lf-vig"></div>`;
+};
+
+const barScene = (names = []) => {
+  const safe = (text) => String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const list = names.length ? names : ['Overload'];
+  const tag = (index) => safe(list[index % list.length]);
+  const disc = (x, r, color, label) => `<circle cx="${x}" r="${r}" fill="${color}" stroke="#111" stroke-width="4"/><circle cx="${x}" r="${r * .3}" fill="none" stroke="#000" stroke-opacity=".25" stroke-width="3"/><circle cx="${x}" r="9" fill="#cfcfcf" stroke="#555" stroke-width="2"/><text x="${x}" y="${-r * .42}" font-size="${r > 80 ? 27 : 21}" font-weight="900" fill="#fff" text-anchor="middle"${label.length > 7 ? ` textLength="${r * 1.5}" lengthAdjust="spacingAndGlyphs"` : ''}>${label}</text>`;
+  const half = (dir, inner, outer) => `<g transform="scale(${dir} 1)"><g transform="translate(128 0)"><g class="wl-sag">
+<rect x="0" y="-6" width="322" height="12" rx="5" fill="#c9ccd2" stroke="#6b6f76" stroke-width="2"/>
+<rect x="72" y="-17" width="26" height="34" rx="4" fill="#9aa0a8" stroke="#555" stroke-width="2"/>
+<g transform="scale(${dir} 1)">${disc(dir * 112, 95, inner.color, inner.label)}${disc(dir * 242, 70, outer.color, outer.label)}</g>
+</g></g></g>`;
+  const bar = `<rect x="-130" y="-6" width="260" height="12" rx="5" fill="#c9ccd2" stroke="#6b6f76" stroke-width="2"/><path d="M-90 -6 V6 M-60 -6 V6 M60 -6 V6 M90 -6 V6" stroke="#8a8f97" stroke-width="2"/>${half(-1, { color: '#d23a32', label: tag(0) }, { color: '#e4b62a', label: tag(2) })}${half(1, { color: '#2f62c9', label: tag(1) }, { color: '#3f9a4a', label: tag(3) })}`;
+  const line = '#a9a59a';
+  const legPath = '<path d="M0 0 V60" stroke="#ee9433" stroke-width="13" stroke-linecap="round"/><path d="M-26 70 Q-14 54 0 58 Q14 54 26 70 Q0 78 -26 70 Z" fill="#ee9433" stroke="#c46f1c" stroke-width="2"/>';
+  const wing = `<path d="M-15 -8 C-26 30 -24 84 -10 140 C-4 132 0 130 4 134 C8 122 12 116 17 118 C22 84 24 30 15 -8 Z" fill="#f4f3ee" stroke="${line}" stroke-width="4" stroke-linejoin="round"/><path d="M-2 40 V112 M8 50 V108" stroke="${line}" stroke-width="2" fill="none"/>`;
+  const eye = '<circle r="9" fill="#fff" stroke="#3a3a3a" stroke-width="2"/><path d="M-8 -2 q3 1 4 -1 M8 3 q-3 0 -4 2 M-6 5 q2 -1 3 0" stroke="#d0281f" stroke-width="1" fill="none"/><circle cx="1" r="4" fill="#111"/>';
+  const torso = 'M0 -270 C46 -270 104 -205 106 -145 C108 -92 66 -62 0 -62 C-66 -62 -108 -92 -106 -145 C-104 -205 -46 -270 0 -270 Z';
+  const feathers = [[-260, -180, -200], [240, -240, 260], [-190, -330, 120], [300, -60, -300], [-320, -40, 340], [140, -360, -160], [40, -420, 220], [-80, -400, -260]]
+    .map(([dx, dy, r]) => `<g transform="translate(0 -170)"><g class="wl-feather" style="--dx:${dx}px;--dy:${dy}px;--r:${r}deg"><path d="M0 -16 C7 -7 7 7 0 16 C-7 7 -7 -7 0 -16 Z M0 -16 V20" fill="#f4f3ee" stroke="${line}" stroke-width="1.5"/></g></g>`).join('');
+  const drift = [[-140, -120, 6.2], [90, -200, 6.5], [200, -90, 6.9], [-60, -260, 7.3]]
+    .map(([x, y, delay]) => `<g transform="translate(${x} ${y})"><g class="wl-drift" style="--d:${delay}s"><path d="M0 -14 C6 -6 6 6 0 14 C-6 6 -6 -6 0 -14 Z M0 -14 V18" fill="#f4f3ee" stroke="${line}" stroke-width="1.5"/></g></g>`).join('');
+  const fans = Array.from({ length: 3 }, (_, row) => Array.from({ length: 26 }, (_, col) => {
+    const x = col * 64 + (row % 2) * 32 - 20 + Math.round(Math.random() * 10);
+    const y = 360 + row * 62;
+    return `<path d="M${x - 9} ${y + 40} C${x - 10} ${y + 20} ${x - 6} ${y + 6} ${x - 5} ${y} L${x + 5} ${y} C${x + 6} ${y + 6} ${x + 10} ${y + 20} ${x + 9} ${y + 40} Z"/><circle cx="${x}" cy="${y - 8}" r="13"/>`;
+  }).join('')).join('');
+  const flashes = Array.from({ length: 12 }, (_, index) => {
+    const x = 60 + Math.round(Math.random() * 1480);
+    const y = 350 + Math.round(Math.random() * 140);
+    return `<g transform="translate(${x} ${y})"><polygon class="wl-flash" style="--d:${(3.6 + index * .16).toFixed(2)}s" points="0,-16 4,-4 16,0 4,4 0,16 -4,4 -16,0 -4,-4" fill="#fff"/></g>`;
+  }).join('');
+  const judge = (x, value, delay, wide) => `<g transform="translate(${x} 975) scale(.66)"><g class="wl-judge" style="--d:${(delay - .5).toFixed(2)}s">
+<g class="wl-card" style="--d:${delay}s"><path d="M20 -100 C40 -150 44 -200 30 -236" stroke="#f4f3ee" stroke-width="26" stroke-linecap="round" fill="none"/><rect x="${wide ? -112 : -72}" y="-330" width="${wide ? 224 : 144}" height="96" rx="8" fill="#fff" stroke="#222" stroke-width="4"/><text x="0" y="-262" font-size="${wide ? 42 : 58}" font-weight="900" fill="${wide ? '#d8231b' : '#111'}" text-anchor="middle">${value}</text></g>
+<path d="M-58 0 C-56 -40 -30 -60 -18 -64 C-20 -90 -16 -110 -12 -128 L12 -128 C16 -110 20 -90 18 -64 C30 -60 56 -40 58 0 Z" fill="#e9e7e0" stroke="${line}" stroke-width="4"/>
+<circle cy="-150" r="32" fill="#e9e7e0" stroke="${line}" stroke-width="4"/><path d="M-30 -164 A32 32 0 0 1 30 -164 Z" fill="#20232b"/><rect x="-140" y="-70" width="280" height="80" rx="6" fill="#2a3346"/><text x="0" y="-26" font-size="22" font-weight="800" fill="#c9d3e6" text-anchor="middle">СУДЬЯ</text><circle cx="-11" cy="-146" r="4.5" fill="#111"/><circle cx="11" cy="-146" r="4.5" fill="#111"/><path d="M-11 -136 Q0 -132 11 -136 L0 -118 Z" fill="#ee9433"/>
+</g></g>`;
+  return `<svg class="wl" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+<g class="wl-zoom"><g class="wl-cam">
+<rect width="1600" height="900" fill="#121827"/>
+<rect y="300" width="1600" height="260" fill="#0c111c"/>
+<g fill="#1f2a40">${fans}</g>
+<g>${flashes}</g>
+<rect x="250" y="208" width="1100" height="62" rx="6" fill="#1d3f8f"/>
+<text x="800" y="250" font-size="30" font-weight="800" fill="#fff" text-anchor="middle" letter-spacing="3">ЧЕМПИОНАТ СПРИНТА · ТЯЖЁЛАЯ АТЛЕТИКА</text>
+<polygon points="690,0 910,0 1260,780 340,780" fill="#fffbe8" fill-opacity=".07"/>
+<polygon points="320,690 1280,690 1300,760 300,760" fill="#b98a55"/>
+<path d="M440 690 L410 760 M640 690 L630 760 M960 690 L970 760 M1160 690 L1190 760" stroke="#000" stroke-opacity=".12" stroke-width="3"/>
+<ellipse cx="800" cy="745" rx="330" ry="34" fill="#fffbe8" fill-opacity=".14"/>
+<g transform="translate(800 735)">
+<g class="wl-tremble">
+<g class="wl-squash">
+<g transform="translate(30 -70)"><g class="wl-leg">${legPath}</g></g>
+<g transform="translate(-30 -70) scale(-1 1)"><g class="wl-leg">${legPath}</g></g>
+<path d="${torso}" fill="#f4f3ee" stroke="${line}" stroke-width="5"/>
+<path d="M-74 -232 C-40 -200 40 -200 74 -232 L92 -120 C40 -102 -40 -102 -92 -120 Z" fill="#c8302a"/>
+<text x="0" y="-150" font-size="40" font-weight="900" fill="#fff" text-anchor="middle">P2P</text>
+<path d="M-98 -122 C-40 -100 40 -100 98 -122 L102 -96 C40 -76 -40 -76 -102 -96 Z" fill="#6b4423"/><rect x="-16" y="-108" width="32" height="24" rx="3" fill="#d9b44a" stroke="#6b4423" stroke-width="3"/>
+<path d="M-20 -250 C-22 -268 -18 -282 -16 -292 L16 -292 C18 -282 22 -268 20 -250 Z" fill="#f4f3ee" stroke="${line}" stroke-width="4"/>
+<circle cy="-296" r="34" fill="#f4f3ee" stroke="${line}" stroke-width="4"/>
+<circle class="wl-red" cy="-296" r="32" fill="#e5483e"/>
+<rect x="-33" y="-322" width="66" height="10" rx="4" fill="#c8302a"/>
+<g transform="translate(-13 -301)"><g class="wl-eye">${eye}</g></g>
+<g transform="translate(13 -301)"><g class="wl-eye">${eye}</g></g>
+<path d="M-15 -292 C-8 -298 8 -298 15 -292 C10 -278 5 -268 0 -262 C-5 -268 -10 -278 -15 -292 Z" fill="#ee9433" stroke="#c46f1c" stroke-width="2"/>
+<path class="wl-sweat" d="M30 -318 q6 10 0 14 q-6 -4 0 -14 Z M-34 -300 q6 10 0 14 q-6 -4 0 -14 Z" fill="#9fd3ff"/>
+</g>
+<g transform="translate(0 -95)"><g class="wl-bar">${bar}</g></g>
+<g class="wl-squash">
+<g transform="translate(82 -230)"><g class="wl-arm">${wing}</g></g>
+<g transform="translate(-82 -230) scale(-1 1)"><g class="wl-arm">${wing}</g></g>
+</g>
+</g>
+<g class="wl-chalk"><circle cy="-165" r="40" fill="#fff" fill-opacity=".8"/><circle cx="-30" cy="-180" r="26" fill="#fff" fill-opacity=".7"/><circle cx="28" cy="-150" r="24" fill="#fff" fill-opacity=".7"/></g>
+${feathers}
+</g>
+<polygon points="300,760 1300,760 1312,790 288,790" fill="#b98a55"/>
+<polygon points="288,790 1312,790 1312,830 288,830" fill="#7c5631"/>
+<rect y="830" width="1600" height="70" fill="#0c111c"/>
+<g class="wl-crack" fill="none" stroke="#3b2510" stroke-width="4" stroke-linejoin="round"><path d="M520 762 l-30 14 l18 10 l-26 16 M560 764 l22 12 l-10 12 M1080 762 l30 12 l-16 12 l28 14 M1040 764 l-20 14 l12 10"/></g>
+<g transform="translate(800 735)">
+<g class="wl-peek"><path d="M-18 -6 V-86 M18 -6 V-86" stroke="#f4f3ee" stroke-width="6"/><g transform="translate(-18 -96)"><g class="wl-blink"><circle r="18" fill="#fff" stroke="#3a3a3a" stroke-width="2.5"/><circle cx="3" r="7.5" fill="#111"/></g></g><g transform="translate(18 -96)"><g class="wl-blink"><circle r="18" fill="#fff" stroke="#3a3a3a" stroke-width="2.5"/><circle cx="-3" r="7.5" fill="#111"/></g></g>
+<g transform="translate(0 -140) scale(1 .35)"><g class="wl-orbit">${[0, 120, 240].map((a) => `<polygon transform="rotate(${a}) translate(70 0)" points="0,-16 5,-5 16,-4 8,4 10,16 0,9 -10,16 -8,4 -16,-4 -5,-5" fill="#ffd23a" stroke="#8a6a00" stroke-width="2"/>`).join('')}</g></g></g>
+<g transform="translate(40 -10)"><g class="wl-wave"><path d="M0 0 C20 -6 50 -8 74 -2 C66 2 62 6 66 10 C44 12 20 10 0 6 Z" fill="#f4f3ee" stroke="${line}" stroke-width="3"/></g></g>
+${drift}
+<g class="wl-dust" fill="#d8c3a0" fill-opacity=".8"><circle cx="-420" cy="-20" r="40"/><circle cx="-480" cy="-50" r="30"/><circle cx="420" cy="-20" r="40"/><circle cx="480" cy="-50" r="30"/><circle cx="-360" cy="-50" r="24"/><circle cx="360" cy="-50" r="24"/></g>
+</g>
+<text class="wl-hey" x="1190" y="610" font-size="64" font-weight="900" fill="#ffd23a" stroke="#1a1a1a" stroke-width="5" paint-order="stroke">ХЭЙ!</text>
+<text class="wl-bang" x="800" y="560" font-size="96" font-weight="900" fill="#ff3b2f" stroke="#1a1a1a" stroke-width="6" paint-order="stroke" text-anchor="middle">БДЫЩ!</text>
+${judge(420, '9.8', 6.6)}${judge(800, '10', 7)}${judge(1180, 'Overload', 7.5, true)}
+</g></g>
+</svg>
+<div class="wl-live"><b>● LIVE</b> P2P Sport</div>
+<div class="wl-third"><b>Гусь Гусев</b><span>сборная P2P · рывок: ${list.map(safe).join(' + ')}</span></div>`;
 };
 
 const ISSUE_LABELS = {
@@ -1173,19 +1562,25 @@ function sprintCapacityMount(config) {
 
   let chaosBefore = false;
   let chaosTimer = null;
-  const releaseGeese = () => {
+  const GOOSE_SCENES = [{ name: 'lift', draw: liftScene, end: 11.3 }, { name: 'bar', draw: barScene, end: 10.6 }, { name: 'noir', draw: noirScene, end: 11.6 }];
+  const releaseGeese = (names) => {
     if ($('.geese')) return;
+    const last = GOOSE_SCENES.findIndex((item) => item.name === readStored('gooseScene', null));
+    const pick = GOOSE_SCENES[(last + 1) % GOOSE_SCENES.length];
+    writeStored('gooseScene', pick.name);
     const scene = document.createElement('div');
     scene.className = 'geese';
-    scene.innerHTML = noirScene();
+    scene.dataset.scene = pick.name;
+    scene.style.setProperty('--end', `${pick.end}s`);
+    scene.innerHTML = pick.draw(names);
     scene.addEventListener('click', () => scene.remove());
     shadow.appendChild(scene);
-    window.setTimeout(() => scene.remove(), 12400);
+    window.setTimeout(() => scene.remove(), (pick.end + .8) * 1000);
   };
   const checkChaos = () => {
     const names = report ? chaosNames(report.rows, boardConfig(boardId, config)) : [];
     const chaos = names.length > 0;
-    if (chaos && !chaosBefore) releaseGeese();
+    if (chaos && !chaosBefore) releaseGeese(names);
     chaosBefore = chaos;
   };
   const checkChaosLater = () => {

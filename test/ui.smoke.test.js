@@ -201,6 +201,7 @@ const page = ({ hostname, stored = {}, opener = null, clipboard = true, holst = 
   });
   env.document = document;
   env.geese = () => shadow.children.filter((element) => element.className === 'geese').length;
+  env.scene = () => shadow.children.find((element) => element.className === 'geese')?.dataset.scene;
   env.toast = () => {
     const box = document.getElementById('sprintcap-toast');
     return box ? box.children.map((element) => element.textContent).join('') : null;
@@ -211,12 +212,13 @@ const page = ({ hostname, stored = {}, opener = null, clipboard = true, holst = 
 const flush = () => new Promise((resolve) => setImmediate(resolve));
 const plain = (value) => JSON.parse(JSON.stringify(value));
 
-const overloadedKaiten = () => page({
+const overloadedKaiten = (stored = {}) => page({
   hostname: 'dodopizza.kaiten.ru',
   stored: {
     'sprintCapacity.v1.board': '68084',
     'sprintCapacity.v1.settings.68084': JSON.stringify({ team: { back: { people: 1 } } }),
     'sprintCapacity.v1.geese.68084': JSON.stringify('2026-10-02'),
+    ...stored,
   },
   fetch: (url) => Promise.resolve({
     ok: true,
@@ -238,6 +240,22 @@ test('Перегруз: гуси бегут при каждом открытии
   // Assert
   assert.equal(first.geese(), 1);
   assert.equal(reopened.geese(), 1);
+});
+
+test('Перегруз: при следующем открытии панели гуси играют другую сцену', async () => {
+  // Arrange
+  const first = overloadedKaiten();
+  await flush();
+  const shown = first.scene();
+
+  // Act
+  const next = overloadedKaiten({ 'sprintCapacity.v1.gooseScene': first.stored.get('sprintCapacity.v1.gooseScene') });
+  await flush();
+
+  // Assert
+  assert.ok(shown);
+  assert.ok(next.scene());
+  assert.notEqual(next.scene(), shown);
 });
 
 test('Панель на Kaiten: красная буква H без входа открывает вход через Holst', () => {
