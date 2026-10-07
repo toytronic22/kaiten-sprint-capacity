@@ -354,7 +354,7 @@ async function holstApply(payload, token) {
     const movedSince = lastRun === null ? null : marked.filter((item) => item.movedAt > lastRun).length;
     const markedText = `Подсвечено карт: ${marked.length} — подвинулись с ${HOLST_STYLE.weekdays[new Date(since).getDay()]} ${shortTime(since).slice(0, 5)}${movedSince === null ? '' : `, из них с прошлого обновления: ${movedSince}`}`;
     const unknown = unknownColumnsText(payload.unknown);
-    const percentLine = payload.percent === null ? 'Процент не написал: в спринте нет карт'
+    const percentLine = payload.percent === null ? `Процент не написал: ${payload.of ? 'у карт спринта нет оценки' : 'в спринте нет карт'}`
       : percentProblem ? `Процент не написал: ${percentProblem}`
       : `Спринт: ${payload.percent}%${labelWrite ? ' — написал над графиком' : ''}, в Done ${payload.done} из ${payload.of}`;
     if (!listChanged && !labelWrite && !labelMove && !cleanup && !fit && !forcedFont && !reportChanged && !pastChanged) {

@@ -1138,7 +1138,7 @@ const ISSUE_LABELS = {
   noEstimate: 'Без оценки',
 };
 
-const PROGRESS_HINT = 'Прогресс спринта: карта весит свои SP, баг и карта без оценки — 1 SP. Готовность по колонке: To Do 0%, Doing 30%, Review 65%, Design Review и Test 80%, Waiting for release 97%, Done 100%';
+const PROGRESS_HINT = 'Прогресс спринта: карта и баг весят свои SP, баг без оценки — 0, задача без оценки — 1 SP. Готовность по колонке: To Do 0%, Doing 30%, Review 65%, Design Review и Test 80%, Waiting for release 97%, Done 100%';
 
 function escapeHtml(value) {
   const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
