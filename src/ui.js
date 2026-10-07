@@ -62,7 +62,7 @@ button { font: inherit; color: inherit; background: none; border: 0; border-radi
 .geese .blink { animation: noir-blink 3.2s steps(1, end) infinite; }
 .geese .flicker { animation: noir-flicker 3.7s steps(1, end) infinite; }
 .geese .surge { animation: noir-surge .7s steps(1, end) var(--bang) both; }
-.geese .tube, .geese .lit { position: absolute; left: 5vw; top: 6vh; font: italic 400 clamp(44px, 11vh, 128px)/1 "Brush Script MT", "Snell Roundhand", "Segoe Script", cursive; letter-spacing: .02em; white-space: nowrap; transform: rotate(-6deg); }
+.geese .tube, .geese .lit { position: absolute; left: 5vw; top: 6vh; font: italic 400 clamp(44px, 11vh, 128px)/1 "Apple Chancery", "Segoe Script", "Brush Script MT", cursive; letter-spacing: .02em; white-space: nowrap; transform: rotate(-6deg); }
 .geese .tube { color: #3a1416; text-shadow: 0 1px 0 #000; }
 .geese .lit { color: #fff1f1; text-shadow: 0 0 .02em #fff, 0 0 .08em #ff5a5a, 0 0 .18em #ff2424, 0 0 .4em #e00000, 0 0 .8em #a00000; }
 .geese .glow { background: radial-gradient(ellipse 42% 48% at 20% 12%, rgba(255, 34, 34, .26), rgba(255, 34, 34, .07) 55%, transparent 78%); mix-blend-mode: screen; }
@@ -649,7 +649,8 @@ const PANEL_HTML = `
   </div>
 </div>`;
 
-const noirScene = () => {
+const noirScene = (names = []) => {
+  const label = escapeHtml(chaosLabel(names));
   const fix = (value) => +value.toFixed(1);
   const points = (list) => list.map(([x, y]) => `${fix(x)},${fix(y)}`).join(' ');
   const wallY = (x, v) => -40 + .525 * x + v * (752 - .94 * x);
@@ -801,7 +802,7 @@ ${wing}
 <div class="rain far"></div>
 <div class="rain"></div>
 <div class="glow blink"></div>
-<div class="surge"><div class="tube">Overload</div><div class="lit blink">Overload</div></div>
+<div class="surge"><div class="tube">${label}</div><div class="lit blink">${label}</div></div>
 <div class="grain"></div>
 <div class="vignette"></div>
 <div class="flash"></div>`;
@@ -829,7 +830,8 @@ ${head}
 <g transform="translate(46 -100)"><g class="sg-wing"><path d="M0 0 C-26 -14 -84 -16 -126 0 C-118 6 -110 8 -104 10 C-112 16 -114 20 -110 24 C-96 22 -88 24 -82 26 C-86 32 -84 36 -78 38 C-40 40 -8 30 2 14 Z" fill="${wing}" stroke="${line}" stroke-width="2.5" stroke-linejoin="round"/></g></g>`;
 };
 
-const liftScene = () => {
+const liftScene = (names = []) => {
+  const label = chaosLabel(names);
   const arrive = (index) => +(1.3 + .28 * index).toFixed(2);
   const crowd = [[690, 800, .78, -1], [805, 800, .78, 1], [905, 800, .78, 1], [740, 708, .78, 1], [880, 708, .78, -1], [690, 618, .76, 1], [800, 618, .76, -1], [912, 618, .76, -1], [750, 528, .74, 1, 1], [868, 528, .74, -1, 1], [672, 802, .84, 1]]
     .map(([x, y, s, dir, bent], index) => ({ y: index === 10 ? 999 : y, html: `<g transform="translate(${x} ${y}) scale(${s * dir} ${s})"><g class="lf-in" style="--d:${arrive(index)}s"><g class="${index === 10 ? 'lf-tug' : ''}${bent ? 'lf-bent' : ''}">${sideGoose()}</g></g></g>` }))
@@ -868,7 +870,7 @@ ${gosling('lf-gb')}
 <path d="M0 140 Q400 120 560 170 M1080 60 Q1300 90 1600 70" fill="none" stroke="#000" stroke-opacity=".05" stroke-width="30"/>
 <rect x="593" y="193" width="414" height="614" fill="none" stroke="#3b2a1e" stroke-width="14"/>
 <rect x="714" y="124" width="172" height="66" rx="8" fill="#5c5348"/>
-${led('0/4', 34, '#5be37f', 0)}${counts}${led('12/4', 34, '#ff4b3a', 6.75)}${led('ПЕРЕГРУЗ', 23, '#ff4b3a', 6.9, 'lf-blink')}${led('▼', 34, '#ff4b3a', 8.05, 'lf-blink')}${led('Overload', 26, '#ff4b3a', 10.5, 'lf-blink')}
+${led('0/4', 34, '#5be37f', 0)}${counts}${led('12/4', 34, '#ff4b3a', 6.75)}${led('ПЕРЕГРУЗ', 23, '#ff4b3a', 6.9, 'lf-blink')}${led('▼', 34, '#ff4b3a', 8.05, 'lf-blink')}${led(escapeHtml(label), Math.min(26, Math.floor(144 / (label.length * .6))), '#ff4b3a', 10.5, 'lf-blink')}
 <rect x="330" y="250" width="220" height="118" rx="10" fill="#f3f1ea" stroke="#2c5aa0" stroke-width="5"/>
 <text x="440" y="296" font-size="34" font-weight="800" fill="#2c5aa0" text-anchor="middle" letter-spacing="4">ЛИФТ</text>
 <text x="440" y="332" font-size="21" fill="#23324d" text-anchor="middle">не более</text>
@@ -927,11 +929,15 @@ const barScene = (names = []) => {
     const y = 350 + Math.round(Math.random() * 140);
     return `<g transform="translate(${x} ${y})"><polygon class="wl-flash" style="--d:${(3.6 + index * .16).toFixed(2)}s" points="0,-16 4,-4 16,0 4,4 0,16 -4,4 -16,0 -4,-4" fill="#fff"/></g>`;
   }).join('');
-  const judge = (x, value, delay, wide) => `<g transform="translate(${x} 975) scale(.66)"><g class="wl-judge" style="--d:${(delay - .5).toFixed(2)}s">
-<g class="wl-card" style="--d:${delay}s"><path d="M20 -100 C40 -150 44 -200 30 -236" stroke="#f4f3ee" stroke-width="26" stroke-linecap="round" fill="none"/><rect x="${wide ? -112 : -72}" y="-330" width="${wide ? 224 : 144}" height="96" rx="8" fill="#fff" stroke="#222" stroke-width="4"/><text x="0" y="-262" font-size="${wide ? 42 : 58}" font-weight="900" fill="${wide ? '#d8231b' : '#111'}" text-anchor="middle">${value}</text></g>
+  const judge = (x, value, delay, wide) => {
+    const width = wide ? Math.min(400, Math.max(224, value.length * 25 + 24)) : 144;
+    const size = wide ? Math.min(42, Math.floor((width - 16) / (value.length * .6))) : 58;
+    return `<g transform="translate(${x} 975) scale(.66)"><g class="wl-judge" style="--d:${(delay - .5).toFixed(2)}s">
+<g class="wl-card" style="--d:${delay}s"><path d="M20 -100 C40 -150 44 -200 30 -236" stroke="#f4f3ee" stroke-width="26" stroke-linecap="round" fill="none"/><rect x="${-width / 2}" y="-330" width="${width}" height="96" rx="8" fill="#fff" stroke="#222" stroke-width="4"/><text x="0" y="-262" font-size="${size}" font-weight="900" fill="${wide ? '#d8231b' : '#111'}" text-anchor="middle">${safe(value)}</text></g>
 <path d="M-58 0 C-56 -40 -30 -60 -18 -64 C-20 -90 -16 -110 -12 -128 L12 -128 C16 -110 20 -90 18 -64 C30 -60 56 -40 58 0 Z" fill="#e9e7e0" stroke="${line}" stroke-width="4"/>
 <circle cy="-150" r="32" fill="#e9e7e0" stroke="${line}" stroke-width="4"/><path d="M-30 -164 A32 32 0 0 1 30 -164 Z" fill="#20232b"/><rect x="-140" y="-70" width="280" height="80" rx="6" fill="#2a3346"/><text x="0" y="-26" font-size="22" font-weight="800" fill="#c9d3e6" text-anchor="middle">СУДЬЯ</text><circle cx="-11" cy="-146" r="4.5" fill="#111"/><circle cx="11" cy="-146" r="4.5" fill="#111"/><path d="M-11 -136 Q0 -132 11 -136 L0 -118 Z" fill="#ee9433"/>
 </g></g>`;
+  };
   return `<svg class="wl" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
 <g class="wl-zoom"><g class="wl-cam">
 <rect width="1600" height="900" fill="#121827"/>
@@ -984,14 +990,14 @@ ${drift}
 </g>
 <text class="wl-hey" x="1190" y="610" font-size="64" font-weight="900" fill="#ffd23a" stroke="#1a1a1a" stroke-width="5" paint-order="stroke">ХЭЙ!</text>
 <text class="wl-bang" x="800" y="560" font-size="96" font-weight="900" fill="#ff3b2f" stroke="#1a1a1a" stroke-width="6" paint-order="stroke" text-anchor="middle">БДЫЩ!</text>
-${judge(420, '9.8', 6.6)}${judge(800, '10', 7)}${judge(1180, 'Overload', 7.5, true)}
+${judge(420, '9.8', 6.6)}${judge(800, '10', 7)}${judge(1180, chaosLabel(names), 7.5, true)}
 </g></g>
 </svg>
 <div class="wl-live"><b>● LIVE</b> P2P Sport</div>
 <div class="wl-third"><b>Гусь Гусев</b><span>сборная P2P · рывок: ${list.map(safe).join(' + ')}</span></div>`;
 };
 
-const rocketScene = () => {
+const rocketScene = (names = []) => {
   const stars = Array.from({ length: 40 }, () => `<circle cx="${Math.round(Math.random() * 1600)}" cy="${Math.round(Math.random() * 520)}" r="${(1 + Math.random() * 2).toFixed(1)}"/>`).join('');
   const lattice = Array.from({ length: 10 }, (_, i) => `M600 ${760 - i * 51} L660 ${709 - i * 51} M660 ${760 - i * 51} L600 ${709 - i * 51}`).join(' ');
   const steam = [[-170, -20, 60], [-260, -50, 46], [-110, -60, 40], [170, -20, 60], [260, -50, 46], [110, -60, 40], [-330, -10, 36], [330, -10, 36]]
@@ -1065,10 +1071,10 @@ ${skull('#aaa69a', 104)}${skull('#f4f3ee', 100)}
 <div class="rk-count" style="--d:.5s;--e:1.2s">3</div><div class="rk-count" style="--d:1.2s;--e:1.9s">2</div><div class="rk-count" style="--d:1.9s;--e:2.6s">1</div><div class="rk-count rk-go" style="--d:2.6s;--e:3.2s">ПОЕХАЛИ!</div>
 <div class="rk-g" style="--d:3.4s;--e:6.2s">ПЕРЕГРУЗКА <b>12g</b></div>
 <div class="rk-sub" style="--d:6.9s;--e:8.7s">ЦУП: Гусь, приём? Гусь?..</div>
-<div class="rk-g rk-over" style="--d:9.5s;--e:99s">ПЕРЕГРУЗКА <b>Overload</b></div>`;
+<div class="rk-g rk-over" style="--d:9.5s;--e:99s">ПЕРЕГРУЗКА <b>${escapeHtml(chaosLabel(names))}</b></div>`;
 };
 
-const natureScene = () => {
+const natureScene = (names = []) => {
   const colors = ['#e2574c', '#3d7be0', '#f2b33d', '#4caf6a', '#9b6ad6'];
   const tile = (i) => `<rect x="-62" y="-22" width="124" height="22" rx="4" fill="#fff" stroke="#c9c4b8" stroke-width="2"/><rect x="-62" y="-22" width="9" height="22" rx="3" fill="${colors[i % colors.length]}"/><path d="M-44 -14 H${10 + (i * 17) % 34} M-44 -7 H${-6 + (i * 23) % 30}" stroke="#b9b4a8" stroke-width="3" stroke-linecap="round"/>`;
   const shift = (i) => ((i * 37) % 21) - 10;
@@ -1123,7 +1129,7 @@ ${leaves}
 <div class="nt-sub" style="--d:3.8s;--e:8.8s">Самец пытается унести в гнездо больше задач, чем способен поднять</div>
 <div class="nt-sub" style="--d:9s;--e:12s">Брачный танец перед тимлидом</div>
 <div class="nt-sub" style="--d:12.2s;--e:15.8s">Увы, не каждый гусь доживёт до релиза</div>
-<div class="nt-end"><span>Природа беспощадна.</span><b>Overload</b></div>`;
+<div class="nt-end"><span>Природа беспощадна.</span><b>${escapeHtml(chaosLabel(names))}</b></div>`;
 };
 
 const ISSUE_LABELS = {

@@ -373,6 +373,17 @@ test('беспредел: трещит тот, у кого вдвое больш
   assert.deepEqual(qaOnly, ['QA']);
 });
 
+test('гуси: вместо Overload пишется, кто трещит, а без имён остаётся Overload', () => {
+  // Arrange
+  const cases = [[], ['QA'], ['Бэк', 'Frontend'], ['Бэк', 'Mobile', 'QA']];
+
+  // Act
+  const labels = cases.map(core.chaosLabel);
+
+  // Assert
+  assert.deepEqual(labels, ['Overload', 'QA', 'Бэк и Frontend', 'Бэк, Mobile и QA']);
+});
+
 test('конец планирования: всё, что прилетело после, считается отдельно «сверху» и остаётся в «прибавилось»', () => {
   // Arrange
   const start = [card(1, { size: 6, sp: 3, platforms: [BACK] }), card(4, { size: 9, sp: 5, platforms: [BACK], state: DONE })];

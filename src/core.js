@@ -254,6 +254,12 @@ function chaosNames(rows, config = SPRINT_CAPACITY) {
   return rows.filter(isChaos).map((row) => names[row.direction]);
 }
 
+function chaosLabel(names) {
+  if (!names.length) return 'Overload';
+  if (names.length === 1) return names[0];
+  return `${names.slice(0, -1).join(', ')} и ${names[names.length - 1]}`;
+}
+
 function signed(value) {
   return `${value < 0 ? '−' : '+'}${formatNumber(Math.abs(value))}`;
 }
@@ -375,4 +381,4 @@ function capacityLogFromComments(comments) {
   return log;
 }
 
-if (typeof module !== 'undefined') module.exports = { SPRINT_CAPACITY, DIRECTIONS, DIRECTION_LABELS, toNumber, round1, formatNumber, plural, readEstimate, platformOf, needsQa, isBug, splitEstimate, progressStage, progressWeight, estimateIssues, defaultSettings, normalizeSettings, personDaysOf, capacityOf, capacityDays, buildReport, boardConfig, isChaos, chaosNames, formatRow, takeSnapshot, takePlanEnd, normalizeCapacity, normalizeSnapshot, boardTitle, snapshotComment, snapshotFromComments, planEndComment, planEndFromComments, capacityLogFromComments };
+if (typeof module !== 'undefined') module.exports = { SPRINT_CAPACITY, DIRECTIONS, DIRECTION_LABELS, toNumber, round1, formatNumber, plural, readEstimate, platformOf, needsQa, isBug, splitEstimate, progressStage, progressWeight, estimateIssues, defaultSettings, normalizeSettings, personDaysOf, capacityOf, capacityDays, buildReport, boardConfig, isChaos, chaosNames, chaosLabel, formatRow, takeSnapshot, takePlanEnd, normalizeCapacity, normalizeSnapshot, boardTitle, snapshotComment, snapshotFromComments, planEndComment, planEndFromComments, capacityLogFromComments };
