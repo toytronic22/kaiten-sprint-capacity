@@ -1646,8 +1646,8 @@ function sprintCapacityMount(config) {
       const current = buildReport({ cards, settings, snapshot, planEnd, config: settingsNow });
       const columns = holstColumns(boardJson);
       const capacityLog = kaitenCardComments(config.snapshotCardId).then(capacityLogFromComments).catch(() => null);
-      const sprintJob = Promise.all([sprintReportLoad({ cards, boardId: board, now, columns, load: kaitenSprint, store: { read: (key) => readStored(key, null), write: writeStored } }), capacityLog])
-        .then(([loaded, log]) => ({ lines: sprintReportLines({ ...loaded, capacity: capacityDays(settings), capacityLog: log, labels: settingsNow.labels, now }) }))
+      const sprintJob = Promise.all([sprintReportLoad({ cards, boardId: board, now, columns, load: kaitenSprint, loadBugs: sprintBugCards, store: { read: (key) => readStored(key, null), write: writeStored } }), capacityLog])
+        .then(([loaded, log]) => ({ report: sprintReportBlocks({ ...loaded, capacity: capacityDays(settings), capacityLog: log, labels: settingsNow.labels, now }) }))
         .catch((error) => ({ problem: error.message || String(error) }));
       const since = holstLookback(now);
       const historyIds = holstHistoryIds(cards, since);

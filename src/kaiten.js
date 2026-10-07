@@ -73,3 +73,9 @@ async function kaitenCards(query) {
   }
   return cards;
 }
+
+async function sprintBugCards({ boards, from, to }) {
+  const cards = {};
+  for (const board of boards) Object.assign(cards, await kaitenCards(`board_id=${board}&type_ids=${SPRINT_REPORT.bugTypeIds.join(',')}&created_after=${encodeURIComponent(from)}&created_before=${encodeURIComponent(to)}`));
+  return Object.values(cards);
+}
