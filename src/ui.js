@@ -34,7 +34,14 @@ button { font: inherit; color: inherit; background: none; border: 0; border-radi
 .geese .hic { animation: noir-hic .5s ease-out 2.6s both; }
 .geese .arm-l { animation: noir-swig 4.9s ease-in-out both; }
 .geese .swing-l { animation: noir-swing 1.1s ease-in-out 4.9s 2 both; }
-.geese .swing-r { animation: noir-swing 1.1s ease-in-out .4s 6 both; }
+.geese .swing-r { animation: noir-swing 1.1s ease-in-out .4s 2.5 both, noir-swing 1.1s ease-in-out 5.45s 1.5 forwards; }
+.geese .arm-r { animation: noir-drag 5.45s ease-in-out both; }
+.geese .cig-turn { animation: noir-twist 5.45s ease-in-out both; }
+.geese .cig-mouth { animation: noir-cigm 4.9s linear both; }
+.geese .cig-hand { animation: noir-cigh 4.9s linear both; }
+.geese .smoke-m { animation: noir-smokem 5.6s ease-in-out both; }
+.geese .smoke-h { animation: noir-smokeh 4.9s ease-in-out both; }
+.geese .whiff { animation: noir-whiff 2.8s ease-out var(--d) infinite; }
 .geese .lid { animation: noir-lid var(--bang) linear both; }
 .geese .lean { animation: noir-lean .4s ease-in-out 8.5s both; }
 .geese .gunrise { animation: noir-gunrise .8s cubic-bezier(.2, .7, .3, 1) 7.9s both; }
@@ -74,6 +81,13 @@ button { font: inherit; color: inherit; background: none; border: 0; border-radi
 @keyframes noir-leg { to { transform: translateY(-9px); } }
 @keyframes noir-hic { 0%, 45%, 100% { transform: translateY(0px); } 20% { transform: translateY(-12px); } 62% { transform: translateY(-3px); } }
 @keyframes noir-swig { 0%, 8.2% { transform: rotate(8deg) scale(1); } 13.8% { transform: rotate(14deg) scale(1); } 25% { transform: rotate(2deg) scale(1); } 36.2% { transform: rotate(14deg) scale(1); } 47.4% { transform: rotate(2deg) scale(1); } 58.7% { transform: rotate(14deg) scale(1); } 69.9% { transform: rotate(2deg) scale(1); } 73.5% { transform: rotate(8deg) scale(1); } 80.6% { transform: rotate(-152.9deg) scale(1.46); } 86.7% { transform: rotate(-155deg) scale(1.46); } 91.8% { transform: rotate(-152deg) scale(1.46); } 100% { transform: rotate(8deg) scale(1); } }
+@keyframes noir-drag { 0%, 57.8% { transform: rotate(0deg) scale(1); } 63.3% { transform: rotate(155.1deg) scale(1.048); } 67%, 68.3% { transform: rotate(193.42deg) scale(1.2006); } 73.4%, 83.5% { transform: rotate(155.1deg) scale(1.048); } 89%, 90.8% { transform: rotate(193.42deg) scale(1.2006); } 100% { transform: rotate(0deg) scale(1); } }
+@keyframes noir-twist { 0%, 68.3% { transform: rotate(0deg); } 73.4%, 83.5% { transform: rotate(100deg); } 89%, 100% { transform: rotate(0deg); } }
+@keyframes noir-cigm { 0%, 75.1% { opacity: 1; } 75.2%, 99.9% { opacity: 0; } 100% { opacity: 1; } }
+@keyframes noir-cigh { 0%, 75.1% { opacity: 0; } 75.2%, 99.9% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes noir-smokem { 0%, 66% { opacity: 1; } 75%, 87.5% { opacity: 0; } 100% { opacity: 1; } }
+@keyframes noir-smokeh { 0%, 81.6% { opacity: 0; } 87.8%, 91.8% { opacity: 1; } 98%, 100% { opacity: 0; } }
+@keyframes noir-whiff { 0% { opacity: 0; transform: translate(0px, 0px) scale(.4); } 12% { opacity: .85; } 45% { opacity: .6; } 100% { opacity: 0; transform: translate(var(--dx), -80px) scale(2.8); } }
 @keyframes noir-swing { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(6deg); } 75% { transform: rotate(-6deg); } }
 @keyframes noir-lid { 0%, 84.8% { transform: scaleY(1); } 86.7%, 88% { transform: scaleY(2.05); } 91.8%, 96.2% { transform: scaleY(1.15); } 98.4%, 100% { transform: scaleY(2.05); } }
 @keyframes noir-lean { to { transform: rotate(-3deg); } }
@@ -463,33 +477,33 @@ a:hover { text-decoration: underline; }
   94.44%, 100% { transform: translate(800px, 450px) scale(1.35) translate(-800px, -430px); }
 }
 .geese .nt text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
-.geese .nt-fly { animation: nt-fly 11s ease-in-out both; }
+.geese .nt-fly { animation: nt-fly 18.5s ease-in-out both; }
 .geese .nt-flap { transform-box: fill-box; transform-origin: center; animation: nt-flutter .12s linear infinite alternate; }
-.geese .nt-goose { animation: nt-walk 11s linear both, nt-gcarry 1.2s cubic-bezier(.4, 0, .8, .6) 7.8s forwards; }
-.geese .nt-shadow { animation: nt-off .01s linear 7.8s forwards; }
-.geese .nt-hop { animation: nt-hop .38s 5.1s 5; }
-.geese .nt-load { animation: nt-load 11s ease-in-out both; }
-.geese .nt-stack { animation: nt-off .01s linear 7.8s forwards; }
-.geese .nt-sway { animation: nt-sway 11s ease-in-out both; }
+.geese .nt-goose { animation: nt-walk 18.5s linear both, nt-gcarry 1.2s cubic-bezier(.4, 0, .8, .6) 13.5s forwards; }
+.geese .nt-shadow { animation: nt-off .01s linear 13.5s forwards; }
+.geese .nt-hop { animation: nt-hop .38s 9s 8; }
+.geese .nt-load { animation: nt-load 18.5s ease-in-out both; }
+.geese .nt-stack { animation: nt-off .01s linear 13.5s forwards; }
+.geese .nt-sway { animation: nt-sway 18.5s ease-in-out both; }
 .geese .nt-card { opacity: 0; animation: nt-on .01s linear var(--d) forwards, nt-drop .3s cubic-bezier(.5, 0, 1, .5) var(--d) both; }
-.geese .nt-goose .sg-leg { animation: nt-step .25s ease-in-out 9 alternate, nt-step .35s ease-in-out 2.75s 6 alternate, nt-step .09s linear 7.8s infinite alternate; }
+.geese .nt-goose .sg-leg { animation: nt-step .25s ease-in-out 12 alternate, nt-step .375s ease-in-out 3.9s 12 alternate, nt-step .09s linear 13.5s infinite alternate; }
 .geese .nt-goose .sg-alt, .geese .nt-lead .sg-alt { animation-direction: alternate-reverse; }
-.geese .nt-goose .sg-neck { animation: nt-neck 11s ease-in-out both; }
-.geese .nt-goose .sg-wing { animation: nt-wave .19s ease-in-out 5.1s 10 alternate, nt-wave .07s linear 7.8s infinite alternate; }
-.geese .nt-goose .sg-eye { animation: nt-wide .2s ease-out 7.8s both; }
-.geese .nt-leaf { opacity: 0; animation: nt-on .01s linear 7.8s forwards, nt-scatter 1.7s ease-out 7.8s both; }
-.geese .nt-eagle { animation: nt-dive .9s cubic-bezier(.5, 0, .9, .6) 6.9s both, nt-ecarry 1.2s cubic-bezier(.4, 0, .8, .6) 7.8s forwards; }
+.geese .nt-goose .sg-neck { animation: nt-neck 18.5s ease-in-out both; }
+.geese .nt-goose .sg-wing { animation: nt-wave .19s ease-in-out 9s 16 alternate, nt-wave .07s linear 13.5s infinite alternate; }
+.geese .nt-goose .sg-eye { animation: nt-wide .2s ease-out 13.5s both; }
+.geese .nt-leaf { opacity: 0; animation: nt-on .01s linear 13.5s forwards, nt-scatter 1.7s ease-out 13.5s both; }
+.geese .nt-eagle { animation: nt-dive .9s cubic-bezier(.5, 0, .9, .6) 12.6s both, nt-ecarry 1.2s cubic-bezier(.4, 0, .8, .6) 13.5s forwards; }
 .geese .nt-eagle .nt-wing { animation: nt-beat .16s ease-in-out infinite alternate; }
 .geese .nt-tag { animation: nt-tag .3s ease-in-out infinite alternate; }
-.geese .nt-lead { animation: nt-lwalk 11s linear both; }
-.geese .nt-lead .sg-leg { animation: nt-step .175s ease-in-out 4.6s 4 alternate; }
-.geese .nt-lead .sg-neck { animation: nt-nod .5s ease-in-out 5.5s 4 alternate, nt-tilt .7s ease-in-out 8.7s forwards; }
-.geese .nt-lead .sg-wing { animation: nt-shrug .7s ease-in-out 8.7s both; }
+.geese .nt-lead { animation: nt-lwalk 18.5s linear both; }
+.geese .nt-lead .sg-leg { animation: nt-step .225s ease-in-out 7.4s 4 alternate; }
+.geese .nt-lead .sg-neck { animation: nt-nod .5s ease-in-out 9.3s 4 alternate, nt-tilt .7s ease-in-out 14.6s forwards; }
+.geese .nt-lead .sg-wing { animation: nt-shrug .7s ease-in-out 14.6s both; }
 .geese .nt-bar { inset: 0 0 auto 0; height: 9%; background: #0d0c0b; }
 .geese .nt-low { inset: auto 0 0 0; }
 .geese .nt-logo { inset: 1.6% auto auto 3%; width: fit-content; height: fit-content; color: #f4e4b8; font: italic 700 clamp(12px, 1.8vw, 26px) Georgia, "Times New Roman", serif; letter-spacing: .04em; }
 .geese .nt-sub { inset: auto 0 2% 0; margin: 0 auto; width: fit-content; height: fit-content; max-width: 92%; color: #fff6d6; font: clamp(13px, 2vw, 28px) Georgia, "Times New Roman", serif; text-align: center; opacity: 0; animation: nt-on .01s linear var(--d) forwards, nt-off .01s linear var(--e) forwards; }
-.geese .nt-end { inset: 0; margin: auto; width: fit-content; height: fit-content; display: flex; flex-direction: column; align-items: center; gap: .15em; padding: .5em 1.2em; border-radius: .3em; background: rgba(28, 18, 8, .62); color: #f4e4b8; font: italic 700 clamp(20px, 4vw, 56px) Georgia, "Times New Roman", serif; opacity: 0; animation: nt-fade .7s ease-out 9.3s both; }
+.geese .nt-end { inset: 0; margin: auto; width: fit-content; height: fit-content; display: flex; flex-direction: column; align-items: center; gap: .15em; padding: .5em 1.2em; border-radius: .3em; background: rgba(28, 18, 8, .62); color: #f4e4b8; font: italic 700 clamp(20px, 4vw, 56px) Georgia, "Times New Roman", serif; opacity: 0; animation: nt-fade .7s ease-out 16s both; }
 .geese .nt-end b { font: 900 1.3em -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; color: #ff5a4a; letter-spacing: .06em; }
 @keyframes nt-on { to { opacity: 1; } }
 @keyframes nt-off { to { opacity: 0; } }
@@ -498,53 +512,57 @@ a:hover { text-decoration: underline; }
 @keyframes nt-flutter { from { transform: scale(1, 1); } to { transform: scale(.25, 1); } }
 @keyframes nt-walk {
   0% { transform: translate(-240px, 780px); }
-  20%, 25% { transform: translate(420px, 780px); }
-  30% { transform: translate(470px, 780px); }
-  34% { transform: translate(450px, 780px); }
-  38% { transform: translate(525px, 780px); }
-  41% { transform: translate(505px, 780px); }
-  45.45%, 100% { transform: translate(600px, 780px); }
+  16.22%, 21.08% { transform: translate(420px, 780px); }
+  24.86% { transform: translate(470px, 780px); }
+  29.19% { transform: translate(450px, 780px); }
+  34.05% { transform: translate(525px, 780px); }
+  37.84% { transform: translate(505px, 780px); }
+  45.41%, 100% { transform: translate(600px, 780px); }
 }
 @keyframes nt-gcarry { from { transform: translate(600px, 780px); } to { transform: translate(1910px, -84px); } }
 @keyframes nt-hop { 0% { transform: translateY(0); animation-timing-function: ease-out; } 50% { transform: translateY(-46px); animation-timing-function: ease-in; } 100% { transform: translateY(0); } }
 @keyframes nt-load {
-  0%, 25% { transform: rotate(0deg); }
-  30% { transform: rotate(-3deg); }
-  34% { transform: rotate(4deg); }
-  38% { transform: rotate(-5deg); }
-  42% { transform: rotate(5deg); }
-  45.45% { transform: rotate(-3deg); }
-  46.36%, 70.91% { transform: rotate(0deg); }
-  75% { transform: rotate(9deg); }
-  80% { transform: rotate(-7deg); }
-  85%, 100% { transform: rotate(5deg); }
+  0%, 21.08% { transform: rotate(0deg); }
+  24.86% { transform: rotate(-3deg); }
+  29.19% { transform: rotate(4deg); }
+  34.05% { transform: rotate(-5deg); }
+  38.92% { transform: rotate(5deg); }
+  45.41% { transform: rotate(-3deg); }
+  48.65%, 72.97% { transform: rotate(0deg); }
+  75.68% { transform: rotate(9deg); }
+  78.38% { transform: rotate(-7deg); }
+  81.08%, 100% { transform: rotate(5deg); }
 }
 @keyframes nt-sway {
-  0%, 25% { transform: rotate(0deg); }
-  30% { transform: rotate(3deg); }
-  35% { transform: rotate(-4deg); }
-  40% { transform: rotate(6deg); }
-  45% { transform: rotate(-7deg); }
-  50% { transform: rotate(12deg); }
-  55% { transform: rotate(-13deg); }
-  60% { transform: rotate(13deg); }
-  65% { transform: rotate(-9deg); }
-  69.09%, 100% { transform: rotate(0deg); }
+  0%, 21.08% { transform: rotate(0deg); }
+  25.95% { transform: rotate(3deg); }
+  30.81% { transform: rotate(-4deg); }
+  35.68% { transform: rotate(6deg); }
+  40.54% { transform: rotate(-7deg); }
+  45.41% { transform: rotate(5deg); }
+  50.81% { transform: rotate(-12deg); }
+  54.86% { transform: rotate(13deg); }
+  58.92% { transform: rotate(-13deg); }
+  62.97% { transform: rotate(12deg); }
+  67.03% { transform: rotate(-6deg); }
+  71.35%, 100% { transform: rotate(0deg); }
 }
 @keyframes nt-drop { from { transform: translateY(-700px); } to { transform: translateY(0); } }
 @keyframes nt-step { from { transform: rotate(-24deg); } to { transform: rotate(24deg); } }
 @keyframes nt-neck {
-  0%, 25% { transform: rotate(0deg); }
-  30% { transform: rotate(10deg); }
-  45.45% { transform: rotate(16deg); }
-  46.36% { transform: rotate(-6deg); }
-  50% { transform: rotate(8deg); }
-  53.5% { transform: rotate(-8deg); }
-  57% { transform: rotate(8deg); }
-  60.5% { transform: rotate(-8deg); }
-  63.64% { transform: rotate(0deg); }
-  66.36%, 70.91% { transform: rotate(-30deg); }
-  72.5%, 100% { transform: rotate(8deg); }
+  0%, 21.08% { transform: rotate(0deg); }
+  28.65% { transform: rotate(10deg); }
+  45.41% { transform: rotate(16deg); }
+  48.65% { transform: rotate(-6deg); }
+  50.81% { transform: rotate(8deg); }
+  52.97% { transform: rotate(-8deg); }
+  55.14% { transform: rotate(8deg); }
+  57.3% { transform: rotate(-8deg); }
+  59.46% { transform: rotate(8deg); }
+  61.62% { transform: rotate(-8deg); }
+  64.86% { transform: rotate(0deg); }
+  67.03%, 72.97% { transform: rotate(-30deg); }
+  74.59%, 100% { transform: rotate(8deg); }
 }
 @keyframes nt-wave { from { transform: rotate(0deg); } to { transform: rotate(55deg); } }
 @keyframes nt-wide { from { transform: scale(1); } to { transform: scale(1.7); } }
@@ -559,7 +577,10 @@ a:hover { text-decoration: underline; }
 @keyframes nt-ecarry { from { transform: translate(500px, 600px) rotate(0deg); } to { transform: translate(1810px, -264px) rotate(-8deg); } }
 @keyframes nt-beat { from { transform: scaleY(1); } to { transform: scaleY(-.55); } }
 @keyframes nt-tag { from { transform: rotate(-7deg); } to { transform: rotate(7deg); } }
-@keyframes nt-lwalk { 0%, 41.82% { transform: translate(1820px, 780px); } 48.18%, 100% { transform: translate(1150px, 780px); } }
+@keyframes nt-lwalk {
+  0%, 40% { transform: translate(1820px, 780px); }
+  44.86%, 100% { transform: translate(1150px, 780px); }
+}
 @keyframes nt-nod { from { transform: rotate(0deg); } to { transform: rotate(10deg); } }
 @keyframes nt-tilt { 0%, 100% { transform: rotate(0deg); } 30%, 70% { transform: rotate(-14deg); } }
 @keyframes nt-shrug { 0%, 100% { transform: rotate(0deg); } 30%, 70% { transform: rotate(40deg); } }
@@ -653,6 +674,7 @@ const noirScene = () => {
   }).join('');
   const puffs = [[60, -120, 0], [130, -60, .05], [20, -190, .12], [160, -160, .2], [90, -240, .3]]
     .map(([dx, dy, delay]) => `<circle class="puff" r="40" style="--dx:${dx}px;--dy:${dy}px;--d:${delay}s" fill="url(#noir-smoke) #777"/>`).join('');
+  const whiffs = [30, 44, 24, 50, 36, 28, 46].map((dx, k) => `<circle class="whiff" r="9" style="--dx:${dx}px;--d:${(-.4 * k).toFixed(1)}s" fill="url(#noir-haze) #bbb"/>`).join('');
   const wing = '<path d="M4 -6 C-12 -4 -22 20 -22 52 C-22 86 -14 112 -6 134 C-2 124 0 116 2 110 C4 120 6 124 8 128 C12 104 16 70 16 40 C16 14 14 -4 4 -6 Z" fill="url(#noir-white) #bdbdbd" stroke="#7a7a7a" stroke-width="1.2"/>';
   const foot = '<path d="M0 0 V36" stroke="#4d4d4d" stroke-width="6" stroke-linecap="round"/><path d="M-2 33 L-15 41 Q-8 38.5 -5.5 43 Q0 39 5.5 43 Q8 38.5 15 41 L2 33 Z" fill="#3c3c3c"/>';
   const almond = 'M-22 -3 C-20 -11 -9 -12 -6.5 -6 C-8 0 -19 1.5 -22 -3 Z';
@@ -672,6 +694,7 @@ const noirScene = () => {
 <radialGradient id="noir-white" cx=".62" cy=".3" r=".8"><stop offset="0" stop-color="#f2f2f2"/><stop offset=".5" stop-color="#c2c2c2"/><stop offset=".85" stop-color="#777"/><stop offset="1" stop-color="#4a4a4a"/></radialGradient>
 <radialGradient id="noir-head" gradientUnits="userSpaceOnUse" cx="8.6" cy="-12.8" r="56"><stop offset="0" stop-color="#f2f2f2"/><stop offset=".5" stop-color="#c2c2c2"/><stop offset=".85" stop-color="#777"/><stop offset="1" stop-color="#4a4a4a"/></radialGradient>
 <radialGradient id="noir-sclera"><stop offset=".25" stop-color="#efdfdb"/><stop offset="1" stop-color="#c2625a"/></radialGradient>
+<radialGradient id="noir-haze"><stop offset="0" stop-color="#d6d6d6" stop-opacity=".95"/><stop offset=".55" stop-color="#c8c8c8" stop-opacity=".55"/><stop offset="1" stop-color="#c8c8c8" stop-opacity="0"/></radialGradient>
 <radialGradient id="noir-smoke"><stop offset="0" stop-color="#b8b8b8" stop-opacity=".9"/><stop offset="1" stop-color="#b8b8b8" stop-opacity="0"/></radialGradient>
 <radialGradient id="noir-halo"><stop offset="0" stop-color="#fff" stop-opacity=".35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
 </defs>
@@ -719,7 +742,6 @@ const noirScene = () => {
 <ellipse cy="232" rx="92" ry="100" fill="url(#noir-white) #bdbdbd"/>
 <path d="M-52 196 q8 7 16 0 M-20 214 q8 7 16 0 M18 198 q8 7 16 0 M-40 246 q8 7 16 0 M4 252 q8 7 16 0 M40 236 q8 7 16 0" fill="none" stroke="#8a8a8a" stroke-opacity=".45" stroke-width="1.6" stroke-linecap="round"/>
 <path d="M-6 144 L10 144 L7 156 L-3 156 Z M-3 156 L7 156 L14 205 L6 218 L-2 207 Z" fill="#141416"/>
-<g transform="translate(70 168) scale(-1 1) rotate(8)"><g class="swing-r">${wing}</g></g>
 <ellipse rx="36" ry="32" fill="url(#noir-head) #bdbdbd"/>
 <path d="M-35 4 l-5 -3 M-36 10 l-6 0 M-33 -14 l-5 -4 M34 6 l6 -4 M35 12 l6 1 M33 -12 l5 -5" stroke="#9a9a9a" stroke-width="1.5" stroke-linecap="round"/>
 ${eyeball}<g transform="scale(-1 1)">${eyeball}</g>
@@ -736,10 +758,15 @@ ${sunken}<g transform="scale(-1 1)">${sunken}</g>
 <circle cy="22.5" r="2" fill="#4a4a4a"/>
 <g transform="translate(31 -12)"><g class="sweat"><path d="M0 -3 C1.6 -.5 2.4 1 2.4 2.2 A2.4 2.4 0 0 1 -2.4 2.2 C-2.4 1 -1.6 -.5 0 -3 Z" fill="#dfe7ea" stroke="#888" stroke-width=".5"/></g></g>
 <g class="hat"><g transform="translate(0 -28) rotate(-8)">${hat}</g></g>
+<g class="cig-mouth">
 <path d="M9 20 L23 30.5" stroke="#e4e4e4" stroke-width="3"/>
 <path d="M23 30.5 L24.2 31.4" stroke="#8a8a8a" stroke-width="3"/>
 <circle class="ember" cx="24.8" cy="31.8" r="1.5" fill="#ff3b30"/>
 <g fill="none" stroke="#aaa" stroke-width=".8" stroke-linecap="round"><path class="wisp" d="M25 29 q-3 -5 0 -9 q3 -4 0 -8"/><path class="wisp" d="M25 29 q3 -5 0 -9 q-3 -4 0 -8"/></g>
+</g>
+<g class="smoke-m"><g transform="translate(25 30)">${whiffs}</g></g>
+<g class="smoke-h"><g transform="translate(119.7 35.5)">${whiffs}</g></g>
+<g transform="translate(70 168) scale(-1 1) rotate(8)"><g class="swing-r"><g class="arm-r">${wing}<g transform="translate(1 128)"><g class="cig-turn"><g class="cig-hand"><path d="M-3.28 5.31 L4.38 -7.09" stroke="#e4e4e4" stroke-width="2.5"/><path d="M4.38 -7.09 L5.04 -8.15" stroke="#8a8a8a" stroke-width="2.5"/><circle class="ember" cx="5.38" cy="-8.64" r="1.25" fill="#ff3b30"/></g></g></g></g></g></g>
 <g transform="translate(-70 168)"><g class="swing-l"><g class="arm-l">
 <path d="M-3 112 H5 V140 C5 143 13 145 13 152 V198 C13 201 11 202 9 202 H-7 C-9 202 -11 201 -11 198 V152 C-11 145 -3 143 -3 140 Z" fill="#262829" fill-opacity=".92"/>
 <rect x="-4" y="108" width="10" height="4.5" rx="1" fill="#3a3c3e"/>
@@ -1045,7 +1072,7 @@ const natureScene = () => {
   const colors = ['#e2574c', '#3d7be0', '#f2b33d', '#4caf6a', '#9b6ad6'];
   const tile = (i) => `<rect x="-62" y="-22" width="124" height="22" rx="4" fill="#fff" stroke="#c9c4b8" stroke-width="2"/><rect x="-62" y="-22" width="9" height="22" rx="3" fill="${colors[i % colors.length]}"/><path d="M-44 -14 H${10 + (i * 17) % 34} M-44 -7 H${-6 + (i * 23) % 30}" stroke="#b9b4a8" stroke-width="3" stroke-linecap="round"/>`;
   const shift = (i) => ((i * 37) % 21) - 10;
-  const stack = Array.from({ length: 16 }, (_, i) => `<g transform="translate(${shift(i)} ${-22 * i})"><g class="nt-card" style="--d:${(2.75 + i * .115).toFixed(3)}s">${tile(i)}</g></g>`).join('');
+  const stack = Array.from({ length: 16 }, (_, i) => `<g transform="translate(${shift(i)} ${-22 * i})"><g class="nt-card" style="--d:${(3.9 + i * .2).toFixed(1)}s">${tile(i)}</g></g>`).join('');
   const leaves = Array.from({ length: 16 }, (_, i) => {
     const y = 656 - 22 * i;
     const dx = ((i * 53) % 400) - 200 + (i % 2 ? 40 : -40);
@@ -1092,10 +1119,10 @@ ${leaves}
 </svg>
 <div class="nt-bar"></div><div class="nt-bar nt-low"></div>
 <div class="nt-logo">В мире животных</div>
-<div class="nt-sub" style="--d:.4s;--e:2.6s">Перед нами гусь серый в период спринта</div>
-<div class="nt-sub" style="--d:2.75s;--e:5s">Самец пытается унести в гнездо больше задач, чем способен поднять</div>
-<div class="nt-sub" style="--d:5.1s;--e:7s">Брачный танец перед тимлидом</div>
-<div class="nt-sub" style="--d:7.1s;--e:9.2s">Увы, не каждый гусь доживёт до релиза</div>
+<div class="nt-sub" style="--d:.4s;--e:3.6s">Перед нами гусь серый в период спринта</div>
+<div class="nt-sub" style="--d:3.8s;--e:8.8s">Самец пытается унести в гнездо больше задач, чем способен поднять</div>
+<div class="nt-sub" style="--d:9s;--e:12s">Брачный танец перед тимлидом</div>
+<div class="nt-sub" style="--d:12.2s;--e:15.8s">Увы, не каждый гусь доживёт до релиза</div>
 <div class="nt-end"><span>Природа беспощадна.</span><b>Overload</b></div>`;
 };
 
@@ -1886,7 +1913,7 @@ function sprintCapacityMount(config) {
 
   let chaosBefore = false;
   let chaosTimer = null;
-  const GOOSE_SCENES = [{ name: 'lift', draw: liftScene, end: 11.3 }, { name: 'bar', draw: barScene, end: 10.6 }, { name: 'rocket', draw: rocketScene, end: 10.8 }, { name: 'nature', draw: natureScene, end: 11 }, { name: 'noir', draw: noirScene, end: 11.6 }];
+  const GOOSE_SCENES = [{ name: 'lift', draw: liftScene, end: 11.3 }, { name: 'bar', draw: barScene, end: 10.6 }, { name: 'rocket', draw: rocketScene, end: 10.8 }, { name: 'nature', draw: natureScene, end: 18.5 }, { name: 'noir', draw: noirScene, end: 11.6 }];
   const releaseGeese = (names) => {
     if ($('.geese')) return;
     const last = GOOSE_SCENES.findIndex((item) => item.name === readStored('gooseScene', null));
