@@ -11,7 +11,7 @@ const SPRINT_CAPACITY = {
   doneState: 3,
   bugTypeIds: [446247],
   bugTypeName: /bug|баг/i,
-  progress: { stages: { 'to do': 0, doing: 0.3, review: 0.65, 'design review': 0.8, test: 0.8, 'waiting for release': 0.97, done: 1 }, bugWeight: 1, emptyWeight: 1 },
+  progress: { stages: { 'to do': 0, doing: 0.3, review: 0.65, 'design review': 0.8, test: 0.8, 'waiting for release': 0.97, done: 1 }, emptyWeight: 1, bugEmptyWeight: 0 },
 };
 
 const DIRECTIONS = ['back', 'front', 'qa'];
@@ -94,9 +94,9 @@ function progressStage(card, config = SPRINT_CAPACITY) {
 }
 
 function progressWeight(card, config = SPRINT_CAPACITY) {
-  if (isBug(card, config)) return config.progress.bugWeight;
   const parts = splitEstimate(readEstimate(card, config));
-  return parts.dev === null ? config.progress.emptyWeight : Math.max(0, parts.dev + parts.qa);
+  if (parts.dev !== null) return Math.max(0, parts.dev + parts.qa);
+  return isBug(card, config) ? config.progress.bugEmptyWeight : config.progress.emptyWeight;
 }
 
 function estimateIssues(estimate, platform, needQa) {

@@ -613,10 +613,10 @@ test('прогресс спринта: Design Review готова, как Test, 
   assert.equal(progress.percent, 40);
 });
 
-test('прогресс спринта: любой баг весит 1 SP, даже с оценкой; карта без оценки — тоже 1 SP', () => {
+test('прогресс спринта: баг с оценкой весит свои SP, баг без оценки — 0, задача без оценки — 1 SP', () => {
   // Arrange
   const cards = [
-    inColumn(card(1, { size: 8, sp: 5, type: WEB_BUG }), 'Doing'),
+    inColumn(card(1, { size: 4, type: WEB_BUG }), 'Doing'),
     inColumn(card(2, { type: WEB_BUG }), 'Done'),
     inColumn(card(3), 'Review'),
     inColumn(card(4, { size: 1, sp: 1 }), 'To Do'),
@@ -626,7 +626,30 @@ test('прогресс спринта: любой баг весит 1 SP, даж
   const progress = progressOf(cards);
 
   // Assert
-  assert.deepEqual([progress.points, progress.percent], [4, 49]);
+  assert.deepEqual([progress.points, progress.done, progress.percent], [6, 1.9, 31]);
+});
+
+test('прогресс спринта: у бага оценка только в поле Story Points — весит её; размер и SP разные — весит больший', () => {
+  // Arrange
+  const onlySp = [inColumn(card(1, { sp: 3, type: WEB_BUG }), 'Done'), inColumn(card(2, { size: 1 }), 'To Do')];
+  const both = [inColumn(card(1, { size: 2, sp: 5, type: WEB_BUG }), 'Done'), inColumn(card(2, { size: 5 }), 'To Do')];
+
+  // Act
+  const actual = [onlySp, both].map((cards) => progressOf(cards)).map((progress) => [progress.points, progress.percent]);
+
+  // Assert
+  assert.deepEqual(actual, [[4, 75], [10, 50]]);
+});
+
+test('прогресс спринта: в спринте только баги без оценки — процента нет, карты считаются', () => {
+  // Arrange
+  const cards = [inColumn(card(1, { type: WEB_BUG }), 'Doing'), inColumn(card(2, { type: WEB_BUG, state: DONE }), 'Done')];
+
+  // Act
+  const report = core.buildReport({ cards, settings: core.defaultSettings() });
+
+  // Assert
+  assert.deepEqual([report.progress.points, report.progress.percent, report.done.count, report.done.of], [0, null, 1, 2]);
 });
 
 test('прогресс спринта: изменились SP — прогресс пересчитан', () => {
@@ -684,7 +707,7 @@ test('прогресс спринта: без карт процента нет, 
   assert.deepEqual([zero.points, zero.percent], [0, null]);
 });
 
-test('прогресс спринта 28.09–11.10 на доске Staff Core 30.09: 32%', () => {
+test('прогресс спринта 28.09–11.10 на доске Staff Core 30.09: 28% — девять багов без оценки не весят', () => {
   // Arrange
   const rows = [
     ['Doing', 13, 8, 0], ['Doing', null, null, 1], ['Doing', 2, 2, 0], ['To Do', 2, 2, 0], ['Review', 2, null, 0], ['To Do', 3, 3, 0],
@@ -700,5 +723,5 @@ test('прогресс спринта 28.09–11.10 на доске Staff Core 3
   const progress = progressOf(cards);
 
   // Assert
-  assert.deepEqual([progress.points, progress.percent], [95, 32]);
+  assert.deepEqual([progress.points, progress.percent], [86, 28]);
 });
