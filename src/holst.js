@@ -257,7 +257,7 @@ function holstReportFind(Y, objects, id) {
   return { old: false, object, children, anchor: (panel ? objects.get(panel) : object).get('position'), textScale: width > 0 ? Math.round((1000 * width) / HOLST_REPORT.width) / 1000 : stored.scale || 1, zIndex: stored.z || 0, sig: stored.sig || null, footer: children.find((childId) => partOf(childId) === 'footer') || null };
 }
 
-function holstWriteReport({ Y, objects, documents, found, place, report, sig, author, now }) {
+function holstWriteReport({ Y, objects, documents, found, place, report, sig, author, now, id }) {
   const anchor = found ? found.anchor : place;
   const scale = found ? found.textScale : place.textScale;
   const z = found ? found.zIndex : place.zIndex;
@@ -266,7 +266,7 @@ function holstWriteReport({ Y, objects, documents, found, place, report, sig, au
   if (found && found.old) holstDeleteObject(objects, documents, found.object.get('id'));
   if (!group) {
     group = new Y.Map();
-    const groupId = crypto.randomUUID();
+    const groupId = id || crypto.randomUUID();
     objects.set(groupId, group);
     group.set('id', groupId);
     group.set('type', 'group');
@@ -326,12 +326,24 @@ async function holstApply(payload, token) {
     const labelMove = moveLabel && Boolean(place);
     const labelWrite = labelChanged && !percentProblem;
     const sprintReport = payload.sprint || null;
-    const reportData = sprintReport && sprintReport.report ? sprintReport.report : null;
-    const reportFound = reportData ? holstReportFind(Y, objects, listRun.report) : null;
-    const reportPlace = reportData && !reportFound ? holstReportPlace({ objects: holstChartObjects({ Y, objects, documents, payload }), group: payload.group, chart: payload.chart }) : null;
-    const reportWrite = Boolean(reportData) && !(reportPlace && reportPlace.problem);
+    const reportRaw = sprintReport && sprintReport.report ? sprintReport.report : null;
+    const reportFound = reportRaw ? holstReportFind(Y, objects, listRun.report) : null;
+    const reportPlace = reportRaw && !reportFound ? holstReportPlace({ objects: holstChartObjects({ Y, objects, documents, payload }), group: payload.group, chart: payload.chart }) : null;
+    const reportWrite = Boolean(reportRaw) && !(reportPlace && reportPlace.problem);
+    const pastRaw = reportWrite && reportRaw.past ? reportRaw.past : null;
+    const pastFound = pastRaw ? holstReportFind(Y, objects, listRun.past) : null;
+    const groupIdOf = (found) => (found && !found.old ? found.object.get('id') : crypto.randomUUID());
+    const reportGroup = reportWrite ? groupIdOf(reportFound) : null;
+    const pastGroup = pastRaw ? groupIdOf(pastFound) : null;
+    const urls = { main: holstObjectUrl(HOLST_ORIGIN, payload.board, reportGroup), past: holstObjectUrl(HOLST_ORIGIN, payload.board, pastGroup) };
+    const reportData = reportRaw ? holstReportLinked(reportRaw, pastRaw ? urls : {}) : null;
+    const pastData = pastRaw ? holstReportLinked(pastRaw, urls) : null;
     const reportSig = reportData ? holstReportSignature(reportData) : null;
     const reportChanged = reportWrite && holstReportStale({ found: reportFound, sig: reportSig, parts: holstReportParts(reportData).length });
+    const reportAnchor = reportFound ? { at: reportFound.anchor, scale: reportFound.textScale, z: reportFound.zIndex } : reportPlace ? { at: reportPlace, scale: reportPlace.textScale, z: reportPlace.zIndex } : null;
+    const pastPlace = pastRaw && !pastFound ? holstPastPlace(reportAnchor.at, reportAnchor.scale, reportAnchor.z) : null;
+    const pastSig = pastData ? holstReportSignature(pastData) : null;
+    const pastChanged = Boolean(pastData) && holstReportStale({ found: pastFound, sig: pastSig, parts: holstReportParts(pastData).length });
     const reportProblem = !sprintReport ? null
       : sprintReport.problem ? `Отчёт спринта не посчитал: ${sprintReport.problem}`
       : reportPlace && reportPlace.problem ? `Отчёт спринта не написал: ${reportPlace.problem}`
@@ -345,7 +357,7 @@ async function holstApply(payload, token) {
     const percentLine = payload.percent === null ? 'Процент не написал: в спринте нет карт'
       : percentProblem ? `Процент не написал: ${percentProblem}`
       : `Спринт: ${payload.percent}%${labelWrite ? ' — написал над графиком' : ''}, в Done ${payload.done} из ${payload.of}`;
-    if (!listChanged && !labelWrite && !labelMove && !cleanup && !fit && !forcedFont && !reportChanged) {
+    if (!listChanged && !labelWrite && !labelMove && !cleanup && !fit && !forcedFont && !reportChanged && !pastChanged) {
       const why = `${payload.percent === null ? 'список как в Kaiten' : `над графиком уже ${payload.percent}%, список как в Kaiten`}${reportWrite ? ', отчёт спринта тот же' : ''}`;
       return { ok: !percentProblem, calm: !percentProblem && !reportProblem, text: [`${payload.title}: обновлять нечего — ${why}`, ...(percentProblem ? [percentLine] : []), ...(reportProblem ? [reportProblem] : []), ...(unknown ? [`Прогресс: ${unknown}`] : [])].join('\n') };
     }
@@ -356,15 +368,21 @@ async function holstApply(payload, token) {
     };
     let labelId = labelRoot ? listRun.label : null;
     let reportId = listRun.report && objects.get(listRun.report) instanceof Y.Map ? listRun.report : null;
+    let pastId = listRun.past && objects.get(listRun.past) instanceof Y.Map ? listRun.past : null;
     doc.on('updateV2', listen);
     doc.transact(() => {
       if (labelWrite && labelRoot) holstReplaceText({ Y, object: label, root: labelRoot, items: labelItems, author, now });
       else if (labelWrite) labelId = holstCreateText({ Y, objects, documents, x: place.x, y: place.y, scale: place.textScale, zIndex: place.zIndex, author, now, items: labelItems });
       if (labelMove) label.set('position', { x: place.x, y: place.y });
-      if (reportChanged) reportId = holstWriteReport({ Y, objects, documents, found: reportFound, place: reportPlace, report: reportData, sig: reportSig, author, now });
+      if (reportChanged) reportId = holstWriteReport({ Y, objects, documents, found: reportFound, place: reportPlace, report: reportData, sig: reportSig, author, now, id: reportGroup });
       else if (reportWrite) {
         const footer = objects.get(reportFound.footer);
         holstReplaceText({ Y, object: footer, root: documents.get(footer.get('documentId')), items: holstFooterItems(reportData.problem, now), author, now });
+      }
+      if (pastChanged) pastId = holstWriteReport({ Y, objects, documents, found: pastFound, place: pastPlace, report: pastData, sig: pastSig, author, now, id: pastGroup });
+      else if (pastData) {
+        const footer = objects.get(pastFound.footer);
+        holstReplaceText({ Y, object: footer, root: documents.get(footer.get('documentId')), items: holstFooterItems(pastData.problem, now), author, now });
       }
       for (const id of leftovers.lines) objects.delete(id);
       for (const id of leftovers.labels) {
@@ -383,7 +401,7 @@ async function holstApply(payload, token) {
         sticker.set('height', fit.height);
         sticker.set('textScale', fit.textScale);
       }
-      sticker.set('sprintcap', { t: payload.generatedAt, k: fit ? fit.k : scale, ...(labelId ? { label: labelId, placed: !moveLabel || labelMove } : {}), ...(reportId ? { report: reportId } : {}) });
+      sticker.set('sprintcap', { t: payload.generatedAt, k: fit ? fit.k : scale, ...(labelId ? { label: labelId, placed: !moveLabel || labelMove } : {}), ...(reportId ? { report: reportId } : {}), ...(pastId ? { past: pastId } : {}) });
       sticker.set('updated', { a: author, t: now });
     }, 'local');
     doc.off('updateV2', listen);
@@ -391,6 +409,7 @@ async function holstApply(payload, token) {
     const result = [`${payload.title}: готово`, percentLine];
     if (reportProblem) result.push(reportProblem);
     else if (reportWrite) result.push(!reportFound ? 'Отчёт спринта: написал под графиком' : reportFound.old ? 'Отчёт спринта: переделал в блоки на том же месте' : reportChanged ? 'Отчёт спринта: обновил' : 'Отчёт спринта: цифры те же');
+    if (pastData) result.push(!pastFound ? 'Прошлый спринт: написал справа от отчёта, ссылка на него — в отчёте' : pastChanged ? 'Прошлый спринт: обновил' : 'Прошлый спринт: цифры те же');
     result.push(markedText);
     result.push(`Список: ${plan.stats.cards} карт, оставил на месте ${plan.stats.kept}`);
     if (labelMove) result.push('Передвинул процент под заголовок графика');

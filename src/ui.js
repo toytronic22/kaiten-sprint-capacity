@@ -150,7 +150,6 @@ button { font: inherit; color: inherit; background: none; border: 0; border-radi
 .plan button.again { background: var(--soft); color: var(--fg); font-weight: 500; }
 .plan button.again:hover { background: var(--line); }
 .plan span { color: var(--muted); font-size: 12px; white-space: nowrap; }
-.plan select { flex: 1; min-width: 0; padding: 6px 8px; font: inherit; color: var(--fg); background: var(--field); border: 1px solid var(--line); border-radius: 8px; }
 .plan + .plan { margin-top: 8px; }
 .top { margin-left: 6px; padding: 0 6px; border-radius: 9px; background: #4d3d12; color: #f3cd62; font-size: 11px; font-weight: 600; }
 .bar .over-top { background: #c9a227; }
@@ -1290,11 +1289,8 @@ function sprintCapacityMount(config) {
     const plan = `<div class="plan"><button type="button" data-act="start-planning"${snapshot ? ' class="again"' : ''}${data.busy ? ' disabled' : ''}>Начать планирование</button>${since}</div>`;
     const endSince = planEnd ? `<span title="${escapeHtml(planEnd.author)}">${snapshotTime(planEnd.takenAt)}</span>` : '';
     const end = snapshot ? `<div class="plan"><button type="button" data-act="end-planning"${planEnd ? ' class="again"' : ''}${data.busy ? ' disabled' : ''}>Закончить планирование</button>${endSince}</div>` : '';
-    const sprintOptions = readStored(`sprintOptions.${boardId}`, null) || [{ mode: 'running', label: 'Идущий спринт' }, { mode: 'last', label: 'Прошлый спринт' }];
-    const sprintPick = readStored(`sprintPick.${boardId}`, null);
-    const sprintSelect = `<select data-act="holst-sprint" title="Какой спринт положить в Holst">${sprintOptions.map((item, index) => `<option value="${escapeHtml(item.mode)}"${item.mode === sprintPick || (sprintPick === null && index === 0) ? ' selected' : ''}>${escapeHtml(item.label)}</option>`).join('')}</select>`;
     const holst = boardConfig(boardId, config).holst
-      ? `<div class="plan"><button type="button" data-act="to-holst" class="again" title="Процент, розовый список и отчёт выбранного спринта"${data.busy ? ' disabled' : ''}>В Holst</button>${sprintSelect}</div>`
+      ? `<div class="plan"><button type="button" data-act="to-holst" class="again" title="Процент, розовый список, отчёт идущего спринта и рядом — итоги прошлого"${data.busy ? ' disabled' : ''}>В Holst</button><span>процент, список и отчёт спринта</span></div>`
       : '';
     box.innerHTML = rows + legend + done + plan + end + holst;
   };
@@ -1650,12 +1646,8 @@ function sprintCapacityMount(config) {
       const current = buildReport({ cards, settings, snapshot, planEnd, config: settingsNow });
       const columns = holstColumns(boardJson);
       const capacityLog = kaitenCardComments(config.snapshotCardId).then(capacityLogFromComments).catch(() => null);
-      const sprintJob = Promise.all([sprintReportLoad({ cards, boardId: board, now, columns, load: kaitenSprint, loadBugs: sprintBugCards, store: { read: (key) => readStored(key, null), write: writeStored }, pick: readStored(`sprintPick.${board}`, null) }), capacityLog])
-        .then(([loaded, log]) => {
-          writeStored(`sprintOptions.${board}`, loaded.options);
-          writeStored(`sprintPick.${board}`, loaded.pick);
-          return { report: sprintReportBlocks({ ...loaded, capacity: capacityDays(settings), capacityLog: log, labels: settingsNow.labels, now }) };
-        })
+      const sprintJob = Promise.all([sprintReportLoad({ cards, boardId: board, now, columns, load: kaitenSprint, loadBugs: sprintBugCards, store: { read: (key) => readStored(key, null), write: writeStored } }), capacityLog])
+        .then(([loaded, log]) => ({ report: sprintReportBlocks({ ...loaded, capacity: capacityDays(settings), capacityLog: log, labels: settingsNow.labels, now }) }))
         .catch((error) => ({ problem: error.message || String(error) }));
       const since = holstLookback(now);
       const historyIds = holstHistoryIds(cards, since);
@@ -2013,7 +2005,6 @@ function sprintCapacityMount(config) {
 
   shadow.addEventListener('change', (event) => {
     if (event.target.dataset.act === 'board') switchBoard(Number(event.target.value));
-    if (event.target.dataset.act === 'holst-sprint') writeStored(`sprintPick.${boardId}`, event.target.value);
   });
 
   shadow.addEventListener('input', (event) => {

@@ -495,6 +495,7 @@ const HOLST_REPORT = {
   gap: 12,
   inner: 16,
   sectionGap: 28,
+  pastGap: 40,
   groupGap: 20,
   columns: 2,
   line: 1.4,
@@ -536,6 +537,7 @@ function holstSectionItems(section) {
   const { color, size } = HOLST_REPORT;
   const items = [holstReportParagraph([{ text: section.title, marks: { bold: true, color: color.head, fontSize: size.head } }])];
   if (section.note) items.push(holstReportParagraph([{ text: section.note, marks: { color: section.tone === 'warn' ? color.warn : color.note, fontSize: size.headNote } }]));
+  if (section.link) items.push(holstReportParagraph([{ text: section.link.text, marks: { color: color.link, fontSize: size.headNote }, ...(section.link.url ? { link: section.link.url } : {}) }]));
   return items;
 }
 
@@ -650,6 +652,20 @@ function holstReportStale({ found, sig, parts }) {
   return !found || found.sig !== sig || !found.footer || found.children.length !== parts;
 }
 
+function holstReportLinked(report, urls) {
+  if (!report) return null;
+  const { past, ...rest } = report;
+  return { ...rest, sections: report.sections.map((section) => (section.link ? { ...section, link: { ...section.link, url: urls[section.link.to] || null } } : section)) };
+}
+
+function holstObjectUrl(origin, board, id) {
+  return `${origin}/share/b/${board}?objectId=${id}`;
+}
+
+function holstPastPlace(anchor, textScale, zIndex) {
+  return { x: Math.round(anchor.x + (HOLST_REPORT.width + HOLST_REPORT.pastGap) * textScale), y: anchor.y, textScale, zIndex, problem: null };
+}
+
 function holstReportPlace({ objects, group, chart = {} }) {
   const base = holstChart({ objects, group, chart });
   if (base.problem) return { problem: base.problem };
@@ -708,4 +724,4 @@ function stickerFit({ items, width, height, textScale = 1, k = 1 }) {
 }
 
 
-if (typeof module !== 'undefined') module.exports = { HOLST_BLOCKS, HOLST_STYLE, normalizeTitle, blockOfColumn, blockInfo, blockOrder, shortTime, columnAt, holstLookback, holstCards, holstHistoryIds, holstPayload, unknownColumnsText, holstForeignBoards, holstColumns, holstOldTitles, readStickerLines, planSticker, kaitenCardId, stripMarker, updatedLine, stickerSignature, HOLST_NULL_DOC, HOLST_FIT, holstReadMessages, holstSyncQueue, holstChart, percentLabelItems, percentLabelPlace, HOLST_REPORT, holstBlockItems, holstItemsHeight, holstReportRows, holstGroupItems, holstLegendItems, holstReportLayout, holstReportParts, holstReportSignature, holstReportStale, holstFooterItems, holstReportPlace, runsEm, stickerFont, stickerScale, stickerFit, runsText };
+if (typeof module !== 'undefined') module.exports = { HOLST_BLOCKS, HOLST_STYLE, normalizeTitle, blockOfColumn, blockInfo, blockOrder, shortTime, columnAt, holstLookback, holstCards, holstHistoryIds, holstPayload, unknownColumnsText, holstForeignBoards, holstColumns, holstOldTitles, readStickerLines, planSticker, kaitenCardId, stripMarker, updatedLine, stickerSignature, HOLST_NULL_DOC, HOLST_FIT, holstReadMessages, holstSyncQueue, holstChart, percentLabelItems, percentLabelPlace, HOLST_REPORT, holstBlockItems, holstItemsHeight, holstReportRows, holstGroupItems, holstLegendItems, holstReportLayout, holstReportParts, holstReportSignature, holstReportStale, holstFooterItems, holstReportPlace, holstReportLinked, holstObjectUrl, holstPastPlace, runsEm, stickerFont, stickerScale, stickerFit, runsText };
