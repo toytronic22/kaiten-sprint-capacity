@@ -225,6 +225,19 @@ test('Сводка: план, влёт, ушло, переоценка, в пр�
     },
   );
   assert.deepEqual(result.carry.oldest.map((item) => sprint.sprintDays(item.days)), ['12,1 рабочего дня', '5,1 рабочего дня']);
+  assert.deepEqual(result.items, [
+    { id: 101, bug: false, plan: true, outcome: 'done', sp: 5 },
+    { id: 102, bug: false, plan: true, outcome: 'carry', sp: 5, column: 'Doing' },
+    { id: 103, bug: false, plan: true, outcome: 'left', sp: 8 },
+    { id: 104, bug: false, plan: false, outcome: 'done', sp: 2 },
+    { id: 105, bug: true, plan: false, outcome: 'done', sp: 0 },
+    { id: 106, bug: false, plan: false, outcome: 'carry', sp: 1, column: 'To Do' },
+    { id: 107, bug: false, plan: false, outcome: 'left', sp: 2 },
+    { id: 108, bug: false, plan: true, outcome: 'done', sp: 3 },
+    { id: 110, bug: true, plan: true, outcome: 'done', sp: 0 },
+    { id: 111, bug: true, plan: false, outcome: 'carry', sp: 1, column: 'Review' },
+    { id: 112, bug: true, plan: false, outcome: 'carry', sp: 0, column: 'To Do' },
+  ]);
   assert.equal(result.plan.sp + result.reestimate + result.reestimateCarry + result.added.sp - result.left.sp, result.done.sp + result.carry.sp);
   assert.equal(result.finished, true);
 });
@@ -644,12 +657,21 @@ test('Баги за спринт: заведённые в окне спринт�
     caught: {
       count: 6,
       done: 2,
+      items: [
+        { id: 201, fixed: true, priority: 'High', source: 'feature testing' },
+        { id: 202, fixed: false, priority: 'Medium', source: 'feature testing' },
+        { id: 209, fixed: false, priority: 'без важности', source: 'feature testing' },
+        { id: 210, fixed: true, priority: 'Low', source: 'feature testing' },
+        { id: 112, fixed: false, priority: 'Medium', source: 'support' },
+        { id: 214, fixed: false, priority: 'Low', source: 'autotest' },
+      ],
       priority: [{ label: 'High', count: 1, open: 0 }, { label: 'Medium', count: 2, open: 2 }, { label: 'Low', count: 2, open: 1 }, { label: 'без важности', count: 1, open: 1 }],
       sources: [{ label: 'feature testing', count: 4 }, { label: 'support', count: 1 }, { label: 'autotest', count: 1 }],
     },
     escaped: {
       count: 2,
       done: 1,
+      items: [{ id: 204, fixed: true, priority: 'High', source: 'support' }, { id: 205, fixed: false, priority: 'Medium', source: 'incident' }],
       priority: [{ label: 'High', count: 1, open: 0 }, { label: 'Medium', count: 1, open: 1 }],
       sources: [{ label: 'support', count: 1 }, { label: 'incident', count: 1 }],
     },
