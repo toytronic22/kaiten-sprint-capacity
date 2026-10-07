@@ -551,7 +551,7 @@ test('Блок отчёта: заголовок — мелкой подпись�
 
 test('Блок отчёта: строка со ссылкой — ссылкой на карту и своим цветом, размер — по тону строки', () => {
   // Arrange
-  const block = { key: 'oldest', title: 'Дольше всех', lines: [{ text: 'Фильтр по датам', link: url(102) }, { text: 'в работе 5 рабочих дней', tone: 'note' }] };
+  const block = { key: 'carry', title: 'Не дошли до прода', lines: [{ text: 'Фильтр по датам', link: url(102) }, { text: 'в работе 5 рабочих дней', tone: 'note' }] };
   const { color, size } = H.HOLST_REPORT;
 
   // Act
@@ -594,6 +594,57 @@ test('Раскладка отчёта: легенда — серым над пе
   assert.ok(legend.y < head.y);
   assert.equal(without.find((part) => part.part === 'legend'), undefined);
   assert.equal(withLegend.length, without.length + 1);
+});
+
+test('Заголовок секции: ссылка на соседнюю панель — строкой под пометкой, цветом ссылки; адреса нет — та же строка без ссылки', () => {
+  // Arrange
+  const { color, size } = H.HOLST_REPORT;
+  const section = (link) => ({ key: 'running', title: 'Идёт спринт 28.09–11.10', note: 'итоги — после воскресенья', link, groups: [] });
+  const head = (link) => H.holstReportLayout({ report: { sections: [section(link)], problem: null }, x: 0, y: 0, textScale: 1, zIndex: 1, now: 0 }).find((part) => part.part === 'head').items;
+
+  // Act
+  const linked = head({ text: 'Итоги прошлого спринта 14.09–27.09 →', to: 'past', url: 'https://app.holst.so/share/b/b1?objectId=g2' });
+  const bare = head({ text: 'Итоги прошлого спринта 14.09–27.09 →', to: 'past', url: null });
+  const none = head(undefined);
+
+  // Assert
+  assert.deepEqual(linked.slice(2), [p({ text: 'Итоги прошлого спринта 14.09–27.09 →', marks: { color: color.link, fontSize: size.headNote }, link: 'https://app.holst.so/share/b/b1?objectId=g2' })]);
+  assert.deepEqual(bare.slice(2), [p(text('Итоги прошлого спринта 14.09–27.09 →', { color: color.link, fontSize: size.headNote }))]);
+  assert.equal(none.length, 2);
+});
+
+test('Ссылки между панелями: адрес — по цели ссылки, вторая панель из отчёта убрана, цели нет — без адреса, отчёта нет — нет и панели', () => {
+  // Arrange
+  const pastSection = { key: 'last', title: 'Итоги спринта 14.09–27.09', link: { text: '← Идёт спринт 28.09–11.10', to: 'main' }, groups: [] };
+  const report = { legend: 'SP — story points.', sections: [{ key: 'running', title: 'Идёт спринт 28.09–11.10', link: { text: 'Итоги прошлого спринта 14.09–27.09 →', to: 'past' }, groups: [] }], problem: null, past: { legend: null, sections: [pastSection], problem: null } };
+  const urls = { main: 'https://app.holst.so/share/b/b1?objectId=g1', past: 'https://app.holst.so/share/b/b1?objectId=g2' };
+
+  // Act
+  const main = H.holstReportLinked(report, urls);
+  const past = H.holstReportLinked(report.past, urls);
+  const lonely = H.holstReportLinked(report, {});
+
+  // Assert
+  assert.equal('past' in main, false);
+  assert.equal(main.legend, 'SP — story points.');
+  assert.equal(main.sections[0].link.url, urls.past);
+  assert.equal(past.sections[0].link.url, urls.main);
+  assert.equal(lonely.sections[0].link.url, null);
+  assert.equal(report.sections[0].link.url, undefined);
+  assert.equal(H.holstReportLinked(null, urls), null);
+});
+
+test('Вторая панель: справа от первой через зазор, на той же высоте и в том же масштабе; адрес объекта — ссылка share с objectId', () => {
+  // Arrange
+  const { width, pastGap } = H.HOLST_REPORT;
+
+  // Act
+  const place = H.holstPastPlace({ x: 30, y: 400 }, 2, 3.5);
+  const link = H.holstObjectUrl('https://app.holst.so', 'b1', 'g2');
+
+  // Assert
+  assert.deepEqual(place, { x: 30 + (width + pastGap) * 2, y: 400, textScale: 2, zIndex: 3.5, problem: null });
+  assert.equal(link, 'https://app.holst.so/share/b/b1?objectId=g2');
 });
 
 test('Ряды блоков: по два, широкий — отдельным рядом, одиночный в конце — на весь ряд', () => {
