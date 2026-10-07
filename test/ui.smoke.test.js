@@ -194,6 +194,7 @@ const page = ({ hostname, stored = {}, opener = null, clipboard = true, holst = 
   vm.runInContext(bundle, context);
   env.$ = (selector) => shadow.querySelector(selector);
   env.click = (act) => (shadow.listeners.click || []).forEach((listener) => listener({ target: { closest: () => ({ dataset: { act } }) } }));
+  env.change = (act, value) => (shadow.listeners.change || []).forEach((listener) => listener({ target: { dataset: { act }, value } }));
   env.message = (origin, data, source) => (env.listeners.message || []).slice().forEach((listener) => listener({ origin, data, source }));
   env.runTimers = (ms) => env.timers.filter((timer) => timer.ms === ms && !timer.cleared).forEach((timer) => {
     if (!timer.repeat) timer.cleared = true;
@@ -488,6 +489,23 @@ test('Мем в итоге «В Holst» пропадает сам через п�
   // Assert
   assert.deepEqual(box.children.map((element) => element.tagName), ['DIV']);
   assert.match(kaiten.toast(), /^В Holst не отправилось: нет сети в тесте/);
+});
+
+test('Выбор спринта у «В Holst»: список из прошлого запуска, выбранный отмечен, смена выбора запоминается для доски', async () => {
+  // Arrange
+  const options = [{ mode: 'running', label: 'Идёт 28.09–11.10' }, { mode: 'last', label: 'Итоги 14.09–27.09' }, { mode: 'history-0', label: 'Итоги 31.08–13.09' }];
+  const kaiten = overloadedKaiten({ 'sprintCapacity.v1.sprintOptions.68084': JSON.stringify(options), 'sprintCapacity.v1.sprintPick.68084': JSON.stringify('last') });
+  await flush();
+  const fresh = overloadedKaiten();
+  await flush();
+
+  // Act
+  kaiten.change('holst-sprint', 'history-0');
+
+  // Assert
+  assert.match(kaiten.$('.summary').innerHTML, /<select data-act="holst-sprint"[^>]*><option value="running">Идёт 28.09–11.10<\/option><option value="last" selected>Итоги 14.09–27.09<\/option><option value="history-0">Итоги 31.08–13.09<\/option><\/select>/);
+  assert.match(fresh.$('.summary').innerHTML, /<option value="running" selected>Идущий спринт<\/option><option value="last">Прошлый спринт<\/option>/);
+  assert.equal(kaiten.stored.get('sprintCapacity.v1.sprintPick.68084'), JSON.stringify('history-0'));
 });
 
 test('Закладка на доске Holst: здоровается с Kaiten и отдаёт вход только Kaiten', () => {
