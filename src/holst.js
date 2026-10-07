@@ -211,7 +211,7 @@ function holstLeftovers(Y, objects) {
   return found;
 }
 
-function holstCreateText({ Y, objects, documents, x, y, scale, zIndex, author, now, items }) {
+function holstCreateText({ Y, objects, documents, x, y, scale, zIndex, author, now, items, extra = {} }) {
   const id = crypto.randomUUID();
   const documentId = crypto.randomUUID();
   const root = new Y.XmlText();
@@ -219,9 +219,70 @@ function holstCreateText({ Y, objects, documents, x, y, scale, zIndex, author, n
   root.applyDelta(items.map((item) => ({ insert: holstItemNode(Y, item) })), { sanitize: false });
   const object = new Y.Map();
   objects.set(id, object);
-  const fields = { id, type: 'simple-text', documentId, position: { x, y }, textScale: scale, lineHeight: '150%', fontFamily: 'Inter', zIndex, created: { a: author, t: now }, updated: { a: author, t: now } };
+  const fields = { id, type: 'simple-text', documentId, position: { x, y }, textScale: scale, lineHeight: '150%', fontFamily: 'Inter', zIndex, ...extra, created: { a: author, t: now }, updated: { a: author, t: now } };
   for (const [key, value] of Object.entries(fields)) object.set(key, value);
   return id;
+}
+
+function holstCreateShape({ Y, objects, documents, part, author, now, extra = {} }) {
+  const id = crypto.randomUUID();
+  const documentId = crypto.randomUUID();
+  documents.set(documentId, new Y.XmlText());
+  const object = new Y.Map();
+  objects.set(id, object);
+  const fields = { id, type: 'shape', shapeType: 'roundedRectangle', documentId, position: { x: part.x, y: part.y }, width: part.width, height: part.height, fixedSize: true, fillColor: { color: part.color, opacity: 1 }, strokeWidth: 0, borderRadius: part.radius, zIndex: part.zIndex, ...extra, created: { a: author, t: now }, updated: { a: author, t: now } };
+  for (const [key, value] of Object.entries(fields)) object.set(key, value);
+  return id;
+}
+
+function holstDeleteObject(objects, documents, id) {
+  const object = objects.get(id);
+  const documentId = object && object.get('documentId');
+  objects.delete(id);
+  if (documentId) documents.delete(documentId);
+}
+
+function holstReportFind(Y, objects, id) {
+  const object = id ? objects.get(id) : null;
+  if (!(object instanceof Y.Map)) return null;
+  if (object.get('type') !== 'group') return { old: true, object, children: [], anchor: object.get('position'), textScale: object.get('textScale') || 1, zIndex: object.get('zIndex') || 0, sig: null, footer: null };
+  const children = [];
+  objects.forEach((child, childId) => {
+    if (child instanceof Y.Map && child.get('parentId') === id) children.push(childId);
+  });
+  const partOf = (childId) => (objects.get(childId).get('sprintcap') || {}).part;
+  const panel = children.find((childId) => partOf(childId) === 'panel');
+  const stored = object.get('sprintcap') || {};
+  return { old: false, object, children, anchor: (panel ? objects.get(panel) : object).get('position'), textScale: stored.scale || 1, zIndex: stored.z || 0, sig: stored.sig || null, footer: children.find((childId) => partOf(childId) === 'footer') || null };
+}
+
+function holstWriteReport({ Y, objects, documents, found, place, report, sig, author, now }) {
+  const anchor = found ? found.anchor : place;
+  const scale = found ? found.textScale : place.textScale;
+  const z = found ? found.zIndex : place.zIndex;
+  if (found) for (const childId of found.children) holstDeleteObject(objects, documents, childId);
+  let group = found && !found.old ? found.object : null;
+  if (found && found.old) holstDeleteObject(objects, documents, found.object.get('id'));
+  if (!group) {
+    group = new Y.Map();
+    const groupId = crypto.randomUUID();
+    objects.set(groupId, group);
+    group.set('id', groupId);
+    group.set('type', 'group');
+    group.set('ignoreZIndex', true);
+    group.set('created', { a: author, t: now });
+  }
+  const groupId = group.get('id');
+  group.set('position', { x: anchor.x, y: anchor.y });
+  group.set('zIndex', z);
+  group.set('sprintcap', { report: true, sig, scale, z });
+  group.set('updated', { a: author, t: now });
+  for (const part of holstReportLayout({ report, x: anchor.x, y: anchor.y, textScale: scale, zIndex: z, now })) {
+    const extra = { parentId: groupId, sprintcap: { part: part.part } };
+    if (part.kind === 'shape') holstCreateShape({ Y, objects, documents, part, author, now, extra });
+    else holstCreateText({ Y, objects, documents, x: part.x, y: part.y, scale: part.textScale, zIndex: part.zIndex, author, now, items: part.items, extra: { ...extra, fixedWidth: true, width: part.width, lineHeight: `${Math.round(HOLST_REPORT.line * 100)}%` } });
+  }
+  return groupId;
 }
 
 function holstReplaceText({ Y, object, root, items, author, now }) {
@@ -264,12 +325,12 @@ async function holstApply(payload, token) {
     const labelMove = moveLabel && Boolean(place);
     const labelWrite = labelChanged && !percentProblem;
     const sprintReport = payload.sprint || null;
-    const reportItems = sprintReport && sprintReport.lines ? holstReportItems(sprintReport.lines, now) : null;
-    const report = listRun.report ? objects.get(listRun.report) : null;
-    const reportRoot = report instanceof Y.Map ? documents.get(report.get('documentId')) || null : null;
-    const reportPlace = reportItems && !reportRoot ? holstReportPlace({ objects: holstChartObjects({ Y, objects, documents, payload }), group: payload.group, chart: payload.chart }) : null;
-    const reportWrite = Boolean(reportItems) && !(reportPlace && reportPlace.problem);
-    const reportChanged = reportWrite && (!reportRoot || stickerSignature(holstDocItems(Y, reportRoot)) !== stickerSignature(reportItems));
+    const reportData = sprintReport && sprintReport.report ? sprintReport.report : null;
+    const reportFound = reportData ? holstReportFind(Y, objects, listRun.report) : null;
+    const reportPlace = reportData && !reportFound ? holstReportPlace({ objects: holstChartObjects({ Y, objects, documents, payload }), group: payload.group, chart: payload.chart }) : null;
+    const reportWrite = Boolean(reportData) && !(reportPlace && reportPlace.problem);
+    const reportSig = reportData ? holstReportSignature(reportData) : null;
+    const reportChanged = reportWrite && (!reportFound || reportFound.sig !== reportSig || !reportFound.footer);
     const reportProblem = !sprintReport ? null
       : sprintReport.problem ? `Отчёт спринта не посчитал: ${sprintReport.problem}`
       : reportPlace && reportPlace.problem ? `Отчёт спринта не написал: ${reportPlace.problem}`
@@ -293,14 +354,17 @@ async function holstApply(payload, token) {
       if (origin !== 'server') updates.push(update);
     };
     let labelId = labelRoot ? listRun.label : null;
-    let reportId = reportRoot ? listRun.report : null;
+    let reportId = listRun.report && objects.get(listRun.report) instanceof Y.Map ? listRun.report : null;
     doc.on('updateV2', listen);
     doc.transact(() => {
       if (labelWrite && labelRoot) holstReplaceText({ Y, object: label, root: labelRoot, items: labelItems, author, now });
       else if (labelWrite) labelId = holstCreateText({ Y, objects, documents, x: place.x, y: place.y, scale: place.textScale, zIndex: place.zIndex, author, now, items: labelItems });
       if (labelMove) label.set('position', { x: place.x, y: place.y });
-      if (reportWrite && reportRoot) holstReplaceText({ Y, object: report, root: reportRoot, items: reportItems, author, now });
-      else if (reportWrite) reportId = holstCreateText({ Y, objects, documents, x: reportPlace.x, y: reportPlace.y, scale: reportPlace.textScale, zIndex: reportPlace.zIndex, author, now, items: reportItems });
+      if (reportChanged) reportId = holstWriteReport({ Y, objects, documents, found: reportFound, place: reportPlace, report: reportData, sig: reportSig, author, now });
+      else if (reportWrite) {
+        const footer = objects.get(reportFound.footer);
+        holstReplaceText({ Y, object: footer, root: documents.get(footer.get('documentId')), items: holstFooterItems(reportData.problem, now), author, now });
+      }
       for (const id of leftovers.lines) objects.delete(id);
       for (const id of leftovers.labels) {
         const documentId = objects.get(id).get('documentId');
@@ -325,7 +389,7 @@ async function holstApply(payload, token) {
     for (const update of updates) await send(update);
     const result = [`${payload.title}: готово`, percentLine];
     if (reportProblem) result.push(reportProblem);
-    else if (reportWrite) result.push(!reportRoot ? 'Отчёт спринта: написал под графиком' : reportChanged ? 'Отчёт спринта: обновил' : 'Отчёт спринта: цифры те же');
+    else if (reportWrite) result.push(!reportFound ? 'Отчёт спринта: написал под графиком' : reportFound.old ? 'Отчёт спринта: переделал в блоки на том же месте' : reportChanged ? 'Отчёт спринта: обновил' : 'Отчёт спринта: цифры те же');
     result.push(markedText);
     result.push(`Список: ${plan.stats.cards} карт, оставил на месте ${plan.stats.kept}`);
     if (labelMove) result.push('Передвинул процент под заголовок графика');

@@ -531,19 +531,89 @@ test('График: заголовка нет — процент по левом
   assert.match(H.holstChart({ objects, group: 'other', chart: {} }).problem, /шкалу/);
 });
 
-test('Отчёт спринта: строка — абзац, заголовок жирный, в конце «Обновлено», которое не меняет подпись текста', () => {
+test('Блок отчёта: заголовок — мелкой подписью капсом, крупная цифра с пояснением, строки по тону', () => {
   // Arrange
-  const lines = [{ text: 'Итоги спринта 14.09–27.09', bold: true }, { text: 'План: 8 SP, 1 карта' }];
+  const block = { key: 'start', title: 'Стартовый план', value: '70%', caption: 'выполнено', lines: [{ text: '64 из 92 SP' }, { text: 'оценка не менялась', tone: 'note' }, { text: 'с блокером: 2 карты', tone: 'warn' }] };
+  const { color, size } = H.HOLST_REPORT;
 
   // Act
-  const items = H.holstReportItems(lines, Date.parse('2026-10-06T10:00:00Z'));
-  const later = H.holstReportItems(lines, Date.parse('2026-10-06T12:30:00Z'));
+  const items = H.holstBlockItems(block);
 
   // Assert
-  assert.deepEqual(items.slice(0, 2), [p(text('Итоги спринта 14.09–27.09', { bold: true })), p(text('План: 8 SP, 1 карта'))]);
-  assert.match(lineTexts(items)[2], /^Обновлено /);
-  assert.equal(H.stickerSignature(items), H.stickerSignature(later));
-  assert.notEqual(H.stickerSignature(items), H.stickerSignature(H.holstReportItems([lines[0]], Date.parse('2026-10-06T10:00:00Z'))));
+  assert.deepEqual(items, [
+    p(text('СТАРТОВЫЙ ПЛАН', { bold: true, color: color.label, fontSize: size.label })),
+    p(text('70%', { bold: true, color: color.value, fontSize: size.value }), text('  выполнено', { color: color.text, fontSize: size.caption })),
+    p(text('64 из 92 SP', { color: color.text, fontSize: size.text })),
+    p(text('оценка не менялась', { color: color.note, fontSize: size.note })),
+    p(text('с блокером: 2 карты', { color: color.warn, fontSize: size.text })),
+  ]);
+});
+
+test('Ряды блоков: по два, широкий — отдельным рядом, одиночный в конце — на весь ряд', () => {
+  // Arrange
+  const blocks = [{ key: 'goal', wide: true }, { key: 'a' }, { key: 'b' }, { key: 'c' }, { key: 'wide', wide: true }, { key: 'd' }];
+
+  // Act
+  const rows = H.holstReportRows(blocks).map((row) => row.map((item) => item.key));
+
+  // Assert
+  assert.deepEqual(rows, [['goal'], ['a', 'b'], ['c'], ['wide'], ['d']]);
+});
+
+test('Раскладка отчёта: тёмная панель первой и под всем, карточки ряда одной высоты, тексты поверх карточек', () => {
+  // Arrange
+  const lines = (count) => Array.from({ length: count }, (_, index) => ({ text: `строка ${index + 1}` }));
+  const report = {
+    sections: [{ key: 'last', title: 'Итоги спринта 14.09–27.09', blocks: [{ key: 'goal', title: 'Цель', wide: true, lines: [{ text: 'Цель', tone: 'strong' }] }, { key: 'a', title: 'А', value: '1', lines: lines(1) }, { key: 'b', title: 'Б', value: '2', lines: lines(6) }, { key: 'c', title: 'В', value: '3', lines: [] }] }],
+    problem: null,
+  };
+
+  // Act
+  const parts = H.holstReportLayout({ report, x: 1000, y: 2000, textScale: 2, zIndex: 50, now: Date.parse('2026-10-06T10:00:00Z') });
+
+  // Assert
+  const [panel, ...rest] = parts;
+  const cards = parts.filter((part) => part.part === 'card');
+  assert.deepEqual([panel.part, panel.kind, panel.x, panel.y, panel.width, panel.zIndex, panel.color], ['panel', 'shape', 1000, 2000, H.HOLST_REPORT.width * 2, 50, H.HOLST_REPORT.panel]);
+  for (const part of rest) {
+    assert.ok(part.x >= panel.x && part.y >= panel.y && part.y < panel.y + panel.height, part.part);
+    if (part.kind === 'shape') assert.ok(part.x + part.width <= panel.x + panel.width && part.y + part.height <= panel.y + panel.height, part.part);
+  }
+  assert.deepEqual(cards.map((card) => card.zIndex), [50.01, 50.01, 50.01, 50.01]);
+  assert.ok(parts.filter((part) => part.kind === 'text').every((part) => part.zIndex === 50.02 && part.textScale === 2));
+  assert.equal(cards[1].y, cards[2].y);
+  assert.equal(cards[1].height, cards[2].height);
+  assert.ok(cards[1].height > cards[3].height);
+  assert.equal(cards[3].width, cards[0].width);
+  const blockText = parts.find((part) => part.part === 'block' && part.items[0].runs[0].text === 'Б');
+  assert.equal(blockText.width * 2, cards[2].width - 2 * H.HOLST_REPORT.inner * 2);
+  assert.match(lineTexts(parts[parts.length - 1].items).pop(), /^Обновлено /);
+});
+
+test('Раскладка отчёта: причина сбоя — в подвале над «Обновлено», жёлтым', () => {
+  // Arrange
+  const report = { sections: [], problem: 'Прошлые спринты не загрузились: нет сети' };
+
+  // Act
+  const footer = H.holstReportLayout({ report, x: 0, y: 0, textScale: 1, zIndex: 1, now: Date.parse('2026-10-06T10:00:00Z') }).find((part) => part.part === 'footer');
+
+  // Assert
+  assert.equal(footer.items[0].runs[0].text, 'Прошлые спринты не загрузились: нет сети');
+  assert.equal(footer.items[0].runs[0].marks.color, H.HOLST_REPORT.color.warn);
+  assert.match(lineTexts(footer.items)[1], /^Обновлено /);
+});
+
+test('Подпись отчёта: те же цифры — та же подпись, другая цифра — другая', () => {
+  // Arrange
+  const report = (value) => ({ sections: [{ key: 'last', title: 'Итоги', blocks: [{ key: 'plan', title: 'План', value, lines: [] }] }], problem: null });
+
+  // Act
+  const signatures = [H.holstReportSignature(report('8 SP')), H.holstReportSignature(report('8 SP')), H.holstReportSignature(report('9 SP'))];
+
+  // Assert
+  assert.equal(signatures[0], signatures[1]);
+  assert.notEqual(signatures[0], signatures[2]);
+  assert.match(signatures[0], /^[0-9a-f]+$/);
 });
 
 test('Отчёт спринта: место — под нижним краем графика, по левому краю заголовка; чужие группы не в счёт', () => {

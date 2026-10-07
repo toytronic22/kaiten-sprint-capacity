@@ -302,9 +302,13 @@ function sprintCount(count, forms) {
   return `${sprintNumber(count)} ${sprintForm(count, forms)}`;
 }
 
-function sprintDays(value) {
+function sprintDayWord(value) {
   const rounded = Math.round(value * 10) / 10;
-  return Number.isInteger(rounded) ? sprintCount(rounded, SPRINT_WORDS.day) : `${sprintNumber(rounded)} рабочего дня`;
+  return Number.isInteger(rounded) ? sprintForm(rounded, SPRINT_WORDS.day) : 'рабочего дня';
+}
+
+function sprintDays(value) {
+  return `${sprintNumber(value)} ${sprintDayWord(value)}`;
 }
 
 function sprintDate(ms, cfg = SPRINT_REPORT) {
@@ -320,75 +324,76 @@ function sprintCards(tasks, bugs) {
 }
 
 function sprintLabels(list) {
-  return list.map((item) => `${item.label} ${item.count}`).join(', ');
+  return list.map((item) => `${item.label} ${item.count}`).join(' · ');
 }
 
-function sprintPlanLine(summary, previous) {
-  const plan = `План: ${sprintNumber(summary.plan.sp)} SP, ${sprintCount(summary.plan.cards, SPRINT_WORDS.card)}`;
-  if (!previous.length) return plan;
-  const speeds = previous.map((item) => item.done.sp);
-  const mean = speeds.reduce((sum, value) => sum + value, 0) / speeds.length;
-  const label = SPRINT_WORDS.previous[previous.length] || `${previous.length} прошлых спринтов`;
-  return `${plan} · velocity ${label}: ${speeds.map(sprintNumber).join(', ')} SP${speeds.length > 1 ? `, в среднем ${sprintNumber(mean)}` : ''}`;
+function sprintPlanBlock(summary, previous) {
+  const lines = [];
+  if (previous.length) {
+    const speeds = previous.map((item) => item.done.sp);
+    const mean = speeds.reduce((sum, value) => sum + value, 0) / speeds.length;
+    const label = SPRINT_WORDS.previous[previous.length] || `${previous.length} прошлых спринтов`;
+    lines.push({ text: `velocity ${label}: ${speeds.map(sprintNumber).join(' · ')} SP` });
+    if (speeds.length > 1) lines.push({ text: `в среднем ${sprintNumber(mean)} SP` });
+  }
+  return { key: 'plan', title: 'План', value: `${sprintNumber(summary.plan.sp)} SP`, caption: sprintCount(summary.plan.cards, SPRINT_WORDS.card), lines };
 }
 
-function sprintAddedLines(summary) {
-  const added = summary.added;
-  if (!added.tasks && !added.bugs) return ['Влетело: ничего'];
-  const lines = [`Влетело: ${sprintCards(added.tasks, added.bugs)} на ${sprintNumber(added.sp)} SP; откуда: ${sprintLabels(added.from)}`];
-  if (added.related.tasks) lines.push(`Из влёта — части задач и эпиков плана: ${sprintCount(added.related.tasks, SPRINT_WORDS.task)} на ${sprintNumber(added.related.sp)} SP`);
-  return lines;
+function sprintChangesBlock(summary) {
+  const { added, left } = summary;
+  const lines = [];
+  if (added.tasks || added.bugs) {
+    lines.push({ text: `Влетело: ${sprintCards(added.tasks, added.bugs)}, ${sprintNumber(added.sp)} SP` });
+    lines.push({ text: `откуда: ${sprintLabels(added.from)}`, tone: 'note' });
+    if (added.related.tasks) lines.push({ text: `из них части задач и эпиков плана: ${sprintCount(added.related.tasks, SPRINT_WORDS.task)}, ${sprintNumber(added.related.sp)} SP`, tone: 'note' });
+  } else lines.push({ text: 'Влетело: ничего' });
+  if (left.cards) {
+    lines.push({ text: `Ушло: ${sprintCount(left.cards, SPRINT_WORDS.card)}, ${sprintNumber(left.sp)} SP` });
+    lines.push({ text: `куда: ${sprintLabels(left.to)}`, tone: 'note' });
+  } else lines.push({ text: 'Ушло: ничего' });
+  lines.push({ text: `Переоценка карт плана: ${summary.reestimate > 0 ? '+' : ''}${sprintNumber(summary.reestimate)} SP` });
+  return { key: 'changes', title: 'Изменения', value: `+${sprintNumber(added.sp)} / −${sprintNumber(left.sp)} SP`, caption: 'влетело / ушло', lines };
 }
 
-function sprintLeftLine(summary) {
-  const left = summary.left;
-  if (!left.cards) return 'Ушло: ничего';
-  return `Ушло: ${sprintCount(left.cards, SPRINT_WORDS.card)} на ${sprintNumber(left.sp)} SP; куда: ${sprintLabels(left.to)}`;
-}
-
-function sprintReestimateLine(summary) {
-  return `Переоценка карт плана: ${summary.reestimate > 0 ? '+' : ''}${sprintNumber(summary.reestimate)} SP`;
-}
-
-function sprintDoneLine(summary) {
+function sprintDoneBlock(summary) {
   const done = summary.done;
-  if (!done.tasks && !done.bugs) return 'В проде: ничего';
-  return `В проде: ${sprintNumber(done.sp)} SP — ${sprintCards(done.tasks, done.bugs)}; из плана ${sprintNumber(done.planSp)} SP, из влёта ${sprintNumber(done.addedSp)} SP`;
+  const block = { key: 'done', title: 'В проде', value: `${sprintNumber(done.sp)} SP` };
+  if (!done.tasks && !done.bugs) return { ...block, caption: 'ничего', lines: [] };
+  return { ...block, caption: sprintCards(done.tasks, done.bugs), lines: [{ text: `из плана ${sprintNumber(done.planSp)} SP · из влёта ${sprintNumber(done.addedSp)} SP` }] };
 }
 
-function sprintPlanDoneLine(summary) {
-  if (!summary.plan.sp) return null;
+function sprintStartBlock(summary) {
+  const block = { key: 'start', title: 'Стартовый план' };
+  if (!summary.plan.sp) return { ...block, value: '—', lines: [{ text: 'на старте в плане 0 SP', tone: 'note' }] };
   const done = summary.done;
   const growth = done.planSp - done.planSp0;
-  const head = `Стартовый план выполнен на ${Math.round((100 * done.planSp) / summary.plan.sp)}%: ${sprintNumber(done.planSp)} из ${sprintNumber(summary.plan.sp)} SP`;
-  if (!growth) return done.planSp ? `${head}, оценка карт в проде не менялась` : head;
-  return `${head} по последней оценке, у карт в проде она ${growth > 0 ? 'выросла' : 'снизилась'} на ${sprintNumber(Math.abs(growth))} SP`;
+  const lines = [{ text: `${sprintNumber(done.planSp)} из ${sprintNumber(summary.plan.sp)} SP${growth ? ' по последней оценке' : ''}` }];
+  if (growth) lines.push({ text: `оценка карт в проде ${growth > 0 ? 'выросла' : 'снизилась'} на ${sprintNumber(Math.abs(growth))} SP`, tone: 'note' });
+  else if (done.planSp) lines.push({ text: 'оценка карт в проде не менялась', tone: 'note' });
+  return { ...block, value: `${Math.round((100 * done.planSp) / summary.plan.sp)}%`, caption: 'выполнено', lines };
 }
 
-function sprintCarryLine(summary, label) {
+function sprintCarryBlock(summary, key, title, blocked) {
   const carry = summary.carry;
-  if (!carry.cards) return `${label}: нет`;
-  const columns = carry.columns.map((column) => `${column.title} ${column.cards}${column.sp ? ` (${sprintNumber(column.sp)} SP)` : ''}`).join(', ');
-  return `${label}: ${sprintCount(carry.cards, SPRINT_WORDS.card)} на ${sprintNumber(carry.sp)} SP — ${columns}`;
+  const lines = carry.columns.map((column) => ({ text: `${column.title} — ${sprintCount(column.cards, SPRINT_WORDS.card)}${column.sp ? `, ${sprintNumber(column.sp)} SP` : ''}` }));
+  if (blocked && carry.blocked) lines.push({ text: `с блокером: ${sprintCount(carry.blocked, SPRINT_WORDS.card)}`, tone: 'warn' });
+  return { key, title, value: `${sprintNumber(carry.sp)} SP`, caption: sprintCount(carry.cards, SPRINT_WORDS.card), lines };
 }
 
-function sprintLeadLine(summary, previous) {
+function sprintLeadBlock(summary, previous) {
   const lead = summary.lead;
-  if (!lead.n) return summary.done.tasks ? 'Время до прода: у задач в проде нет даты начала работы' : 'Время до прода: задач в проде нет';
+  const block = { key: 'lead', title: 'Время до прода' };
+  const stages = summary.stages.length ? [{ text: `по колонкам: ${summary.stages.map((stage) => `${stage.title} ${Math.round(stage.share * 100)}%`).join(' · ')}`, tone: 'note' }] : [];
+  if (!lead.n) return { ...block, value: '—', lines: [{ text: summary.done.tasks ? 'у задач в проде нет даты начала работы' : 'задач в проде нет', tone: 'note' }, ...stages] };
   const series = [...previous.slice(-2), summary].map((item) => (item.lead.n ? sprintNumber(item.lead.median) : '—'));
-  const trend = series.length > 1 ? `; медиана по спринтам: ${series.join(' → ')}` : '';
-  return `Время до прода (задачи, от Doing до Done): медиана ${sprintDays(lead.median)}, у 85% — до ${sprintNumber(lead.p85)}, всего ${sprintCount(lead.n, SPRINT_WORDS.task)}${trend}`;
+    const lines = [{ text: `у 85% задач — до ${sprintNumber(lead.p85)}` }, { text: `${sprintCount(lead.n, SPRINT_WORDS.task)}, от Doing до Done`, tone: 'note' }];
+  if (series.length > 1) lines.push({ text: `медиана по спринтам: ${series.join(' → ')}` });
+  return { ...block, value: sprintNumber(lead.median), caption: `${sprintDayWord(lead.median)}, медиана`, lines: [...lines, ...stages] };
 }
 
-function sprintStagesLine(summary) {
-  if (!summary.stages.length) return null;
-  return `Время по колонкам: ${summary.stages.map((stage) => `${stage.title} ${Math.round(stage.share * 100)}%`).join(', ')}`;
-}
-
-function sprintEscapedLine(summary) {
+function sprintEscapedBlock(summary) {
   const escaped = summary.escaped;
-  if (!escaped.count) return 'Баги из прода: нет';
-  return `Баги из прода: ${escaped.count}, исправлено ${escaped.done}`;
+  return { key: 'escaped', title: 'Баги из прода', value: sprintNumber(escaped.count), caption: escaped.count ? `исправлено ${sprintNumber(escaped.done)}` : 'нет', lines: [] };
 }
 
 function sprintCapacitySum(days) {
@@ -396,7 +401,7 @@ function sprintCapacitySum(days) {
 }
 
 function sprintCapacityParts(days, labels) {
-  return Object.keys(labels).filter((key) => days[key] !== undefined).map((key) => `${labels[key]} ${sprintNumber(days[key])}`).join(', ');
+  return Object.keys(labels).filter((key) => days[key] !== undefined).map((key) => `${labels[key]} ${sprintNumber(days[key])}`).join(' · ');
 }
 
 function sprintCapacityChange(from, to, labels) {
@@ -407,7 +412,7 @@ function sprintCapacityChange(from, to, labels) {
       const after = to[key] || 0;
       return `${labels[key]} ${sprintNumber(before)}${before === after ? '' : ` → ${sprintNumber(after)}`}`;
     })
-    .join(', ');
+    .join(' · ');
 }
 
 function sprintCapacityRecord(log, kind, boardId, around, latest, cfg = SPRINT_REPORT) {
@@ -415,76 +420,81 @@ function sprintCapacityRecord(log, kind, boardId, around, latest, cfg = SPRINT_R
   return found.length ? found[latest ? found.length - 1 : 0] : null;
 }
 
-function sprintCapacityLine(capacity, labels, head) {
-  if (!capacity) return `${head}: «Команда и дни» в панели не заполнены`;
-  return `${head} по «Команде и дням»: ${sprintNumber(sprintCapacitySum(capacity))} чел.-дн. — ${sprintCapacityParts(capacity, labels)}`;
-}
-
-function sprintCapacityDoneLine(summary, log, labels, cfg = SPRINT_REPORT) {
+function sprintCapacityDoneBlock(summary, log, labels, cfg = SPRINT_REPORT) {
+  const block = { key: 'capacity', title: 'Capacity, чел.-дн.' };
+  if (!log) return { ...block, value: '—', lines: [{ text: 'записи из служебной карты не загрузились', tone: 'warn' }] };
   const plan = sprintCapacityRecord(log, 'end', summary.boardId, summary.start, true, cfg);
   const fact = sprintCapacityRecord(log, 'start', summary.boardId, summary.end, false, cfg);
-  if (!plan && !fact) return 'Capacity: план и факт не записаны — их пишут кнопки «Закончить планирование» и «Начать планирование»';
-  if (!fact) return `Capacity, чел.-дн.: план ${sprintNumber(sprintCapacitySum(plan.days))} — ${sprintCapacityParts(plan.days, labels)}; факт не записан — его пишет «Начать планирование» следующего спринта`;
-  if (!plan) return `Capacity, чел.-дн.: факт ${sprintNumber(sprintCapacitySum(fact.days))} — ${sprintCapacityParts(fact.days, labels)}; план не записан — его пишет «Закончить планирование»`;
-  return `Capacity, чел.-дн.: план ${sprintNumber(sprintCapacitySum(plan.days))}, факт ${sprintNumber(sprintCapacitySum(fact.days))} — ${sprintCapacityChange(plan.days, fact.days, labels)}`;
+  if (!plan && !fact) return { ...block, value: '—', lines: [{ text: 'план и факт не записаны — их пишут кнопки «Закончить планирование» и «Начать планирование»', tone: 'note' }] };
+  if (!fact) return { ...block, value: sprintNumber(sprintCapacitySum(plan.days)), caption: 'план', lines: [{ text: sprintCapacityParts(plan.days, labels) }, { text: 'факт не записан — его пишет «Начать планирование» следующего спринта', tone: 'note' }] };
+  if (!plan) return { ...block, value: sprintNumber(sprintCapacitySum(fact.days)), caption: 'факт', lines: [{ text: sprintCapacityParts(fact.days, labels) }, { text: 'план не записан — его пишет «Закончить планирование»', tone: 'note' }] };
+  return { ...block, value: `${sprintNumber(sprintCapacitySum(plan.days))} → ${sprintNumber(sprintCapacitySum(fact.days))}`, caption: 'план → факт', lines: [{ text: sprintCapacityChange(plan.days, fact.days, labels) }] };
 }
 
-function sprintCapacityRunningLine(summary, capacity, log, labels, cfg = SPRINT_REPORT) {
+function sprintCapacityRunningBlock(summary, capacity, log, labels, cfg = SPRINT_REPORT) {
+  const block = { key: 'capacity', title: 'Capacity, чел.-дн.' };
   const plan = log ? sprintCapacityRecord(log, 'end', summary.boardId, summary.start, true, cfg) : null;
-  if (!plan) return sprintCapacityLine(capacity, labels, 'Capacity');
-  const head = `Capacity, чел.-дн.: план ${sprintNumber(sprintCapacitySum(plan.days))}`;
-  if (!capacity) return `${head} — ${sprintCapacityParts(plan.days, labels)}; сейчас «Команда и дни» в панели не заполнены`;
-  return `${head}, сейчас по «Команде и дням» ${sprintNumber(sprintCapacitySum(capacity))} — ${sprintCapacityChange(plan.days, capacity, labels)}`;
+  const lost = log ? [] : [{ text: 'план из служебной карты не загрузился', tone: 'warn' }];
+  if (!plan && !capacity) return { ...block, value: '—', lines: [{ text: '«Команда и дни» в панели не заполнены', tone: 'note' }, ...lost] };
+  if (!plan) return { ...block, value: sprintNumber(sprintCapacitySum(capacity)), caption: 'по «Команде и дням»', lines: [{ text: sprintCapacityParts(capacity, labels) }, ...lost] };
+  if (!capacity) return { ...block, value: sprintNumber(sprintCapacitySum(plan.days)), caption: 'план', lines: [{ text: sprintCapacityParts(plan.days, labels) }, { text: 'сейчас «Команда и дни» в панели не заполнены', tone: 'note' }] };
+  return { ...block, value: `${sprintNumber(sprintCapacitySum(plan.days))} → ${sprintNumber(sprintCapacitySum(capacity))}`, caption: 'план → сейчас по «Команде и дням»', lines: [{ text: sprintCapacityChange(plan.days, capacity, labels) }] };
 }
 
-function sprintGoalLine(summary) {
-  if (summary.goal) return `Цель: ${summary.goal}`;
-  if (summary.title) return `Цель — из названия спринта: ${summary.title}`;
-  return 'Цель в Kaiten не заполнена';
+function sprintNextBlock(capacity, labels) {
+  const block = { key: 'next', title: 'Следующий спринт, capacity' };
+  if (!capacity) return { ...block, value: '—', lines: [{ text: '«Команда и дни» в панели не заполнены', tone: 'note' }] };
+  return { ...block, value: sprintNumber(sprintCapacitySum(capacity)), caption: 'чел.-дн. по «Команде и дням»', lines: [{ text: sprintCapacityParts(capacity, labels) }] };
+}
+
+function sprintGoalBlock(summary) {
+  const block = { key: 'goal', title: 'Цель', wide: true };
+  if (summary.goal) return { ...block, lines: [{ text: summary.goal, tone: 'strong' }] };
+  if (summary.title) return { ...block, lines: [{ text: summary.title, tone: 'strong' }, { text: 'в Kaiten цель не заполнена — это название спринта', tone: 'note' }] };
+  return { ...block, lines: [{ text: 'в Kaiten не заполнена', tone: 'note' }] };
 }
 
 function sprintRange(summary, cfg = SPRINT_REPORT) {
   return `${sprintDate(summary.start, cfg)}–${sprintDate(summary.end, cfg)}`;
 }
 
-function sprintReportLines({ last = null, running = null, history = [], historyProblem = null, capacity = null, capacityLog = null, labels = null, now, cfg = SPRINT_REPORT }) {
+function sprintReportBlocks({ last = null, running = null, history = [], historyProblem = null, capacity = null, capacityLog = null, labels = null, now, cfg = SPRINT_REPORT }) {
   const names = labels || cfg.labels;
-  const lines = [];
-  const add = (text, bold) => {
-    if (text) lines.push(bold ? { text, bold: true } : { text });
-  };
   const older = history.slice().reverse();
+  const sections = [];
   if (last) {
-    add(`Итоги спринта ${sprintRange(last, cfg)}${last.closedAt === null ? ' — предварительные: в Kaiten ещё не завершён' : ''}`, true);
-    add(sprintGoalLine(last));
-    if (capacityLog) add(sprintCapacityDoneLine(last, capacityLog, names, cfg));
-    add(sprintPlanLine(last, older));
-    for (const text of sprintAddedLines(last)) add(text);
-    add(sprintLeftLine(last));
-    add(sprintReestimateLine(last));
-    add(sprintDoneLine(last));
-    add(sprintPlanDoneLine(last));
-    add(sprintCarryLine(last, 'Перенос'));
-    add(sprintLeadLine(last, older));
-    add(sprintStagesLine(last));
-    add(sprintEscapedLine(last));
-    if (!running) add(sprintCapacityLine(capacity, names, 'Следующий спринт, capacity'));
+    const blocks = [
+      sprintGoalBlock(last),
+      sprintCapacityDoneBlock(last, capacityLog, names, cfg),
+      sprintPlanBlock(last, older),
+      sprintChangesBlock(last),
+      sprintDoneBlock(last),
+      sprintStartBlock(last),
+      sprintCarryBlock(last, 'carry', 'Перенос', false),
+      sprintLeadBlock(last, older),
+      sprintEscapedBlock(last),
+    ];
+    if (!running) blocks.push(sprintNextBlock(capacity, names));
+    sections.push({ key: 'last', title: `Итоги спринта ${sprintRange(last, cfg)}`, ...(last.closedAt === null ? { note: 'предварительные: в Kaiten ещё не завершён', tone: 'warn' } : {}), blocks });
   }
   if (running) {
-    add(`Идёт спринт ${sprintRange(running, cfg)} — осталось ${sprintCount(sprintDaysLeft(now, running.end, cfg), SPRINT_WORDS.day)} с сегодняшним`, true);
-    add(sprintGoalLine(running));
-    add(sprintCapacityRunningLine(running, capacity, capacityLog, names, cfg));
-    add(sprintPlanLine(running, last ? [...older.slice(-2), last] : []));
-    for (const text of sprintAddedLines(running)) add(text);
-    add(sprintLeftLine(running));
-    add(sprintReestimateLine(running));
-    add(sprintDoneLine(running));
-    add(sprintCarryLine(running, 'Не в проде'));
-    if (running.carry.blocked) add(`С блокером: ${sprintCount(running.carry.blocked, SPRINT_WORDS.card)}`);
-    add(sprintEscapedLine(running));
+    sections.push({
+      key: 'running',
+      title: `Идёт спринт ${sprintRange(running, cfg)}`,
+      note: `осталось ${sprintCount(sprintDaysLeft(now, running.end, cfg), SPRINT_WORDS.day)} с сегодняшним`,
+      tone: 'warn',
+      blocks: [
+        sprintGoalBlock(running),
+        sprintCapacityRunningBlock(running, capacity, capacityLog, names, cfg),
+        sprintPlanBlock(running, last ? [...older.slice(-2), last] : []),
+        sprintChangesBlock(running),
+        sprintDoneBlock(running),
+        sprintCarryBlock(running, 'open', 'Не в проде', true),
+        sprintEscapedBlock(running),
+      ],
+    });
   }
-  if (historyProblem) add(`Прошлые спринты не загрузились: ${historyProblem}`);
-  return lines;
+  return { sections, problem: historyProblem ? `Прошлые спринты не загрузились: ${historyProblem}` : null };
 }
 
 async function sprintReportLoad({ cards, boardId, now, columns, load, store, cfg = SPRINT_REPORT }) {
@@ -523,4 +533,4 @@ async function sprintReportLoad({ cards, boardId, now, columns, load, store, cfg
   return { last, running, history, historyProblem, currentId };
 }
 
-if (typeof module !== 'undefined') module.exports = { SPRINT_REPORT, sprintTime, sprintMonday, sprintPeriod, sprintFinished, sprintIsBug, sprintEscaped, sprintCurrentId, sprintVersions, sprintWorkdays, sprintDaysLeft, sprintMedian, sprintPercentile, sprintSummary, sprintNumber, sprintDays, sprintDate, sprintReportLines, sprintReportLoad };
+if (typeof module !== 'undefined') module.exports = { SPRINT_REPORT, sprintTime, sprintMonday, sprintPeriod, sprintFinished, sprintIsBug, sprintEscaped, sprintCurrentId, sprintVersions, sprintWorkdays, sprintDaysLeft, sprintMedian, sprintPercentile, sprintSummary, sprintNumber, sprintDays, sprintDate, sprintReportBlocks, sprintReportLoad };

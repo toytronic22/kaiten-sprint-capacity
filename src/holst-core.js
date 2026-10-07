@@ -489,8 +489,132 @@ function holstChart({ objects, group, chart = {} }) {
   return { top: scale.position.y, left: title ? title.position.x : scale.position.x, textScale: scale.textScale || 1, zIndex: scale.zIndex || 0, problem: null };
 }
 
-function holstReportItems(lines, now) {
-  return [...lines.map((line) => ({ type: 'paragraph', runs: [line.bold ? { text: line.text, marks: { bold: true } } : { text: line.text }] })), updatedLine(now)];
+const HOLST_REPORT = {
+  width: 680,
+  pad: 24,
+  gap: 12,
+  inner: 16,
+  sectionGap: 28,
+  columns: 2,
+  line: 1.4,
+  wrap: 0.92,
+  panel: 0x12151C,
+  card: 0x222834,
+  panelRadius: 24,
+  cardRadius: 12,
+  color: { head: 0xFFFFFF, label: 0x8AB4FF, value: 0xFFFFFF, text: 0xC9CED8, strong: 0xFFFFFF, note: 0x8B93A3, warn: 0xFFC66D },
+  size: { head: 20, headNote: 13, label: 10, value: 24, caption: 12, text: 12, strong: 15, note: 11, updated: 10 },
+};
+
+function holstReportMarks(tone) {
+  const { color, size } = HOLST_REPORT;
+  if (tone === 'strong') return { bold: true, color: color.strong, fontSize: size.strong };
+  if (tone === 'note') return { color: color.note, fontSize: size.note };
+  if (tone === 'warn') return { color: color.warn, fontSize: size.text };
+  return { color: color.text, fontSize: size.text };
+}
+
+function holstReportParagraph(runs) {
+  return { type: 'paragraph', runs };
+}
+
+function holstBlockItems(block) {
+  const { color, size } = HOLST_REPORT;
+  const items = [holstReportParagraph([{ text: block.title.toUpperCase(), marks: { bold: true, color: color.label, fontSize: size.label } }])];
+  if (block.value !== undefined) {
+    const runs = [{ text: block.value, marks: { bold: true, color: color.value, fontSize: size.value } }];
+    if (block.caption) runs.push({ text: `  ${block.caption}`, marks: { color: color.text, fontSize: size.caption } });
+    items.push(holstReportParagraph(runs));
+  }
+  for (const line of block.lines || []) items.push(holstReportParagraph([{ text: line.text, marks: holstReportMarks(line.tone) }]));
+  return items;
+}
+
+function holstSectionItems(section) {
+  const { color, size } = HOLST_REPORT;
+  const items = [holstReportParagraph([{ text: section.title, marks: { bold: true, color: color.head, fontSize: size.head } }])];
+  if (section.note) items.push(holstReportParagraph([{ text: section.note, marks: { color: section.tone === 'warn' ? color.warn : color.note, fontSize: size.headNote } }]));
+  return items;
+}
+
+function holstFooterItems(problem, now) {
+  const { color, size } = HOLST_REPORT;
+  const items = problem ? [holstReportParagraph([{ text: problem, marks: holstReportMarks('warn') }])] : [];
+  items.push(holstReportParagraph([{ text: `Обновлено ${shortTime(now)}`, marks: { color: color.note, italic: true, fontSize: size.updated } }]));
+  return items;
+}
+
+function holstItemsHeight(items, width) {
+  let total = 0;
+  for (const item of items) {
+    const sizeOf = (run) => (run.marks && run.marks.fontSize) || 16;
+    const size = Math.max(...item.runs.map(sizeOf));
+    const length = item.runs.reduce((sum, run) => sum + runsEm([run]) * sizeOf(run), 0);
+    total += Math.max(1, Math.ceil(length / (width * HOLST_REPORT.wrap))) * size * HOLST_REPORT.line;
+  }
+  return total;
+}
+
+function holstReportRows(blocks, columns = HOLST_REPORT.columns) {
+  const rows = [];
+  let row = [];
+  for (const block of blocks) {
+    if (block.wide) {
+      if (row.length) rows.push(row);
+      rows.push([block]);
+      row = [];
+      continue;
+    }
+    row.push(block);
+    if (row.length === columns) {
+      rows.push(row);
+      row = [];
+    }
+  }
+  if (row.length) rows.push(row);
+  return rows;
+}
+
+function holstReportLayout({ report, x, y, textScale, zIndex, now }) {
+  const R = HOLST_REPORT;
+  const content = R.width - 2 * R.pad;
+  const parts = [];
+  const at = (left, top) => ({ x: Math.round(x + left * textScale), y: Math.round(y + top * textScale) });
+  const text = (part, left, top, width, items) => parts.push({ part, kind: 'text', ...at(left, top), width, textScale, zIndex: zIndex + 0.02, items });
+  let top = R.pad;
+  for (const section of report.sections) {
+    const head = holstSectionItems(section);
+    text('head', R.pad, top, content, head);
+    top += holstItemsHeight(head, content) + R.gap;
+    for (const row of holstReportRows(section.blocks)) {
+      const width = (content - R.gap * (row.length - 1)) / row.length;
+      const inner = width - 2 * R.inner;
+      const items = row.map(holstBlockItems);
+      const height = Math.max(...items.map((list) => holstItemsHeight(list, inner))) + 2 * R.inner;
+      row.forEach((block, index) => {
+        const left = R.pad + index * (width + R.gap);
+        parts.push({ part: 'card', kind: 'shape', ...at(left, top), width: Math.round(width * textScale), height: Math.round(height * textScale), color: R.card, radius: Math.round(R.cardRadius * textScale), zIndex: zIndex + 0.01 });
+        text('block', left + R.inner, top + R.inner, inner, items[index]);
+      });
+      top += height + R.gap;
+    }
+    top += R.sectionGap - R.gap;
+  }
+  const footer = holstFooterItems(report.problem, now);
+  text('footer', R.pad, top, content, footer);
+  top += holstItemsHeight(footer, content) + R.pad;
+  parts.unshift({ part: 'panel', kind: 'shape', ...at(0, 0), width: Math.round(R.width * textScale), height: Math.round(top * textScale), color: R.panel, radius: Math.round(R.panelRadius * textScale), zIndex });
+  return parts;
+}
+
+function holstReportSignature(report) {
+  const text = JSON.stringify([HOLST_REPORT, report]);
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash.toString(16).padStart(8, '0');
 }
 
 function holstReportPlace({ objects, group, chart = {} }) {
@@ -551,4 +675,4 @@ function stickerFit({ items, width, height, textScale = 1, k = 1 }) {
 }
 
 
-if (typeof module !== 'undefined') module.exports = { HOLST_BLOCKS, HOLST_STYLE, normalizeTitle, blockOfColumn, blockInfo, blockOrder, shortTime, columnAt, holstLookback, holstCards, holstHistoryIds, holstPayload, unknownColumnsText, holstForeignBoards, holstColumns, holstOldTitles, readStickerLines, planSticker, kaitenCardId, stripMarker, updatedLine, stickerSignature, HOLST_NULL_DOC, HOLST_FIT, holstReadMessages, holstSyncQueue, holstChart, percentLabelItems, percentLabelPlace, holstReportItems, holstReportPlace, runsEm, stickerFont, stickerScale, stickerFit, runsText };
+if (typeof module !== 'undefined') module.exports = { HOLST_BLOCKS, HOLST_STYLE, normalizeTitle, blockOfColumn, blockInfo, blockOrder, shortTime, columnAt, holstLookback, holstCards, holstHistoryIds, holstPayload, unknownColumnsText, holstForeignBoards, holstColumns, holstOldTitles, readStickerLines, planSticker, kaitenCardId, stripMarker, updatedLine, stickerSignature, HOLST_NULL_DOC, HOLST_FIT, holstReadMessages, holstSyncQueue, holstChart, percentLabelItems, percentLabelPlace, HOLST_REPORT, holstBlockItems, holstItemsHeight, holstReportRows, holstReportLayout, holstReportSignature, holstFooterItems, holstReportPlace, runsEm, stickerFont, stickerScale, stickerFit, runsText };
