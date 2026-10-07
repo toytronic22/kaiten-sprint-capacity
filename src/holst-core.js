@@ -501,8 +501,8 @@ const HOLST_REPORT = {
   wrap: 0.92,
   panel: 0x12151C,
   card: 0x222834,
-  color: { head: 0xFFFFFF, group: 0x8AB4FF, label: 0x9AA3B5, value: 0xFFFFFF, text: 0xC9CED8, strong: 0xFFFFFF, note: 0x8B93A3, warn: 0xFFC66D },
-  size: { head: 20, headNote: 13, group: 14, label: 10, value: 24, caption: 12, text: 12, strong: 15, note: 11, updated: 10 },
+  color: { head: 0xFFFFFF, group: 0x8AB4FF, label: 0x9AA3B5, value: 0xFFFFFF, text: 0xC9CED8, strong: 0xFFFFFF, note: 0x8B93A3, warn: 0xFFC66D, link: 0xA8C7FA },
+  size: { head: 20, headNote: 13, group: 14, groupNote: 12, label: 10, value: 24, caption: 12, text: 12, strong: 15, note: 11, legend: 11, updated: 10 },
 };
 
 function holstReportMarks(tone) {
@@ -525,7 +525,10 @@ function holstBlockItems(block) {
     if (block.caption) runs.push({ text: `  ${block.caption}`, marks: { color: color.text, fontSize: size.caption } });
     items.push(holstReportParagraph(runs));
   }
-  for (const line of block.lines || []) items.push(holstReportParagraph([{ text: line.text, marks: holstReportMarks(line.tone) }]));
+  for (const line of block.lines || []) {
+    if (line.link) items.push(holstReportParagraph([{ text: line.text, marks: { ...holstReportMarks(line.tone), color: color.link }, link: line.link }]));
+    else items.push(holstReportParagraph([{ text: line.text, marks: holstReportMarks(line.tone) }]));
+  }
   return items;
 }
 
@@ -538,7 +541,14 @@ function holstSectionItems(section) {
 
 function holstGroupItems(group) {
   const { color, size } = HOLST_REPORT;
-  return [holstReportParagraph([{ text: group.title, marks: { bold: true, color: color.group, fontSize: size.group } }])];
+  const runs = [{ text: group.title, marks: { bold: true, color: color.group, fontSize: size.group } }];
+  if (group.note) runs.push({ text: ` — ${group.note}`, marks: { color: color.note, fontSize: size.groupNote } });
+  return [holstReportParagraph(runs)];
+}
+
+function holstLegendItems(legend) {
+  const { color, size } = HOLST_REPORT;
+  return legend ? [holstReportParagraph([{ text: legend, marks: { color: color.note, fontSize: size.legend } }])] : [];
 }
 
 function holstFooterItems(problem, now) {
@@ -586,6 +596,11 @@ function holstReportLayout({ report, x, y, textScale, zIndex, now }) {
   const at = (left, top) => ({ x: Math.round(x + left * textScale), y: Math.round(y + top * textScale) });
   const text = (part, left, top, width, items) => parts.push({ part, kind: 'text', ...at(left, top), width, textScale, zIndex: zIndex + 0.02, items });
   let top = R.pad;
+  const legend = holstLegendItems(report.legend);
+  if (legend.length) {
+    text('legend', R.pad, top, content, legend);
+    top += holstItemsHeight(legend, content) + R.gap;
+  }
   for (const section of report.sections) {
     const head = holstSectionItems(section);
     text('head', R.pad, top, content, head);
@@ -693,4 +708,4 @@ function stickerFit({ items, width, height, textScale = 1, k = 1 }) {
 }
 
 
-if (typeof module !== 'undefined') module.exports = { HOLST_BLOCKS, HOLST_STYLE, normalizeTitle, blockOfColumn, blockInfo, blockOrder, shortTime, columnAt, holstLookback, holstCards, holstHistoryIds, holstPayload, unknownColumnsText, holstForeignBoards, holstColumns, holstOldTitles, readStickerLines, planSticker, kaitenCardId, stripMarker, updatedLine, stickerSignature, HOLST_NULL_DOC, HOLST_FIT, holstReadMessages, holstSyncQueue, holstChart, percentLabelItems, percentLabelPlace, HOLST_REPORT, holstBlockItems, holstItemsHeight, holstReportRows, holstGroupItems, holstReportLayout, holstReportParts, holstReportSignature, holstReportStale, holstFooterItems, holstReportPlace, runsEm, stickerFont, stickerScale, stickerFit, runsText };
+if (typeof module !== 'undefined') module.exports = { HOLST_BLOCKS, HOLST_STYLE, normalizeTitle, blockOfColumn, blockInfo, blockOrder, shortTime, columnAt, holstLookback, holstCards, holstHistoryIds, holstPayload, unknownColumnsText, holstForeignBoards, holstColumns, holstOldTitles, readStickerLines, planSticker, kaitenCardId, stripMarker, updatedLine, stickerSignature, HOLST_NULL_DOC, HOLST_FIT, holstReadMessages, holstSyncQueue, holstChart, percentLabelItems, percentLabelPlace, HOLST_REPORT, holstBlockItems, holstItemsHeight, holstReportRows, holstGroupItems, holstLegendItems, holstReportLayout, holstReportParts, holstReportSignature, holstReportStale, holstFooterItems, holstReportPlace, runsEm, stickerFont, stickerScale, stickerFit, runsText };

@@ -253,7 +253,8 @@ function holstReportFind(Y, objects, id) {
   const partOf = (childId) => objects.get(childId).get('sprintcap').part;
   const panel = children.find((childId) => partOf(childId) === 'panel');
   const stored = object.get('sprintcap') || {};
-  return { old: false, object, children, anchor: (panel ? objects.get(panel) : object).get('position'), textScale: stored.scale || 1, zIndex: stored.z || 0, sig: stored.sig || null, footer: children.find((childId) => partOf(childId) === 'footer') || null };
+  const width = panel ? Number(objects.get(panel).get('width')) : 0;
+  return { old: false, object, children, anchor: (panel ? objects.get(panel) : object).get('position'), textScale: width > 0 ? Math.round((1000 * width) / HOLST_REPORT.width) / 1000 : stored.scale || 1, zIndex: stored.z || 0, sig: stored.sig || null, footer: children.find((childId) => partOf(childId) === 'footer') || null };
 }
 
 function holstWriteReport({ Y, objects, documents, found, place, report, sig, author, now }) {

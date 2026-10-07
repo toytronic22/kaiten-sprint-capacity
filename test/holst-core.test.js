@@ -549,6 +549,53 @@ test('Блок отчёта: заголовок — мелкой подпись�
   ]);
 });
 
+test('Блок отчёта: строка со ссылкой — ссылкой на карту и своим цветом, размер — по тону строки', () => {
+  // Arrange
+  const block = { key: 'oldest', title: 'Дольше всех', lines: [{ text: 'Фильтр по датам', link: url(102) }, { text: 'в работе 5 рабочих дней', tone: 'note' }] };
+  const { color, size } = H.HOLST_REPORT;
+
+  // Act
+  const items = H.holstBlockItems(block);
+
+  // Assert
+  assert.deepEqual(items.slice(1), [
+    p({ text: 'Фильтр по датам', marks: { color: color.link, fontSize: size.text }, link: url(102) }),
+    p(text('в работе 5 рабочих дней', { color: color.note, fontSize: size.note })),
+  ]);
+});
+
+test('Заголовок группы: вопрос, на который отвечает группа, — серым после тире; без вопроса — только название', () => {
+  // Arrange
+  const { color, size } = H.HOLST_REPORT;
+
+  // Act
+  const items = [H.holstGroupItems({ title: 'Результат', note: 'что дошло до прода' }), H.holstGroupItems({ title: 'Качество' })];
+
+  // Assert
+  assert.deepEqual(items, [
+    [p(text('Результат', { bold: true, color: color.group, fontSize: size.group }), text(' — что дошло до прода', { color: color.note, fontSize: size.groupNote }))],
+    [p(text('Качество', { bold: true, color: color.group, fontSize: size.group }))],
+  ]);
+});
+
+test('Раскладка отчёта: легенда — серым над первой секцией, нет легенды — нет и строки', () => {
+  // Arrange
+  const sections = [{ key: 'last', title: 'Итоги', groups: [{ key: 'result', title: 'Результат', blocks: [{ key: 'a', title: 'А', value: '1', lines: [] }] }] }];
+  const layout = (legend) => H.holstReportLayout({ report: { legend, sections, problem: null }, x: 0, y: 0, textScale: 1, zIndex: 1, now: Date.parse('2026-10-06T10:00:00Z') });
+
+  // Act
+  const withLegend = layout('SP — story points, оценка карты.');
+  const without = layout(undefined);
+
+  // Assert
+  const legend = withLegend.find((part) => part.part === 'legend');
+  const head = withLegend.find((part) => part.part === 'head');
+  assert.deepEqual(legend.items, [p(text('SP — story points, оценка карты.', { color: H.HOLST_REPORT.color.note, fontSize: H.HOLST_REPORT.size.legend }))]);
+  assert.ok(legend.y < head.y);
+  assert.equal(without.find((part) => part.part === 'legend'), undefined);
+  assert.equal(withLegend.length, without.length + 1);
+});
+
 test('Ряды блоков: по два, широкий — отдельным рядом, одиночный в конце — на весь ряд', () => {
   // Arrange
   const blocks = [{ key: 'goal', wide: true }, { key: 'a' }, { key: 'b' }, { key: 'c' }, { key: 'wide', wide: true }, { key: 'd' }];
