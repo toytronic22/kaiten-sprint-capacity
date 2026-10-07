@@ -138,7 +138,6 @@ test('Сводка спринта: разработка, тестировани�
   assert.deepEqual(current.bugs.development, { count: 3, feature: 1, escape: 1 });
   assert.deepEqual(current.bugs.expedite, { count: 1, feature: 0, escape: 1 });
   assert.deepEqual(current.escapeIds, [202, 205]);
-  assert.deepEqual(current.needQaUntested, [104]);
   assert.deepEqual(current.done, { count: 4, tasks: 1, bugs: 3 });
 });
 
@@ -207,7 +206,7 @@ test('Спринты: идущий первым, по умолчанию бер�
   assert.equal(lateSunday[0].from, '2026-09-28');
 });
 
-test('Что проверить под сводкой: escape, долгие в Test и Need QA мимо Test — ссылками', () => {
+test('Что проверить под сводкой: escape и долгие в Test — ссылками', () => {
   // Arrange
   const { current, previous } = summaries();
 
@@ -219,7 +218,6 @@ test('Что проверить под сводкой: escape, долгие в T
   assert.deepEqual(notes, [
     { label: 'Вернулись из прода', items: [{ id: 202 }, { id: 205 }] },
     { label: 'Дольше недели в Test — не вошли в среднее', items: [{ id: 106, note: '8 рабочих дней' }] },
-    { label: 'Need QA, но мимо Test', items: [{ id: 104 }] },
   ]);
   assert.deepEqual(quiet, []);
 });

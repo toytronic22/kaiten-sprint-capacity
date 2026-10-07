@@ -100,15 +100,13 @@ function reportDevelopment({ cards, histories, columns, start, end, cfg = REPORT
     const events = reportSorted(histories[card.id]);
     for (const board of Object.keys(cfg.boards).map(Number)) {
       let began = null;
-      let tested = false;
       for (const event of events) {
         if (event.board_id !== board) continue;
         const title = columns[event.column_id] || '?';
         const when = reportEventTime(event);
         if (title === cfg.doing && began === null) began = when;
-        if (began !== null && title === cfg.test) tested = true;
         if (began !== null && cfg.forward.includes(title)) {
-          if (start <= when && when < end) finished.push({ card: card.id, board, days: reportWorkdays(began, when, cfg), tested });
+          if (start <= when && when < end) finished.push({ card: card.id, board, days: reportWorkdays(began, when, cfg) });
           break;
         }
       }
@@ -165,7 +163,6 @@ function reportSummarize({ cards, bugCards, histories, columns, start, end, cfg 
   const doneBugs = done.filter((id) => cards[id].type_id === cfg.bugType).length;
   return {
     finished: { count: finished.length, ...kinds },
-    needQaUntested: finished.filter((item) => kind(item.card) === 'needQa' && !item.tested).map((item) => item.card),
     development: { mean: reportMean(dev), count: dev.length },
     test: { mean: reportMean(inTest), count: inTest.length, long },
     tested: {
@@ -257,7 +254,6 @@ function reportNotes(summary) {
   return [
     { label: 'Вернулись из прода', items: summary.escapeIds.map((id) => ({ id })) },
     { label: 'Дольше недели в Test — не вошли в среднее', items: summary.test.long.map((item) => ({ id: item.card, note: reportDays(item.days, true) })) },
-    { label: 'Need QA, но мимо Test', items: summary.needQaUntested.map((id) => ({ id })) },
   ].filter((group) => group.items.length);
 }
 
