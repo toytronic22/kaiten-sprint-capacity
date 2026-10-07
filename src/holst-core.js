@@ -495,13 +495,14 @@ const HOLST_REPORT = {
   gap: 12,
   inner: 16,
   sectionGap: 28,
+  groupGap: 20,
   columns: 2,
   line: 1.4,
   wrap: 0.92,
   panel: 0x12151C,
   card: 0x222834,
-  color: { head: 0xFFFFFF, label: 0x8AB4FF, value: 0xFFFFFF, text: 0xC9CED8, strong: 0xFFFFFF, note: 0x8B93A3, warn: 0xFFC66D },
-  size: { head: 20, headNote: 13, label: 10, value: 24, caption: 12, text: 12, strong: 15, note: 11, updated: 10 },
+  color: { head: 0xFFFFFF, group: 0x8AB4FF, label: 0x9AA3B5, value: 0xFFFFFF, text: 0xC9CED8, strong: 0xFFFFFF, note: 0x8B93A3, warn: 0xFFC66D },
+  size: { head: 20, headNote: 13, group: 14, label: 10, value: 24, caption: 12, text: 12, strong: 15, note: 11, updated: 10 },
 };
 
 function holstReportMarks(tone) {
@@ -533,6 +534,11 @@ function holstSectionItems(section) {
   const items = [holstReportParagraph([{ text: section.title, marks: { bold: true, color: color.head, fontSize: size.head } }])];
   if (section.note) items.push(holstReportParagraph([{ text: section.note, marks: { color: section.tone === 'warn' ? color.warn : color.note, fontSize: size.headNote } }]));
   return items;
+}
+
+function holstGroupItems(group) {
+  const { color, size } = HOLST_REPORT;
+  return [holstReportParagraph([{ text: group.title, marks: { bold: true, color: color.group, fontSize: size.group } }])];
 }
 
 function holstFooterItems(problem, now) {
@@ -584,18 +590,24 @@ function holstReportLayout({ report, x, y, textScale, zIndex, now }) {
     const head = holstSectionItems(section);
     text('head', R.pad, top, content, head);
     top += holstItemsHeight(head, content) + R.gap;
-    for (const row of holstReportRows(section.blocks)) {
-      const width = (content - R.gap * (row.length - 1)) / row.length;
-      const inner = width - 2 * R.inner;
-      const items = row.map(holstBlockItems);
-      const height = Math.max(...items.map((list) => holstItemsHeight(list, inner))) + 2 * R.inner;
-      row.forEach((block, index) => {
-        const left = R.pad + index * (width + R.gap);
-        parts.push({ part: 'card', kind: 'shape', ...at(left, top), width: Math.round(width * textScale), height: Math.round(height * textScale), color: R.card, shape: 'roundedRectangle', zIndex: zIndex + 0.01 });
-        text('block', left + R.inner, top + R.inner, inner, items[index]);
-      });
-      top += height + R.gap;
-    }
+    section.groups.forEach((group, groupIndex) => {
+      if (groupIndex) top += R.groupGap - R.gap;
+      const title = holstGroupItems(group);
+      text('group', R.pad, top, content, title);
+      top += holstItemsHeight(title, content) + R.gap / 2;
+      for (const row of holstReportRows(group.blocks)) {
+        const width = (content - R.gap * (row.length - 1)) / row.length;
+        const inner = width - 2 * R.inner;
+        const items = row.map(holstBlockItems);
+        const height = Math.max(...items.map((list) => holstItemsHeight(list, inner))) + 2 * R.inner;
+        row.forEach((block, index) => {
+          const left = R.pad + index * (width + R.gap);
+          parts.push({ part: 'card', kind: 'shape', ...at(left, top), width: Math.round(width * textScale), height: Math.round(height * textScale), color: R.card, shape: 'roundedRectangle', zIndex: zIndex + 0.01 });
+          text('block', left + R.inner, top + R.inner, inner, items[index]);
+        });
+        top += height + R.gap;
+      }
+    });
     top += R.sectionGap - R.gap;
   }
   const footer = holstFooterItems(report.problem, now);
@@ -605,14 +617,22 @@ function holstReportLayout({ report, x, y, textScale, zIndex, now }) {
   return parts;
 }
 
+function holstReportParts(report) {
+  return holstReportLayout({ report, x: 0, y: 0, textScale: 1, zIndex: 0, now: 0 });
+}
+
 function holstReportSignature(report) {
-  const text = JSON.stringify([HOLST_REPORT, report]);
+  const text = JSON.stringify(holstReportParts(report));
   let hash = 0x811c9dc5;
   for (let index = 0; index < text.length; index += 1) {
     hash ^= text.charCodeAt(index);
     hash = Math.imul(hash, 0x01000193) >>> 0;
   }
   return hash.toString(16).padStart(8, '0');
+}
+
+function holstReportStale({ found, sig, parts }) {
+  return !found || found.sig !== sig || !found.footer || found.children.length !== parts;
 }
 
 function holstReportPlace({ objects, group, chart = {} }) {
@@ -673,4 +693,4 @@ function stickerFit({ items, width, height, textScale = 1, k = 1 }) {
 }
 
 
-if (typeof module !== 'undefined') module.exports = { HOLST_BLOCKS, HOLST_STYLE, normalizeTitle, blockOfColumn, blockInfo, blockOrder, shortTime, columnAt, holstLookback, holstCards, holstHistoryIds, holstPayload, unknownColumnsText, holstForeignBoards, holstColumns, holstOldTitles, readStickerLines, planSticker, kaitenCardId, stripMarker, updatedLine, stickerSignature, HOLST_NULL_DOC, HOLST_FIT, holstReadMessages, holstSyncQueue, holstChart, percentLabelItems, percentLabelPlace, HOLST_REPORT, holstBlockItems, holstItemsHeight, holstReportRows, holstReportLayout, holstReportSignature, holstFooterItems, holstReportPlace, runsEm, stickerFont, stickerScale, stickerFit, runsText };
+if (typeof module !== 'undefined') module.exports = { HOLST_BLOCKS, HOLST_STYLE, normalizeTitle, blockOfColumn, blockInfo, blockOrder, shortTime, columnAt, holstLookback, holstCards, holstHistoryIds, holstPayload, unknownColumnsText, holstForeignBoards, holstColumns, holstOldTitles, readStickerLines, planSticker, kaitenCardId, stripMarker, updatedLine, stickerSignature, HOLST_NULL_DOC, HOLST_FIT, holstReadMessages, holstSyncQueue, holstChart, percentLabelItems, percentLabelPlace, HOLST_REPORT, holstBlockItems, holstItemsHeight, holstReportRows, holstGroupItems, holstReportLayout, holstReportParts, holstReportSignature, holstReportStale, holstFooterItems, holstReportPlace, runsEm, stickerFont, stickerScale, stickerFit, runsText };

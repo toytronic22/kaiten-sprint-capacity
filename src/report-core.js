@@ -224,10 +224,6 @@ function reportDays(value, working) {
   return `${text} ${reportForm(rounded, working ? ['рабочий день', 'рабочих дня', 'рабочих дней'] : ['день', 'дня', 'дней'])}`;
 }
 
-function reportGrowth(current, previous) {
-  return current > previous && previous > 0 ? Math.round((100 * (current - previous)) / previous) : null;
-}
-
 function reportText({ sprint, current, previous, cfg = REPORT_CONFIG }) {
   const task = ['задачи', 'задач', 'задач'];
   const taskCount = ['задача', 'задачи', 'задач'];
@@ -242,11 +238,6 @@ function reportText({ sprint, current, previous, cfg = REPORT_CONFIG }) {
     `Заведено багов: ${current.bugs.development.count} на основной доске Development и ${current.bugs.expedite.count} на дежурной Expedite. В прошлом спринте — ${previous.bugs.development.count} и ${previous.bugs.expedite.count}.`,
     `Из прода ${returned(current.escapeIds.length)} ${reportCount(current.escapeIds.length, ['баг', 'бага', 'багов'])}, в прошлом спринте — ${previous.escapeIds.length}.`,
   ];
-  const growth = reportGrowth(current.done.count, previous.done.count);
-  if (growth !== null) {
-    const cardForms = ['карточка', 'карточки', 'карточек'];
-    lines.push(`Нагрузка повысилась на ${growth}%: до колонки Done ${current.done.count % 10 === 1 && current.done.count % 100 !== 11 ? 'дошла' : 'дошли'} ${reportCount(current.done.count, cardForms)}, в прошлом спринте — ${reportCount(previous.done.count, cardForms)}.`);
-  }
   return [lines[0], ...lines.slice(1).map((line, index) => `${index + 1}. ${line}`)].join('\n');
 }
 
@@ -257,4 +248,4 @@ function reportNotes(summary) {
   ].filter((group) => group.items.length);
 }
 
-if (typeof module !== 'undefined') module.exports = { REPORT_CONFIG, reportTime, reportWorkdays, reportFlow, reportDevelopment, reportBugs, reportSummarize, reportSprints, reportPeriod, reportShortDate, reportDays, reportGrowth, reportText, reportNotes };
+if (typeof module !== 'undefined') module.exports = { REPORT_CONFIG, reportTime, reportWorkdays, reportFlow, reportDevelopment, reportBugs, reportSummarize, reportSprints, reportPeriod, reportShortDate, reportDays, reportText, reportNotes };

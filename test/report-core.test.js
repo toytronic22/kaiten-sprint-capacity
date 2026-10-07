@@ -141,7 +141,7 @@ test('Сводка спринта: разработка, тестировани�
   assert.deepEqual(current.done, { count: 4, tasks: 1, bugs: 3 });
 });
 
-test('Текст сводки: шесть пунктов, формы слов по числу, рост нагрузки в процентах', () => {
+test('Текст сводки: пять пунктов, формы слов по числу, без «роста нагрузки» по числу карт', () => {
   // Arrange
   const { current, previous } = summaries();
 
@@ -157,21 +157,7 @@ test('Текст сводки: шесть пунктов, формы слов п
     '3. Протестировали 2 задачи и перепроверили 1 исправленный баг. В прошлом спринте — 1 задачу и 0 багов.',
     '4. Заведено багов: 3 на основной доске Development и 1 на дежурной Expedite. В прошлом спринте — 0 и 0.',
     '5. Из прода вернулись 2 бага, в прошлом спринте — 0.',
-    '6. Нагрузка повысилась на 100%: до колонки Done дошли 4 карточки, в прошлом спринте — 2 карточки.',
   ].join('\n'));
-});
-
-test('Текст сводки: нагрузка не выросла — шестого пункта нет', () => {
-  // Arrange
-  const { current, previous } = summaries();
-
-  // Act
-  const text = report.reportText({ sprint: SPRINT, current: previous, previous: current });
-
-  // Assert
-  assert.equal(text.split('\n').length, 7);
-  assert.doesNotMatch(text, /Нагрузка/);
-  assert.match(text, /5\. Из прода вернулось 0 багов, в прошлом спринте — 2\./);
 });
 
 test('Дни словами: дробь — «рабочего дня», целое — по числу, нет данных — так и пишем', () => {
@@ -182,14 +168,6 @@ test('Дни словами: дробь — «рабочего дня», цел�
   assert.equal(report.reportDays(2, true), '2 рабочих дня');
   assert.equal(report.reportDays(5, false), '5 дней');
   assert.equal(report.reportDays(null, true), 'нет данных');
-});
-
-test('Рост нагрузки: только когда выросла и было с чем сравнить', () => {
-  // Assert
-  assert.equal(report.reportGrowth(52, 23), 126);
-  assert.equal(report.reportGrowth(23, 52), null);
-  assert.equal(report.reportGrowth(23, 23), null);
-  assert.equal(report.reportGrowth(5, 0), null);
 });
 
 test('Спринты: идущий первым, по умолчанию берётся прошлый; новые сутки — по UTC+5', () => {

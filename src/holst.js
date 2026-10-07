@@ -248,9 +248,9 @@ function holstReportFind(Y, objects, id) {
   if (object.get('type') !== 'group') return { old: true, object, children: [], anchor: object.get('position'), textScale: object.get('textScale') || 1, zIndex: object.get('zIndex') || 0, sig: null, footer: null };
   const children = [];
   objects.forEach((child, childId) => {
-    if (child instanceof Y.Map && child.get('parentId') === id) children.push(childId);
+    if (child instanceof Y.Map && child.get('parentId') === id && (child.get('sprintcap') || {}).part) children.push(childId);
   });
-  const partOf = (childId) => (objects.get(childId).get('sprintcap') || {}).part;
+  const partOf = (childId) => objects.get(childId).get('sprintcap').part;
   const panel = children.find((childId) => partOf(childId) === 'panel');
   const stored = object.get('sprintcap') || {};
   return { old: false, object, children, anchor: (panel ? objects.get(panel) : object).get('position'), textScale: stored.scale || 1, zIndex: stored.z || 0, sig: stored.sig || null, footer: children.find((childId) => partOf(childId) === 'footer') || null };
@@ -330,7 +330,7 @@ async function holstApply(payload, token) {
     const reportPlace = reportData && !reportFound ? holstReportPlace({ objects: holstChartObjects({ Y, objects, documents, payload }), group: payload.group, chart: payload.chart }) : null;
     const reportWrite = Boolean(reportData) && !(reportPlace && reportPlace.problem);
     const reportSig = reportData ? holstReportSignature(reportData) : null;
-    const reportChanged = reportWrite && (!reportFound || reportFound.sig !== reportSig || !reportFound.footer);
+    const reportChanged = reportWrite && holstReportStale({ found: reportFound, sig: reportSig, parts: holstReportParts(reportData).length });
     const reportProblem = !sprintReport ? null
       : sprintReport.problem ? `Отчёт спринта не посчитал: ${sprintReport.problem}`
       : reportPlace && reportPlace.problem ? `Отчёт спринта не написал: ${reportPlace.problem}`

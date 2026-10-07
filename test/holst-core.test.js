@@ -560,11 +560,18 @@ test('Ряды блоков: по два, широкий — отдельным 
   assert.deepEqual(rows, [['goal'], ['a', 'b'], ['c'], ['wide'], ['d']]);
 });
 
-test('Раскладка отчёта: тёмная панель первой и под всем, карточки ряда одной высоты, тексты поверх карточек', () => {
+test('Раскладка отчёта: тёмная панель первой и под всем, заголовок группы над её карточками, карточки ряда одной высоты, тексты поверх карточек', () => {
   // Arrange
   const lines = (count) => Array.from({ length: count }, (_, index) => ({ text: `строка ${index + 1}` }));
   const report = {
-    sections: [{ key: 'last', title: 'Итоги спринта 14.09–27.09', blocks: [{ key: 'goal', title: 'Цель', wide: true, lines: [{ text: 'Цель', tone: 'strong' }] }, { key: 'a', title: 'А', value: '1', lines: lines(1) }, { key: 'b', title: 'Б', value: '2', lines: lines(6) }, { key: 'c', title: 'В', value: '3', lines: [] }] }],
+    sections: [{
+      key: 'last',
+      title: 'Итоги спринта 14.09–27.09',
+      groups: [
+        { key: 'result', title: 'Результат', blocks: [{ key: 'goal', title: 'Цель', wide: true, lines: [{ text: 'Цель', tone: 'strong' }] }, { key: 'a', title: 'А', value: '1', lines: lines(1) }, { key: 'b', title: 'Б', value: '2', lines: lines(6) }] },
+        { key: 'quality', title: 'Качество', blocks: [{ key: 'c', title: 'В', value: '3', lines: [] }] },
+      ],
+    }],
     problem: null,
   };
 
@@ -589,6 +596,10 @@ test('Раскладка отчёта: тёмная панель первой и
   const blockText = parts.find((part) => part.part === 'block' && part.items[0].runs[0].text === 'Б');
   assert.equal(blockText.width * 2, cards[2].width - 2 * H.HOLST_REPORT.inner * 2);
   assert.match(lineTexts(parts[parts.length - 1].items).pop(), /^Обновлено /);
+  const groups = parts.filter((part) => part.part === 'group');
+  assert.deepEqual(groups.map((part) => lineTexts(part.items)[0]), ['Результат', 'Качество']);
+  assert.ok(groups[0].y < cards[0].y && groups[1].y > cards[2].y + cards[2].height && groups[1].y < cards[3].y);
+  assert.equal(groups[0].items[0].runs[0].marks.color, H.HOLST_REPORT.color.group);
 });
 
 test('Раскладка отчёта: причина сбоя — в подвале над «Обновлено», жёлтым', () => {
@@ -604,17 +615,43 @@ test('Раскладка отчёта: причина сбоя — в подва
   assert.match(lineTexts(footer.items)[1], /^Обновлено /);
 });
 
-test('Подпись отчёта: те же цифры — та же подпись, другая цифра — другая', () => {
+test('Подпись отчёта: те же цифры — та же подпись, другая цифра или другая раскладка — другая', () => {
   // Arrange
-  const report = (value) => ({ sections: [{ key: 'last', title: 'Итоги', blocks: [{ key: 'plan', title: 'План', value, lines: [] }] }], problem: null });
+  const report = (value) => ({ sections: [{ key: 'last', title: 'Итоги', groups: [{ key: 'predictability', title: 'Предсказуемость', blocks: [{ key: 'plan', title: 'План', value, lines: [] }] }] }], problem: null });
+  const gap = H.HOLST_REPORT.gap;
 
   // Act
   const signatures = [H.holstReportSignature(report('8 SP')), H.holstReportSignature(report('8 SP')), H.holstReportSignature(report('9 SP'))];
+  H.HOLST_REPORT.gap = gap + 4;
+  const moved = H.holstReportSignature(report('8 SP'));
+  H.HOLST_REPORT.gap = gap;
 
   // Assert
   assert.equal(signatures[0], signatures[1]);
   assert.notEqual(signatures[0], signatures[2]);
+  assert.notEqual(signatures[0], moved);
   assert.match(signatures[0], /^[0-9a-f]+$/);
+});
+
+test('Отчёт на доске устарел: нет группы, другая подпись, нет подвала или частей не столько, сколько в раскладке', () => {
+  // Arrange
+  const report = { sections: [{ key: 'last', title: 'Итоги', groups: [{ key: 'quality', title: 'Качество', blocks: [{ key: 'escaped', title: 'Баги из прода', value: '0', lines: [] }] }] }], problem: null };
+  const sig = H.holstReportSignature(report);
+  const parts = H.holstReportParts(report).length;
+  const found = { sig, footer: 'f', children: Array.from({ length: parts }, (_, index) => index) };
+
+  // Act
+  const stale = [
+    H.holstReportStale({ found, sig, parts }),
+    H.holstReportStale({ found: null, sig, parts }),
+    H.holstReportStale({ found: { ...found, sig: 'old' }, sig, parts }),
+    H.holstReportStale({ found: { ...found, footer: null }, sig, parts }),
+    H.holstReportStale({ found: { ...found, children: found.children.slice(1) }, sig, parts }),
+  ];
+
+  // Assert
+  assert.deepEqual(stale, [false, true, true, true, true]);
+  assert.equal(parts, 6);
 });
 
 test('Отчёт спринта: место — под нижним краем графика, по левому краю заголовка; чужие группы не в счёт', () => {
