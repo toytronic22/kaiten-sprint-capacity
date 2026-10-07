@@ -199,6 +199,7 @@ function sprintSummary({ sprint, now, columns = {}, cfg = SPRINT_REPORT }) {
     lead: { median: null, p85: null, n: 0, instant: 0 },
     stages: [],
     prevId: null,
+    items: [],
   };
   const from = new Map();
   const to = new Map();
@@ -252,6 +253,7 @@ function sprintSummary({ sprint, now, columns = {}, cfg = SPRINT_REPORT }) {
       bump(from, sprintOrigin({ previous: c[fi - 1] || null, born: sprintTime(card.created), start, sprintId: id, boardId, cfg }));
     }
     if (!stays) {
+      result.items.push({ id: cardId, bug, plan, outcome: 'left', sp: plan ? sp0 : sp });
       result.left.cards += 1;
       result.left.sp += plan ? sp0 : sp;
       bump(to, sprintTarget({ next: exit, sprintId: id, boardId, cfg }));
@@ -271,6 +273,7 @@ function sprintSummary({ sprint, now, columns = {}, cfg = SPRINT_REPORT }) {
       column.cards += 1;
       column.sp += carrySp;
       carryColumns.set(title, column);
+      result.items.push({ id: cardId, bug, plan, outcome: 'carry', sp: carrySp, column: title });
       const startedAt = sprintStarted(card, c, cfg);
       if (startedAt !== null && startedAt <= close) {
         const sprints = new Set(c.map((version) => version.sprint).filter((value) => value && value <= id)).size;
@@ -280,6 +283,7 @@ function sprintSummary({ sprint, now, columns = {}, cfg = SPRINT_REPORT }) {
       continue;
     }
     result.done.sp += sp;
+    result.items.push({ id: cardId, bug, plan, outcome: 'done', sp });
     if (plan) {
       result.done.planSp += sp;
       result.done.planSp0 += sp0;
@@ -366,6 +370,7 @@ function sprintBugs({ cards, summary, now, cfg = SPRINT_REPORT }) {
     return {
       count: list.length,
       done: list.filter((item) => item.fixed).length,
+      items: list.map((item) => ({ id: item.card.id, fixed: item.fixed, priority: sprintPriority(item.card, cfg), source: sprintSource(item.card, cfg) })),
       priority: [...Object.values(cfg.priorities), cfg.noPriority].filter((label) => all.has(label)).map((label) => ({ label, count: all.get(label), open: open.get(label) || 0 })),
       sources: [...sources].map(([label, count]) => ({ label, count })).sort((x, y) => y.count - x.count || order.indexOf(x.label) - order.indexOf(y.label)),
     };
