@@ -500,8 +500,6 @@ const HOLST_REPORT = {
   wrap: 0.92,
   panel: 0x12151C,
   card: 0x222834,
-  panelRadius: 24,
-  cardRadius: 12,
   color: { head: 0xFFFFFF, label: 0x8AB4FF, value: 0xFFFFFF, text: 0xC9CED8, strong: 0xFFFFFF, note: 0x8B93A3, warn: 0xFFC66D },
   size: { head: 20, headNote: 13, label: 10, value: 24, caption: 12, text: 12, strong: 15, note: 11, updated: 10 },
 };
@@ -593,7 +591,7 @@ function holstReportLayout({ report, x, y, textScale, zIndex, now }) {
       const height = Math.max(...items.map((list) => holstItemsHeight(list, inner))) + 2 * R.inner;
       row.forEach((block, index) => {
         const left = R.pad + index * (width + R.gap);
-        parts.push({ part: 'card', kind: 'shape', ...at(left, top), width: Math.round(width * textScale), height: Math.round(height * textScale), color: R.card, radius: Math.round(R.cardRadius * textScale), zIndex: zIndex + 0.01 });
+        parts.push({ part: 'card', kind: 'shape', ...at(left, top), width: Math.round(width * textScale), height: Math.round(height * textScale), color: R.card, shape: 'roundedRectangle', zIndex: zIndex + 0.01 });
         text('block', left + R.inner, top + R.inner, inner, items[index]);
       });
       top += height + R.gap;
@@ -603,7 +601,7 @@ function holstReportLayout({ report, x, y, textScale, zIndex, now }) {
   const footer = holstFooterItems(report.problem, now);
   text('footer', R.pad, top, content, footer);
   top += holstItemsHeight(footer, content) + R.pad;
-  parts.unshift({ part: 'panel', kind: 'shape', ...at(0, 0), width: Math.round(R.width * textScale), height: Math.round(top * textScale), color: R.panel, radius: Math.round(R.panelRadius * textScale), zIndex });
+  parts.unshift({ part: 'panel', kind: 'shape', ...at(0, 0), width: Math.round(R.width * textScale), height: Math.round(top * textScale), color: R.panel, shape: 'rectangle', zIndex });
   return parts;
 }
 

@@ -230,7 +230,7 @@ function holstCreateShape({ Y, objects, documents, part, author, now, extra = {}
   documents.set(documentId, new Y.XmlText());
   const object = new Y.Map();
   objects.set(id, object);
-  const fields = { id, type: 'shape', shapeType: 'roundedRectangle', documentId, position: { x: part.x, y: part.y }, width: part.width, height: part.height, fixedSize: true, fillColor: { color: part.color, opacity: 1 }, strokeWidth: 0, borderRadius: part.radius, zIndex: part.zIndex, ...extra, created: { a: author, t: now }, updated: { a: author, t: now } };
+  const fields = { id, type: 'shape', shapeType: part.shape, documentId, position: { x: part.x, y: part.y }, width: part.width, height: part.height, fixedSize: true, fillColor: { color: part.color, opacity: 1 }, strokeWidth: 0, zIndex: part.zIndex, ...extra, created: { a: author, t: now }, updated: { a: author, t: now } };
   for (const [key, value] of Object.entries(fields)) object.set(key, value);
   return id;
 }

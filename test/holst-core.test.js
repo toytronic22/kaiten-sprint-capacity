@@ -574,7 +574,8 @@ test('Раскладка отчёта: тёмная панель первой и
   // Assert
   const [panel, ...rest] = parts;
   const cards = parts.filter((part) => part.part === 'card');
-  assert.deepEqual([panel.part, panel.kind, panel.x, panel.y, panel.width, panel.zIndex, panel.color], ['panel', 'shape', 1000, 2000, H.HOLST_REPORT.width * 2, 50, H.HOLST_REPORT.panel]);
+  assert.deepEqual([panel.part, panel.kind, panel.shape, panel.x, panel.y, panel.width, panel.zIndex, panel.color], ['panel', 'shape', 'rectangle', 1000, 2000, H.HOLST_REPORT.width * 2, 50, H.HOLST_REPORT.panel]);
+  assert.ok(cards.every((card) => card.shape === 'roundedRectangle'));
   for (const part of rest) {
     assert.ok(part.x >= panel.x && part.y >= panel.y && part.y < panel.y + panel.height, part.part);
     if (part.kind === 'shape') assert.ok(part.x + part.width <= panel.x + panel.width && part.y + part.height <= panel.y + panel.height, part.part);
