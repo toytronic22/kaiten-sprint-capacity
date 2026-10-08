@@ -12,6 +12,7 @@ const SPRINT_CAPACITY = {
   bugTypeIds: [446247],
   bugTypeName: /bug|баг/i,
   progress: { stages: { 'to do': 0, doing: 0.3, review: 0.65, 'design review': 0.8, test: 0.8, 'waiting for release': 0.97, done: 1 }, emptyWeight: 1, bugEmptyWeight: 0 },
+  scale: { since: Date.parse('2026-10-12T00:00:00+03:00'), spPerDay: 2 },
 };
 
 const DIRECTIONS = ['back', 'front', 'qa'];
@@ -105,6 +106,10 @@ function progressWeight(card, config = SPRINT_CAPACITY) {
   return isBug(card, config) ? config.progress.bugEmptyWeight : config.progress.emptyWeight;
 }
 
+function newScale(at, config = SPRINT_CAPACITY) {
+  return Boolean(config.scale) && Number.isFinite(at) && at >= config.scale.since;
+}
+
 function estimateIssues(estimate, platform, needQa) {
   const parts = splitEstimate(estimate);
   if (parts.dev === null) return ['noEstimate'];
@@ -114,14 +119,14 @@ function estimateIssues(estimate, platform, needQa) {
   return issues;
 }
 
-function defaultSettings() {
+function defaultSettings(now = null, config = SPRINT_CAPACITY) {
   const team = {};
   for (const direction of DIRECTIONS) team[direction] = { people: 0, absence: 0 };
-  return { workDays: 10, holidays: 0, coefficient: 1, team };
+  return { workDays: 10, holidays: 0, coefficient: newScale(now, config) ? config.scale.spPerDay : 1, team };
 }
 
-function normalizeSettings(raw) {
-  const base = defaultSettings();
+function normalizeSettings(raw, now = null, config = SPRINT_CAPACITY) {
+  const base = defaultSettings(now, config);
   const source = raw && typeof raw === 'object' ? raw : {};
   const pick = (value, fallback) => {
     const number = toNumber(value);
@@ -138,6 +143,12 @@ function normalizeSettings(raw) {
     coefficient: pick(source.coefficient, base.coefficient),
     team,
   };
+}
+
+function scaledSettings(raw, savedAt, now, config = SPRINT_CAPACITY) {
+  const settings = normalizeSettings(raw, now, config);
+  if (newScale(now, config) && !newScale(Date.parse(savedAt), config)) settings.coefficient = config.scale.spPerDay;
+  return settings;
 }
 
 function personDaysOf(settings, direction) {
@@ -159,7 +170,8 @@ function percentOf(part, whole) {
   return whole > 0 ? Math.round((part / whole) * 100) : null;
 }
 
-function buildReport({ cards, settings, snapshot = null, planEnd = null, config = SPRINT_CAPACITY }) {
+function buildReport({ cards, settings, snapshot = null, planEnd = null, now = null, config = SPRINT_CAPACITY }) {
+  const bugPoints = newScale(now, config);
   const sums = {};
   for (const direction of DIRECTIONS) sums[direction] = 0;
   const report = {
@@ -191,10 +203,11 @@ function buildReport({ cards, settings, snapshot = null, planEnd = null, config 
     report.progress.points += weight;
     report.progress.done += weight * (stage || 0);
     if (stage === null) report.progress.unknown.push({ id: card.id, title: item.title, column: columnTitle(card) });
-    if (isBug(card, config)) {
+    const bug = isBug(card, config);
+    if (bug) {
       report.bugs.cards.push(item);
       report.bugs.points += total;
-      continue;
+      if (!bugPoints) continue;
     }
     report.board.cards.push(item);
     report.board.points += total;
@@ -202,9 +215,8 @@ function buildReport({ cards, settings, snapshot = null, planEnd = null, config 
       report.done.cards.push(item);
       report.done.points += total;
     }
-    for (const issue of estimateIssues(estimate, platform, needsQa(card, config))) {
-      report.warnings.push({ issue, item });
-    }
+    const issues = bug && parts.dev === null ? [] : estimateIssues(estimate, platform, needsQa(card, config));
+    for (const issue of issues) report.warnings.push({ issue, item });
     if (parts.dev !== null) {
       if (platform) {
         sums[platform] += parts.dev;
@@ -279,7 +291,7 @@ function formatRow(row) {
 
 function takeSnapshot({ cards, settings, now, boardId, config = SPRINT_CAPACITY }) {
   const inWork = cards.filter((card) => card.state !== config.doneState);
-  const report = buildReport({ cards: inWork, settings, config });
+  const report = buildReport({ cards: inWork, settings, now, config });
   const totals = {};
   for (const row of report.rows) totals[row.direction] = row.total;
   const doneIds = cards.filter((card) => card.state === config.doneState).map((card) => card.id);
@@ -288,7 +300,7 @@ function takeSnapshot({ cards, settings, now, boardId, config = SPRINT_CAPACITY 
 }
 
 function takePlanEnd({ cards, snapshot, settings = defaultSettings(), now, boardId, config = SPRINT_CAPACITY }) {
-  const report = buildReport({ cards, settings: defaultSettings(), snapshot, config });
+  const report = buildReport({ cards, settings: defaultSettings(), snapshot, now, config });
   const totals = {};
   for (const row of report.rows) totals[row.direction] = row.total;
   const capacity = capacityDays(settings);
@@ -386,14 +398,14 @@ function capacityLogFromComments(comments) {
   return log;
 }
 
-function withSettingEdits(base, values) {
-  const next = normalizeSettings(base);
+function withSettingEdits(base, values, now = null, config = SPRINT_CAPACITY) {
+  const next = normalizeSettings(base, now, config);
   for (const [path, raw] of Object.entries(values && typeof values === 'object' ? values : {})) {
     if (!SETTING_PATHS.includes(path)) continue;
     const keys = path.split('.');
     keys.slice(0, -1).reduce((node, key) => node[key], next)[keys[keys.length - 1]] = raw;
   }
-  return normalizeSettings(next);
+  return normalizeSettings(next, now, config);
 }
 
 function resetForNewSprint(settings) {
@@ -441,4 +453,4 @@ function planningReminder({ sprint = null, snapshot = null, planEnd = null, now 
   return !snapshot || Date.parse(snapshot.takenAt) < boundary - 4 * day ? 'start' : null;
 }
 
-if (typeof module !== 'undefined') module.exports = { SPRINT_CAPACITY, DIRECTIONS, DIRECTION_LABELS, SETTINGS_MARK, SETTING_PATHS, toNumber, round1, formatNumber, plural, readEstimate, platformOf, needsQa, isBug, splitEstimate, progressStage, progressWeight, estimateIssues, defaultSettings, normalizeSettings, personDaysOf, capacityOf, capacityDays, buildReport, boardConfig, isChaos, chaosNames, chaosLabel, formatRow, takeSnapshot, takePlanEnd, normalizeCapacity, normalizeSnapshot, boardTitle, snapshotComment, snapshotFromComments, planEndComment, planEndFromComments, capacityLogFromComments, withSettingEdits, resetForNewSprint, settingsComment, settingsFromComments, planningFresh, planningReminder };
+if (typeof module !== 'undefined') module.exports = { SPRINT_CAPACITY, DIRECTIONS, DIRECTION_LABELS, SETTINGS_MARK, SETTING_PATHS, toNumber, round1, formatNumber, plural, readEstimate, platformOf, needsQa, isBug, splitEstimate, progressStage, progressWeight, newScale, estimateIssues, defaultSettings, normalizeSettings, scaledSettings, personDaysOf, capacityOf, capacityDays, buildReport, boardConfig, isChaos, chaosNames, chaosLabel, formatRow, takeSnapshot, takePlanEnd, normalizeCapacity, normalizeSnapshot, boardTitle, snapshotComment, snapshotFromComments, planEndComment, planEndFromComments, capacityLogFromComments, withSettingEdits, resetForNewSprint, settingsComment, settingsFromComments, planningFresh, planningReminder };

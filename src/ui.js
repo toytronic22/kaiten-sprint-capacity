@@ -620,7 +620,7 @@ const PANEL_HTML = `
         <div class="days">
           <label>рабочих дней ${PANEL_INPUT('workDays', '10')}</label>
           <label>праздников ${PANEL_INPUT('holidays', '0')}</label>
-          <label>SP в день ${PANEL_INPUT('coefficient', '1')}</label>
+          <label title="Сколько SP один человек делает за рабочий день. С 12.10.2026 1 SP — 4 часа работы одного человека, поэтому 2">SP в день ${PANEL_INPUT('coefficient', '1')}</label>
         </div>
         <div class="days-hint" title="Будни с понедельника по пятницу между датами спринта в Kaiten. Праздники панель не знает — их вписывают в «праздников»" hidden></div>
         <div class="shared"></div>
@@ -1202,7 +1202,8 @@ function sprintCapacityMount(config) {
   const knownBoard = (id) => config.boards.some((board) => board.id === id);
   let boardId = readStored('board', null);
   if (!knownBoard(boardId)) boardId = config.boards[0].id;
-  const localSettings = (board) => normalizeSettings(readStored(`settings.${board}`, board === config.boards[0].id ? readStored('settings', null) : null));
+  const localSettings = (board, now) => scaledSettings(readStored(`settings.${board}`, board === config.boards[0].id ? readStored('settings', null) : null), readStored(`settingsAt.${board}`, null), now, config);
+  const baseSettings = (record, board, now) => (record ? scaledSettings(record.settings, record.savedAt, now, config) : localSettings(board, now));
   const readEdits = (board) => {
     const raw = readStored(`edits.${board}`, null);
     const ok = raw && typeof raw === 'object' && Number.isFinite(raw.at) && raw.values && typeof raw.values === 'object' && !Array.isArray(raw.values);
@@ -1212,7 +1213,7 @@ function sprintCapacityMount(config) {
   let shared = null;
   let sharedAt = 0;
   let commentsLoaded = false;
-  let settings = withSettingEdits(localSettings(boardId), edits.values);
+  let settings = withSettingEdits(localSettings(boardId, Date.now()), edits.values, Date.now(), config);
   let saveTimer = null;
   let saveChain = Promise.resolve();
   let savingBoard = null;
@@ -1248,11 +1249,12 @@ function sprintCapacityMount(config) {
   const cardLink = (item) => `<a href="${window.location.origin}/${item.id}" target="_blank" rel="noopener">${escapeHtml(item.title || item.id)}</a>`;
 
   const applySettings = () => {
-    settings = withSettingEdits(shared ? shared.settings : localSettings(boardId), edits.values);
+    const now = Date.now();
+    settings = withSettingEdits(baseSettings(shared, boardId, now), edits.values, now, config);
   };
 
   const recompute = () => {
-    report = data.cards ? buildReport({ cards: data.cards, settings, snapshot, planEnd, config: boardConfig(boardId, config) }) : null;
+    report = data.cards ? buildReport({ cards: data.cards, settings, snapshot, planEnd, now: Date.now(), config: boardConfig(boardId, config) }) : null;
   };
 
   const reminder = () => (commentsLoaded && !data.snapshotError && report ? planningReminder({ sprint: sprintDates, snapshot, planEnd, now: Date.now() }) : null);
@@ -1387,6 +1389,7 @@ function sprintCapacityMount(config) {
     for (const input of shadow.querySelectorAll('.settings input[data-set]')) {
       if (input === shadow.activeElement) continue;
       const path = input.dataset.set;
+      if (path === 'coefficient') input.placeholder = formatNumber(defaultSettings(Date.now(), config).coefficient);
       const value = path.split('.').reduce((node, key) => node[key], settings);
       input.value = edits.values[path] !== undefined ? edits.values[path] : value === 0 && input.placeholder === '0' ? '' : formatNumber(value);
     }
@@ -1399,7 +1402,8 @@ function sprintCapacityMount(config) {
     if (board === boardId && !closed) renderShared();
     try {
       const latest = settingsFromComments(await kaitenCardComments(config.snapshotCardId), board);
-      const merged = withSettingEdits(latest ? latest.settings : localSettings(board), sent.values);
+      const now = Date.now();
+      const merged = withSettingEdits(baseSettings(latest, board, now), sent.values, now, config);
       const next = transform ? transform(merged) : merged;
       let record = latest;
       if (!latest || JSON.stringify(latest.settings) !== JSON.stringify(next)) {
@@ -1412,6 +1416,7 @@ function sprintCapacityMount(config) {
       const rest = Object.keys(values).length ? { at: current.at, values } : { at: 0, values: {} };
       writeStored(`edits.${board}`, rest);
       writeStored(`settings.${board}`, record.settings);
+      writeStored(`settingsAt.${board}`, record.savedAt);
       if (board === boardId && !closed) {
         shared = record;
         sharedAt = Date.now();
@@ -1514,7 +1519,10 @@ function sprintCapacityMount(config) {
       planEnd = loaded.planEnd;
       data.snapshotError = null;
       if (asked >= sharedAt) shared = loaded.shared;
-      if (shared) writeStored(`settings.${board}`, shared.settings);
+      if (shared) {
+        writeStored(`settings.${board}`, shared.settings);
+        writeStored(`settingsAt.${board}`, shared.savedAt);
+      }
       if (!commentsLoaded && shared && edits.at < Date.parse(shared.savedAt)) {
         edits = { at: 0, values: {} };
         writeStored(`edits.${board}`, edits);
@@ -1801,7 +1809,7 @@ function sprintCapacityMount(config) {
     try {
       const [cards, boardJson] = await Promise.all([kaitenBoardCards(board), kaitenBoard(board)]);
       const now = Date.now();
-      const current = buildReport({ cards, settings, snapshot, planEnd, config: settingsNow });
+      const current = buildReport({ cards, settings, snapshot, planEnd, now, config: settingsNow });
       const columns = holstColumns(boardJson);
       const capacityLog = kaitenCardComments(config.snapshotCardId).then(capacityLogFromComments).catch(() => null);
       const sprintJob = Promise.all([sprintReportLoad({ cards, boardId: board, now, columns, load: kaitenSprint, loadBugs: sprintBugCards, store: { read: (key) => readStored(key, null), write: writeStored } }), capacityLog])

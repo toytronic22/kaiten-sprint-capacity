@@ -841,3 +841,94 @@ test('напоминание о планировании: у границы сп
   // Assert
   assert.deepEqual(actual, cases.map(([name, , , , , expected]) => [name, expected]));
 });
+
+test('новая шкала — с 12.10.2026 00:00 МСК: ровно на границе — новая; минутой раньше, без даты и без шкалы в настройках — старая', () => {
+  // Arrange
+  const since = Date.parse('2026-10-12T00:00:00+03:00');
+  const config = { ...core.SPRINT_CAPACITY, scale: null };
+
+  // Act
+  const actual = [core.newScale(since), core.newScale(since - 60000), core.newScale(NaN), core.newScale(null), core.newScale(since, config)];
+
+  // Assert
+  assert.deepEqual(actual, [true, false, false, false, false]);
+});
+
+test('SP в день по умолчанию: до 12.10 — 1, с 12.10 — 2, без даты — 1', () => {
+  // Arrange
+  const since = Date.parse('2026-10-12T00:00:00+03:00');
+
+  // Act
+  const actual = [core.defaultSettings(since - 1), core.defaultSettings(since), core.defaultSettings()].map((settings) => settings.coefficient);
+
+  // Assert
+  assert.deepEqual(actual, [1, 2, 1]);
+});
+
+test('«Команда и дни», сохранённые до 12.10 или без даты, после 12.10 считаются с SP в день 2; сохранённые после 12.10 — как вписано', () => {
+  // Arrange
+  const before = Date.parse('2026-10-09T12:00:00+03:00');
+  const after = Date.parse('2026-10-14T12:00:00+03:00');
+  const raw = { coefficient: 1.5, team: { back: { people: 3 } } };
+  const one = { coefficient: 1, team: { back: { people: 3 } } };
+
+  // Act
+  const actual = [
+    core.scaledSettings(raw, '2026-10-09T09:00:00.000Z', before),
+    core.scaledSettings(raw, '2026-10-09T09:00:00.000Z', after),
+    core.scaledSettings(one, '2026-10-13T09:00:00.000Z', after),
+    core.scaledSettings(raw, null, after),
+  ];
+
+  // Assert
+  assert.deepEqual(actual.map((settings) => settings.coefficient), [1.5, 2, 1, 2]);
+  assert.ok(actual.every((settings) => settings.team.back.people === 3));
+});
+
+test('SP в день стёрли: после 12.10 — 2, до 12.10 — 1', () => {
+  // Arrange
+  const base = core.normalizeSettings({ coefficient: 1.5 });
+
+  // Act
+  const actual = [Date.parse('2026-10-14T12:00:00+03:00'), Date.parse('2026-10-09T12:00:00+03:00')].map((now) => core.withSettingEdits(base, { coefficient: '' }, now).coefficient);
+
+  // Assert
+  assert.deepEqual(actual, [2, 1]);
+});
+
+test('с 12.10 баги считаются по оценке: в нагрузке, на доске и в Done, баг без оценки — 0 и без замечаний; до 12.10 — по-старому', () => {
+  // Arrange
+  const now = Date.parse('2026-10-14T12:00:00+03:00');
+  const cards = [
+    card(1, { size: 5, sp: 3, platforms: [BACK], testType: [NEED_QA], type: WEB_BUG }),
+    card(2, { size: 2, platforms: [FRONT], state: DONE, type: WEB_BUG }),
+    card(3, { type: WEB_BUG }),
+    card(4, { size: 4, sp: 3, platforms: [BACK] }),
+    card(5, { size: 1, type: WEB_BUG }),
+  ];
+
+  // Act
+  const after = core.buildReport({ cards, settings: core.defaultSettings(now), now });
+  const before = core.buildReport({ cards, settings: core.defaultSettings(), now: Date.parse('2026-10-09T12:00:00+03:00') });
+
+  // Assert
+  assert.deepEqual(totals(after), [6, 2, 3]);
+  assert.deepEqual([after.board.points, after.board.cards.length, after.done.points, after.done.percent, after.notCounted.points], [12, 5, 2, 20, 1]);
+  assert.deepEqual(after.warnings.map((warning) => [warning.issue, warning.item.id]), [['noPlatform', 5]]);
+  assert.deepEqual([after.bugs.cards.map((item) => item.id), after.bugs.points], [[1, 2, 3, 5], 8]);
+  assert.deepEqual(totals(before), [3, 0, 1]);
+  assert.deepEqual([before.board.points, before.done.points, before.warnings.length, before.notCounted.points], [4, 0, 0, 0]);
+  assert.deepEqual([before.bugs.cards.map((item) => item.id), before.bugs.points], [[1, 2, 3, 5], 8]);
+});
+
+test('снимок с 12.10 считает SP багов, до 12.10 — нет', () => {
+  // Arrange
+  const cards = [card(1, { size: 3, platforms: [BACK], type: WEB_BUG }), card(2, { size: 2, platforms: [FRONT] })];
+  const take = (text) => core.takeSnapshot({ cards, settings: core.defaultSettings(), now: Date.parse(`${text}+03:00`), boardId: CORE_BOARD });
+
+  // Act
+  const actual = [take('2026-10-11T23:59:00'), take('2026-10-12T10:00:00')].map((snapshot) => snapshot.totals);
+
+  // Assert
+  assert.deepEqual(actual, [{ back: 0, front: 2, qa: 0 }, { back: 3, front: 2, qa: 0 }]);
+});
