@@ -4,6 +4,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const { execFileSync } = require('node:child_process');
 const { readFileSync } = require('node:fs');
+const core = require('../src/core.js');
 
 const root = path.join(__dirname, '..');
 execFileSync(process.execPath, [path.join(root, 'build.mjs')], { cwd: root, stdio: 'pipe' });
@@ -123,7 +124,7 @@ const fakeTab = () => {
   return tab;
 };
 
-const page = ({ hostname, stored = {}, opener = null, clipboard = true, holst = 'ok', fetch = () => Promise.reject(new Error('нет сети в тесте')) }) => {
+const page = ({ hostname, stored = {}, opener = null, clipboard = true, holst = 'ok', confirm = () => false, fetch = () => Promise.reject(new Error('нет сети в тесте')) }) => {
   const env = { stored: new Map(Object.entries(stored)), timers: [], listeners: {}, opened: [], alerts: [], copied: [], blockPopups: false, holst, sockets: [] };
   const shadow = remember(fakeElement(), new Map([['.holst-login', remember(Object.assign(fakeElement(), { hidden: true }))], ['.geese', null]]));
   const body = fakeElement();
@@ -181,7 +182,7 @@ const page = ({ hostname, stored = {}, opener = null, clipboard = true, holst = 
     },
     alert: (text) => env.alerts.push(text),
     prompt: (text) => env.alerts.push(text),
-    confirm: () => false,
+    confirm,
     opener,
   };
   context.window = context;
@@ -189,6 +190,7 @@ const page = ({ hostname, stored = {}, opener = null, clipboard = true, holst = 
   vm.runInContext(bundle, context);
   env.$ = (selector) => shadow.querySelector(selector);
   env.click = (act) => (shadow.listeners.click || []).forEach((listener) => listener({ target: { closest: () => ({ dataset: { act } }) } }));
+  env.type = (set, value) => (shadow.listeners.input || []).forEach((listener) => listener({ target: { dataset: { set }, value } }));
   env.message = (origin, data, source) => (env.listeners.message || []).slice().forEach((listener) => listener({ origin, data, source }));
   env.runTimers = (ms) => env.timers.filter((timer) => timer.ms === ms && !timer.cleared).forEach((timer) => {
     if (!timer.repeat) timer.cleared = true;
@@ -604,4 +606,194 @@ test('Закладка на Holst без входа в Holst — просит в
   // Assert
   assert.match(holst.alerts[0], /вы не вошли в Holst/);
   assert.deepEqual(opener.sent, []);
+});
+
+const DAY = 86400000;
+const SNAPSHOT = 'Снимок начала планирования';
+const ago = (ms) => new Date(Date.now() - ms).toISOString();
+const teamComment = (savedAt, settings, author = 'Тестировщик') => ({
+  text: core.settingsComment({ boardId: 68084, savedAt, settings: core.normalizeSettings(settings) }),
+  created: savedAt,
+  author: { full_name: author },
+});
+const posted = (env, mark) => env.requests.filter((item) => item.method === 'POST' && item.body.text.startsWith(mark)).map((item) => JSON.parse(item.body.text.match(/```json\s*([\s\S]*?)```/)[1]));
+
+const teamKaiten = ({ stored = {}, comments = [], sprint = null, sprintId = null, confirm = () => false, fail = () => false } = {}) => {
+  const requests = [];
+  const env = page({
+    hostname: 'dodopizza.kaiten.ru',
+    stored: { 'sprintCapacity.v1.board': '68084', 'sprintCapacity.v1.settings.68084': JSON.stringify({ team: { back: { people: 1 } } }), ...stored },
+    confirm,
+    fetch: (url, options = {}) => {
+      const body = options.body ? JSON.parse(options.body) : null;
+      requests.push({ url, method: options.method || 'GET', body });
+      if (fail(body)) return Promise.reject(new Error('нет сети'));
+      let reply = [];
+      if (url.startsWith('/api/cards?')) reply = [{ id: 1, title: 'Карта 1', size: 30, properties: { id_499149: [16232407] }, state: 1, ...(sprintId ? { sprint_id: sprintId } : {}) }];
+      else if (url.endsWith('/comments') && body) {
+        reply = { text: body.text, created: new Date().toISOString(), author: { full_name: 'Алексей' } };
+        comments.unshift(reply);
+      } else if (url.endsWith('/comments')) reply = comments.slice();
+      else if (url.startsWith('/api/sprints/') && sprint) reply = { data: sprint };
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(reply) });
+    },
+  });
+  return Object.assign(env, { requests, comments });
+};
+
+test('«Команда и дни» общие: панель берёт их из служебной карты, а не вписанное в этом браузере', async () => {
+  // Arrange
+  const kaiten = teamKaiten({ comments: [teamComment(ago(3600000), { team: { back: { people: 3 }, front: { people: 2 } } })] });
+
+  // Act
+  await flush();
+
+  // Assert
+  assert.match(kaiten.$('.summary').innerHTML, /<span class="of"> \/ 30<\/span>/);
+  assert.match(kaiten.$('.shared').textContent, /^Общие для команды · последняя правка: Тестировщик, \d\d\.\d\d, \d\d:\d\d$/);
+  assert.equal(JSON.parse(kaiten.stored.get('sprintCapacity.v1.settings.68084')).team.back.people, 3);
+  assert.deepEqual(posted(kaiten, core.SETTINGS_MARK), []);
+});
+
+test('Правка в «Команде и днях» через две секунды уходит всей команде и ложится поверх чужой правки, сделанной тем временем', async () => {
+  // Arrange
+  const kaiten = teamKaiten({ comments: [teamComment(ago(3600000), { team: { back: { people: 3 }, front: { people: 2 } } })] });
+  await flush();
+
+  // Act
+  kaiten.type('team.qa.people', '1');
+  const waiting = kaiten.$('.shared').textContent;
+  kaiten.comments.unshift(teamComment(ago(60000), { team: { back: { people: 3 }, front: { people: 4 } } }, 'Коллега'));
+  kaiten.runTimers(2000);
+  await flush();
+
+  // Assert
+  const saved = posted(kaiten, core.SETTINGS_MARK);
+  assert.equal(waiting, 'Сохраняю для всей команды…');
+  assert.equal(saved.length, 1);
+  assert.deepEqual(saved[0].settings.team, { back: { people: 3, absence: 0 }, front: { people: 4, absence: 0 }, qa: { people: 1, absence: 0 } });
+  assert.match(kaiten.$('.shared').textContent, /^Общие для команды · последняя правка: Алексей, /);
+  assert.deepEqual(JSON.parse(kaiten.stored.get('sprintCapacity.v1.edits.68084')), { at: 0, values: {} });
+});
+
+test('Неотправленная правка старше чужого сохранения при открытии выбрасывается, свежая — уходит команде', async () => {
+  // Arrange
+  const comments = () => [teamComment(ago(3600000), { team: { back: { people: 3 } } })];
+  const edit = (at) => ({ 'sprintCapacity.v1.edits.68084': JSON.stringify({ at, values: { 'team.back.people': '5' } }) });
+
+  // Act
+  const stale = teamKaiten({ stored: edit(Date.now() - 2 * 3600000), comments: comments() });
+  const fresh = teamKaiten({ stored: edit(Date.now() - 600000), comments: comments() });
+  await flush();
+
+  // Assert
+  assert.deepEqual(posted(stale, core.SETTINGS_MARK), []);
+  assert.match(stale.$('.summary').innerHTML, /<span class="of"> \/ 30<\/span>/);
+  assert.deepEqual(JSON.parse(stale.stored.get('sprintCapacity.v1.edits.68084')), { at: 0, values: {} });
+  assert.deepEqual(posted(fresh, core.SETTINGS_MARK).map((item) => item.settings.team.back.people), [5]);
+});
+
+test('«Начать планирование» нового цикла: снимок пишет «Команду и дни» как факт, потом «нет, чел.-дн» и праздники обнуляются у всех', async () => {
+  // Arrange
+  const asked = [];
+  const kaiten = teamKaiten({
+    comments: [teamComment(ago(3600000), { holidays: 1, team: { back: { people: 3, absence: 2 }, front: { people: 2, absence: 1 } } })],
+    confirm: (text) => asked.push(text) > 0,
+  });
+  await flush();
+
+  // Act
+  kaiten.click('start-planning');
+  await flush();
+
+  // Assert
+  const posts = kaiten.requests.filter((item) => item.method === 'POST').map((item) => item.body.text.split(',')[0]);
+  assert.match(asked[0], /^Staff Core: начать планирование для всей команды\? .*Потом «нет, чел\.-дн» и «праздников» обнулятся — впишите их на новый спринт\.$/);
+  assert.deepEqual(posts, ['Снимок начала планирования', 'Команда и дни']);
+  assert.deepEqual(posted(kaiten, SNAPSHOT)[0].capacity, { back: 25, front: 17 });
+  assert.deepEqual(posted(kaiten, core.SETTINGS_MARK)[0].settings, core.normalizeSettings({ team: { back: { people: 3 }, front: { people: 2 } } }));
+  assert.deepEqual(kaiten.alerts, []);
+});
+
+test('«Начать планирование» ещё раз в течение трёх дней: снимок заменяется, «Команда и дни» не обнуляются', async () => {
+  // Arrange
+  const asked = [];
+  const kaiten = teamKaiten({
+    comments: [teamComment(ago(3600000), { team: { back: { people: 3, absence: 2 } } }), planningStart(ago(7200000))],
+    confirm: (text) => asked.push(text) > 0,
+  });
+  await flush();
+
+  // Act
+  kaiten.click('start-planning');
+  await flush();
+
+  // Assert
+  assert.match(asked[0], /^Staff Core: начать планирование заново\? Снимок от .* заменится текущей доской у всей команды\. «Команда и дни» не обнулятся\.$/);
+  assert.equal(posted(kaiten, SNAPSHOT).length, 1);
+  assert.deepEqual(posted(kaiten, core.SETTINGS_MARK), []);
+});
+
+test('Спринт в Kaiten закончился, а планирования не было — жёлтое напоминание, раскрывашки открыты, «Начать» снова синяя', async () => {
+  // Arrange
+  const sprint = { id: 501, start_date: ago(14 * DAY), finish_date: ago(3600000), actual_finish_date: null };
+  const kaiten = teamKaiten({ sprintId: 501, sprint, comments: [planningStart(ago(20 * DAY))] });
+
+  // Act
+  await flush();
+
+  // Assert
+  assert.equal(kaiten.$('.remind').innerHTML, '<div class="tip">Пора планировать спринт. 1) Проверьте «Команда и дни»: это факт уходящего спринта. 2) Нажмите «Начать планирование».</div>');
+  assert.equal(kaiten.$('.planning').open, true);
+  assert.equal(kaiten.$('.settings').open, true);
+  assert.match(kaiten.$('.planning').innerHTML, /title="Когда: один раз за спринт[^"]*">Начать планирование<\/button>/);
+  assert.equal(JSON.parse(kaiten.stored.get('sprintCapacity.v1.sprint.68084')), 501);
+});
+
+test('Посреди спринта напоминания нет, а даты спринта панель берёт из Kaiten не на каждом обновлении', async () => {
+  // Arrange
+  const sprint = { id: 502, start_date: ago(5 * DAY), finish_date: ago(-9 * DAY), actual_finish_date: null };
+  const kaiten = teamKaiten({ sprintId: 502, sprint });
+  await flush();
+
+  // Act
+  kaiten.click('refresh');
+  await flush();
+
+  // Assert
+  assert.equal(kaiten.$('.remind').innerHTML, '');
+  assert.equal(kaiten.$('.planning').open, undefined);
+  assert.equal(kaiten.requests.filter((item) => item.url.startsWith('/api/sprints/')).length, 1);
+});
+
+test('После «Начать планирование» напоминание просит вписать новый спринт и нажать «Закончить»', async () => {
+  // Arrange
+  const sprint = { id: 503, start_date: ago(14 * DAY), finish_date: ago(3600000), actual_finish_date: ago(1800000) };
+
+  // Act
+  const kaiten = teamKaiten({ sprintId: 503, sprint, comments: [planningStart(ago(600000))] });
+  await flush();
+
+  // Assert
+  assert.match(kaiten.$('.remind').innerHTML, /^<div class="tip">Планирование идёт\. 1\) Впишите «Команда и дни» на новый спринт: людей, отпуска и отгулы, праздники, рабочие дни\. 2\) Нажмите «Закончить планирование»\.<\/div>$/);
+  assert.match(kaiten.$('.planning').innerHTML, /class="again">Начать планирование<\/button>/);
+});
+
+test('Снимок записан, а обнулить «Команду и дни» не вышло — панель просит обнулить вручную и не обещает повторить', async () => {
+  // Arrange
+  const kaiten = teamKaiten({
+    comments: [teamComment(ago(3600000), { team: { back: { people: 3, absence: 2 } } })],
+    confirm: () => true,
+    fail: (body) => Boolean(body && body.text.startsWith('Команда и дни')),
+  });
+  await flush();
+
+  // Act
+  kaiten.click('start-planning');
+  await flush();
+
+  // Assert
+  assert.deepEqual(kaiten.alerts, ['«Команда и дни» не обнулились: нет сети. Обнулите «нет, чел.-дн» и «праздников» вручную.']);
+  assert.equal(kaiten.requests.filter((item) => item.method === 'POST' && item.body.text.startsWith(SNAPSHOT)).length, 1);
+  assert.doesNotMatch(kaiten.$('.status').innerHTML, /повторю/);
 });

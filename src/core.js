@@ -20,6 +20,12 @@ const SNAPSHOT_MARK = 'Снимок начала планирования';
 
 const PLAN_END_MARK = 'Конец планирования';
 
+const SETTINGS_MARK = 'Команда и дни';
+
+const SETTING_PATHS = ['workDays', 'holidays', 'coefficient', ...DIRECTIONS.flatMap((direction) => [`team.${direction}.people`, `team.${direction}.absence`])];
+
+const PLAN_REPEAT_MS = 259200000;
+
 const DIRECTION_LABELS = { back: 'Бэк', front: 'Фронт', qa: 'QA' };
 
 function toNumber(value) {
@@ -380,4 +386,58 @@ function capacityLogFromComments(comments) {
   return log;
 }
 
-if (typeof module !== 'undefined') module.exports = { SPRINT_CAPACITY, DIRECTIONS, DIRECTION_LABELS, toNumber, round1, formatNumber, plural, readEstimate, platformOf, needsQa, isBug, splitEstimate, progressStage, progressWeight, estimateIssues, defaultSettings, normalizeSettings, personDaysOf, capacityOf, capacityDays, buildReport, boardConfig, isChaos, chaosNames, chaosLabel, formatRow, takeSnapshot, takePlanEnd, normalizeCapacity, normalizeSnapshot, boardTitle, snapshotComment, snapshotFromComments, planEndComment, planEndFromComments, capacityLogFromComments };
+function withSettingEdits(base, values) {
+  const next = normalizeSettings(base);
+  for (const [path, raw] of Object.entries(values && typeof values === 'object' ? values : {})) {
+    if (!SETTING_PATHS.includes(path)) continue;
+    const keys = path.split('.');
+    keys.slice(0, -1).reduce((node, key) => node[key], next)[keys[keys.length - 1]] = raw;
+  }
+  return normalizeSettings(next);
+}
+
+function resetForNewSprint(settings) {
+  const next = normalizeSettings(settings);
+  next.holidays = 0;
+  for (const direction of DIRECTIONS) next.team[direction].absence = 0;
+  return next;
+}
+
+function settingsText(settings, labels) {
+  const team = DIRECTIONS.filter((direction) => settings.team[direction].people > 0 || settings.team[direction].absence > 0)
+    .map((direction) => `${labels[direction]} ${formatNumber(settings.team[direction].people)}${settings.team[direction].absence > 0 ? `, нет ${formatNumber(settings.team[direction].absence)}` : ''}`);
+  return `Людей: ${team.length ? team.join(' · ') : 'не вписано'}. Рабочих дней ${formatNumber(settings.workDays)}, праздников ${formatNumber(settings.holidays)}, SP в день ${formatNumber(settings.coefficient)}.`;
+}
+
+function settingsComment(record, config = SPRINT_CAPACITY) {
+  const { labels } = boardConfig(record.boardId, config);
+  const settings = normalizeSettings(record.settings);
+  const json = { boardId: record.boardId, savedAt: record.savedAt, settings };
+  return `${SETTINGS_MARK}, ${boardTitle(record.boardId, config)}. ${settingsText(settings, labels)}${capacityText(capacityDays(settings), labels)}\n\n\`\`\`json\n${JSON.stringify(json)}\n\`\`\``;
+}
+
+function settingsFromComments(comments, boardId) {
+  for (const { raw, author } of commentsWithJson(comments, SETTINGS_MARK)) {
+    if (!raw || typeof raw !== 'object' || raw.boardId !== boardId || !Number.isFinite(Date.parse(raw.savedAt)) || !raw.settings || typeof raw.settings !== 'object') continue;
+    return { boardId, savedAt: raw.savedAt, settings: normalizeSettings(raw.settings), author };
+  }
+  return null;
+}
+
+function planningFresh(snapshot, now) {
+  return !snapshot || now - Date.parse(snapshot.takenAt) > PLAN_REPEAT_MS;
+}
+
+function planningReminder({ sprint = null, snapshot = null, planEnd = null, now }) {
+  const day = 86400000;
+  if (!planningFresh(snapshot, now) && !planEnd) return 'end';
+  if (!sprint) return null;
+  const end = sprint.closedAt === null || sprint.closedAt === undefined ? sprint.finish : Math.min(sprint.finish, sprint.closedAt);
+  let boundary = null;
+  if (now >= end - day && now < end + 7 * day) boundary = end;
+  else if (now >= sprint.start - day && now < sprint.start + 3 * day) boundary = sprint.start;
+  if (boundary === null) return null;
+  return !snapshot || Date.parse(snapshot.takenAt) < boundary - 4 * day ? 'start' : null;
+}
+
+if (typeof module !== 'undefined') module.exports = { SPRINT_CAPACITY, DIRECTIONS, DIRECTION_LABELS, SETTINGS_MARK, SETTING_PATHS, toNumber, round1, formatNumber, plural, readEstimate, platformOf, needsQa, isBug, splitEstimate, progressStage, progressWeight, estimateIssues, defaultSettings, normalizeSettings, personDaysOf, capacityOf, capacityDays, buildReport, boardConfig, isChaos, chaosNames, chaosLabel, formatRow, takeSnapshot, takePlanEnd, normalizeCapacity, normalizeSnapshot, boardTitle, snapshotComment, snapshotFromComments, planEndComment, planEndFromComments, capacityLogFromComments, withSettingEdits, resetForNewSprint, settingsComment, settingsFromComments, planningFresh, planningReminder };
