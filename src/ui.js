@@ -167,6 +167,7 @@ details[open] > summary::after { transform: rotate(90deg); }
 .team .th { color: var(--muted); font-size: 11px; text-align: center; }
 .days { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
 .days label { display: flex; flex-direction: column; gap: 3px; color: var(--muted); font-size: 11px; }
+.days-hint { margin-top: 6px; color: var(--muted); font-size: 11px; }
 .shared { margin-top: 10px; color: var(--muted); font-size: 11px; }
 input[type=text], input[type=password] { width: 100%; box-sizing: border-box; font: inherit; color: inherit; padding: 5px 8px; text-align: center; border: 1px solid var(--line); border-radius: 8px; background: var(--field); }
 input[type=text]:focus, input[type=password]:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(91, 156, 246, .2); }
@@ -620,6 +621,7 @@ const PANEL_HTML = `
           <label>праздников ${PANEL_INPUT('holidays', '0')}</label>
           <label>SP в день ${PANEL_INPUT('coefficient', '1')}</label>
         </div>
+        <div class="days-hint" title="Будни с понедельника по пятницу между датами спринта в Kaiten. Праздники панель не знает — их вписывают в «праздников»" hidden></div>
         <div class="shared"></div>
       </div>
     </details>
@@ -1290,6 +1292,12 @@ function sprintCapacityMount(config) {
     $('.shared').textContent = text;
   };
 
+  const renderDaysHint = () => {
+    const text = sprintDaysHint(sprintDates, Date.now());
+    $('.days-hint').hidden = !text;
+    $('.days-hint').textContent = text || '';
+  };
+
   const renderRow = (row) => {
     const scale = Math.max(row.total, row.capacity || 0, snapshot ? row.base : 0);
     const share = (value) => (scale > 0 ? `${(Math.max(value, 0) / scale) * 100}%` : '0');
@@ -1361,6 +1369,7 @@ function sprintCapacityMount(config) {
     renderPlanning();
     renderWarnings();
     renderShared();
+    renderDaysHint();
     renderHolstKey();
   };
 

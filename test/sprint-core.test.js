@@ -143,35 +143,74 @@ function loader(sprints, broken = null) {
   return { loads, load };
 }
 
-test('Период спринта: даты Kaiten в чужом поясе сводятся к понедельнику 00:00 и воскресенью 23:59:59 по Москве', () => {
+test('Период спринта: даты Kaiten сводятся к ближайшей полуночи по Москве — чужой пояс спринт не сдвигает, среда, четверг и понедельник остаются как в Kaiten', () => {
   // Arrange
   const utc7 = { start_date: '2026-09-13T17:00:00.000Z', finish_date: '2026-09-27T16:59:59.999Z' };
   const utc4 = { start_date: '2026-08-02T20:00:00.000Z', finish_date: '2026-08-16T19:59:59.999Z' };
+  const wednesday = { start_date: '2026-10-13T21:00:00.000Z', finish_date: '2026-10-22T20:59:59.999Z' };
+  const wednesdayUtc5 = { start_date: '2026-10-13T19:00:00.000Z', finish_date: '2026-10-22T18:59:59.999Z' };
+  const mondayEnd = { start_date: '2026-08-30T21:00:00.000Z', finish_date: '2026-09-14T20:59:59.999Z' };
 
   // Act
-  const first = sprint.sprintPeriod(utc7);
-  const second = sprint.sprintPeriod(utc4);
+  const periods = [utc7, utc4, wednesday, wednesdayUtc5, mondayEnd].map((item) => sprint.sprintPeriod(item)).map(({ start, end }) => [new Date(start).toISOString(), new Date(end).toISOString()]);
 
   // Assert
-  assert.equal(new Date(first.start).toISOString(), '2026-09-13T21:00:00.000Z');
-  assert.equal(new Date(first.end).toISOString(), '2026-09-27T20:59:59.999Z');
-  assert.equal(new Date(second.start).toISOString(), '2026-08-02T21:00:00.000Z');
-  assert.equal(new Date(second.end).toISOString(), '2026-08-16T20:59:59.999Z');
+  assert.deepEqual(periods, [
+    ['2026-09-13T21:00:00.000Z', '2026-09-27T20:59:59.999Z'],
+    ['2026-08-02T21:00:00.000Z', '2026-08-16T20:59:59.999Z'],
+    ['2026-10-13T21:00:00.000Z', '2026-10-22T20:59:59.999Z'],
+    ['2026-10-13T21:00:00.000Z', '2026-10-22T20:59:59.999Z'],
+    ['2026-08-30T21:00:00.000Z', '2026-09-14T20:59:59.999Z'],
+  ]);
 });
 
-test('Спринт закончен: после воскресенья 23:59 по Москве или когда закрыт в Kaiten', () => {
+test('Спринт закончен: после последнего дня 23:59 по Москве или когда закрыт в Kaiten', () => {
   // Arrange
   const open = sprintData({ actual_finish_date: null });
+  const short = sprintData({ start_date: '2026-10-13T21:00:00.000Z', finish_date: '2026-10-22T20:59:59.999Z', actual_finish_date: null });
 
   // Act
   const sunday = sprint.sprintFinished(open, Date.parse('2026-09-27T20:59:59.000Z'));
   const monday = sprint.sprintFinished(open, Date.parse('2026-09-27T21:00:00.000Z'));
+  const thursday = sprint.sprintFinished(short, Date.parse('2026-10-22T20:59:59.000Z'));
+  const friday = sprint.sprintFinished(short, Date.parse('2026-10-22T21:00:00.000Z'));
   const closedEarly = sprint.sprintFinished(sprintData({ actual_finish_date: '2026-09-25T10:00:00.000Z' }), Date.parse('2026-09-25T11:00:00.000Z'));
 
   // Assert
-  assert.equal(sunday, false);
-  assert.equal(monday, true);
-  assert.equal(closedEarly, true);
+  assert.deepEqual([sunday, monday, thursday, friday, closedEarly], [false, true, false, true, true]);
+});
+
+test('Спринт со среды по четверг: заголовок, остаток дней и окно багов — по датам Kaiten, а не по понедельникам', () => {
+  // Arrange
+  const now = Date.parse('2026-10-19T09:00:00.000Z');
+  const running = sprint.sprintSummary({ sprint: sprintData({ start_date: '2026-10-13T21:00:00.000Z', finish_date: '2026-10-22T20:59:59.999Z', actual_finish_date: null, cards: [], cardUpdates: [] }), now, columns: COLUMNS, cfg: CFG });
+
+  // Act
+  const section = sprint.sprintReportBlocks({ running, capacityLog: [], now, cfg: CFG }).sections[0];
+  const window = sprint.sprintBugWindow(running, now);
+
+  // Assert
+  assert.deepEqual([section.title, section.note], ['Идёт спринт 14.10–22.10', 'осталось 4 рабочих дня, считая сегодня']);
+  assert.deepEqual([window.from, window.to].map((ms) => new Date(ms).toISOString()), ['2026-10-13T21:00:00.000Z', '2026-10-19T09:00:00.000Z']);
+});
+
+test('Подсказка у «рабочих дней»: будни между датами спринта в Kaiten, у закрытого и закончившегося спринта её нет', () => {
+  // Arrange
+  const wednesday = { start: Date.parse('2026-10-13T19:00:00.000Z'), finish: Date.parse('2026-10-22T18:59:59.999Z'), closedAt: null };
+  const twoWeeks = { start: Date.parse('2026-09-27T21:00:00.000Z'), finish: Date.parse('2026-10-11T20:59:59.999Z'), closedAt: null };
+  const now = Date.parse('2026-10-08T09:00:00.000Z');
+
+  // Act
+  const hints = [
+    sprint.sprintDaysHint(wednesday, now),
+    sprint.sprintDaysHint(twoWeeks, now),
+    sprint.sprintDaysHint({ ...twoWeeks, closedAt: Date.parse('2026-10-12T07:00:00.000Z') }, now),
+    sprint.sprintDaysHint(twoWeeks, Date.parse('2026-10-11T21:00:00.000Z')),
+    sprint.sprintDaysHint(null, now),
+  ];
+
+  // Assert
+  assert.deepEqual(hints, ['по датам в Kaiten (14.10–22.10) — 7 будних дней', 'по датам в Kaiten (28.09–11.10) — 10 будних дней', null, null, null]);
 });
 
 test('Текущий спринт доски: самый частый у карт, при равенстве больший, без спринта — нет', () => {
@@ -884,6 +923,31 @@ test('Capacity из служебной карты: план — последни
 
   // Assert
   assert.deepEqual(capacity, { key: 'capacity', title: 'Capacity, человеко-дни', value: '76 → 48', caption: 'план → факт', lines: [{ text: 'Бэк 40 → 30 · Фронт 18 · QA 18 → 0' }, { text: 'отклонение −37%' }] });
+});
+
+test('Capacity короткого спринта: «Начать планирование» в его последний день — факт, а раннее «Закончить» следующего спринта — не его план', () => {
+  // Arrange
+  const summary = (start, finish) => sprint.sprintSummary({ sprint: sprintData({ start_date: start, finish_date: finish, cards: [], cardUpdates: [] }), now: Date.parse('2026-10-30T09:00:00.000Z'), columns: COLUMNS, cfg: CFG });
+  const wednesday = summary('2026-10-13T21:00:00.000Z', '2026-10-22T20:59:59.999Z');
+  const week = summary('2026-10-11T21:00:00.000Z', '2026-10-18T20:59:59.999Z');
+  const wednesdayLog = [
+    record('start', '2026-10-13T07:00:00.000Z', { back: 1 }),
+    record('end', '2026-10-13T12:00:00.000Z', { back: 20 }),
+    record('start', '2026-10-22T12:00:00.000Z', { back: 15 }),
+  ];
+  const weekLog = [
+    record('start', '2026-10-12T07:00:00.000Z', { back: 1 }),
+    record('end', '2026-10-12T09:00:00.000Z', { back: 30 }),
+    record('start', '2026-10-16T07:00:00.000Z', { back: 25 }),
+    record('end', '2026-10-16T09:00:00.000Z', { back: 99 }),
+  ];
+  const capacity = (last, capacityLog) => block(sprint.sprintReportBlocks({ last, capacityLog, now: Date.parse('2026-10-30T09:00:00.000Z'), cfg: CFG }), 'last', 'capacity').value;
+
+  // Act
+  const values = [capacity(wednesday, wednesdayLog), capacity(week, weekLog)];
+
+  // Assert
+  assert.deepEqual(values, ['20 → 15', '30 → 25']);
 });
 
 test('Capacity из служебной карты: записан только план, только факт, ничего; служебная карта не загрузилась — так и пишу', () => {

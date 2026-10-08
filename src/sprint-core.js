@@ -16,7 +16,7 @@ const SPRINT_REPORT = {
   escapeSources: [217075, 16194797, 217080],
   notEscape: [69403781, 69525693],
   history: 3,
-  cacheVersion: 5,
+  cacheVersion: 6,
   testStage: 'test',
   capacityBeforeMs: 259200000,
   capacityAfterMs: 604800000,
@@ -43,6 +43,7 @@ const SPRINT_WORDS = {
   bug: ['баг', 'бага', 'багов'],
   day: ['рабочий день', 'рабочих дня', 'рабочих дней'],
   dayOf: ['рабочего дня', 'рабочих дней', 'рабочих дней'],
+  weekday: ['будний день', 'будних дня', 'будних дней'],
 };
 
 function sprintTime(value) {
@@ -51,16 +52,16 @@ function sprintTime(value) {
   return Date.parse(/(?:Z|[+-]\d{2}:?\d{2})$/.test(text) ? text : `${text}Z`);
 }
 
-function sprintMonday(ms, cfg = SPRINT_REPORT) {
-  const local = ms + cfg.mskMs;
-  const day = Math.floor(local / cfg.dayMs);
-  const week = 7 * cfg.dayMs;
-  const before = (day - ((((day + 3) % 7) + 7) % 7)) * cfg.dayMs;
-  return (local - before <= before + week - local ? before : before + week) - cfg.mskMs;
+function sprintMidnight(ms, cfg = SPRINT_REPORT) {
+  return Math.round((ms + cfg.mskMs) / cfg.dayMs) * cfg.dayMs - cfg.mskMs;
+}
+
+function sprintBounds(start, finish, cfg = SPRINT_REPORT) {
+  return { start: sprintMidnight(start, cfg), end: sprintMidnight(finish + 1, cfg) - 1 };
 }
 
 function sprintPeriod(sprint, cfg = SPRINT_REPORT) {
-  return { start: sprintMonday(sprintTime(sprint.start_date), cfg), end: sprintMonday(sprintTime(sprint.finish_date), cfg) - 1 };
+  return sprintBounds(sprintTime(sprint.start_date), sprintTime(sprint.finish_date), cfg);
 }
 
 function sprintFinished(sprint, now, cfg = SPRINT_REPORT) {
@@ -588,16 +589,20 @@ function sprintCapacityDeviation(plan, fact) {
   return [{ text: `отклонение ${value > 0 ? '+' : ''}${sprintNumber(value)}%` }];
 }
 
-function sprintCapacityRecord(log, kind, boardId, around, latest, cfg = SPRINT_REPORT) {
-  const found = log.filter((item) => item.kind === kind && item.boardId === boardId && item.at >= around - cfg.capacityBeforeMs && item.at < around + cfg.capacityAfterMs).sort((x, y) => x.at - y.at);
-  return found.length ? found[latest ? found.length - 1 : 0] : null;
+function sprintCapacityRecord(log, kind, summary, cfg = SPRINT_REPORT) {
+  const middle = summary.start + (summary.end + 1 - summary.start) / 2;
+  const plan = kind === 'end';
+  const from = plan ? summary.start - cfg.capacityBeforeMs : Math.max(summary.end - cfg.capacityBeforeMs, middle);
+  const to = plan ? Math.min(summary.start + cfg.capacityAfterMs, middle) : summary.end + cfg.capacityAfterMs;
+  const found = log.filter((item) => item.kind === kind && item.boardId === summary.boardId && item.at >= from && item.at < to).sort((x, y) => x.at - y.at);
+  return found.length ? found[plan ? found.length - 1 : 0] : null;
 }
 
 function sprintCapacityDoneBlock(summary, log, labels, cfg = SPRINT_REPORT) {
   const block = { key: 'capacity', title: 'Capacity, человеко-дни' };
   if (!log) return { ...block, lines: [{ text: 'записи capacity не загрузились', tone: 'warn' }] };
-  const plan = sprintCapacityRecord(log, 'end', summary.boardId, summary.start, true, cfg);
-  const fact = sprintCapacityRecord(log, 'start', summary.boardId, summary.end, false, cfg);
+  const plan = sprintCapacityRecord(log, 'end', summary, cfg);
+  const fact = sprintCapacityRecord(log, 'start', summary, cfg);
   if (!plan && !fact) return { ...block, lines: [{ text: 'план и факт не записаны', tone: 'note' }] };
   if (!fact) return { ...block, value: sprintNumber(sprintCapacitySum(plan.days)), caption: 'план', lines: [{ text: sprintCapacityParts(plan.days, labels) }, { text: 'факт не записан', tone: 'note' }] };
   if (!plan) return { ...block, value: sprintNumber(sprintCapacitySum(fact.days)), caption: 'факт', lines: [{ text: sprintCapacityParts(fact.days, labels) }, { text: 'план не записан', tone: 'note' }] };
@@ -608,7 +613,7 @@ function sprintCapacityDoneBlock(summary, log, labels, cfg = SPRINT_REPORT) {
 
 function sprintCapacityRunningBlock(summary, capacity, log, labels, cfg = SPRINT_REPORT) {
   const block = { key: 'capacity', title: 'Capacity, человеко-дни' };
-  const plan = log ? sprintCapacityRecord(log, 'end', summary.boardId, summary.start, true, cfg) : null;
+  const plan = log ? sprintCapacityRecord(log, 'end', summary, cfg) : null;
   const lost = log ? [] : [{ text: 'план capacity не загрузился', tone: 'warn' }];
   if (!plan && !capacity) return { ...block, lines: [{ text: 'не посчитана', tone: 'note' }, ...lost] };
   if (!plan) return { ...block, value: sprintNumber(sprintCapacitySum(capacity)), caption: 'на спринт, по панели', lines: [{ text: sprintCapacityParts(capacity, labels) }, ...lost] };
@@ -626,6 +631,13 @@ function sprintNextBlock(capacity, labels) {
 
 function sprintRange(summary, cfg = SPRINT_REPORT) {
   return `${sprintDate(summary.start, cfg)}–${sprintDate(summary.end, cfg)}`;
+}
+
+function sprintDaysHint(dates, now, cfg = SPRINT_REPORT) {
+  if (!dates || dates.closedAt !== null) return null;
+  const period = sprintBounds(dates.start, dates.finish, cfg);
+  if (now > period.end) return null;
+  return `по датам в Kaiten (${sprintRange(period, cfg)}) — ${sprintCount(sprintDaysLeft(period.start, period.end, cfg), SPRINT_WORDS.weekday)}`;
 }
 
 function sprintGroups(list) {
@@ -733,4 +745,4 @@ async function sprintReportLoad({ cards, boardId, now, columns, load, loadBugs =
   return { last, running, history, historyProblem, currentId, focus, bugs };
 }
 
-if (typeof module !== 'undefined') module.exports = { SPRINT_REPORT, sprintTime, sprintMonday, sprintPeriod, sprintFinished, sprintIsBug, sprintEscaped, sprintSource, sprintPriority, sprintCurrentId, sprintVersions, sprintWorkdays, sprintDaysLeft, sprintMedian, sprintPercentile, sprintSummary, sprintBugWindow, sprintBugs, sprintNumber, sprintDayWord, sprintDate, sprintFocus, sprintReportBlocks, sprintReportLoad };
+if (typeof module !== 'undefined') module.exports = { SPRINT_REPORT, sprintTime, sprintPeriod, sprintFinished, sprintIsBug, sprintEscaped, sprintSource, sprintPriority, sprintCurrentId, sprintVersions, sprintWorkdays, sprintDaysLeft, sprintMedian, sprintPercentile, sprintSummary, sprintBugWindow, sprintBugs, sprintNumber, sprintDayWord, sprintDate, sprintDaysHint, sprintFocus, sprintReportBlocks, sprintReportLoad };

@@ -767,6 +767,22 @@ test('Посреди спринта напоминания нет, а даты �
   assert.equal(kaiten.requests.filter((item) => item.url.startsWith('/api/sprints/')).length, 1);
 });
 
+test('Подсказка у «рабочих дней»: будни по датам спринта в Kaiten; у закончившегося спринта и без спринта её нет', async () => {
+  // Arrange
+  const running = { id: 502, start_date: ago(5 * DAY), finish_date: ago(-9 * DAY), actual_finish_date: null };
+  const ended = { id: 501, start_date: ago(16 * DAY), finish_date: ago(2 * DAY), actual_finish_date: null };
+
+  // Act
+  const kaitens = [teamKaiten({ sprintId: 502, sprint: running }), teamKaiten({ sprintId: 501, sprint: ended }), teamKaiten()];
+  await flush();
+
+  // Assert
+  const hints = kaitens.map((kaiten) => [kaiten.$('.days-hint').hidden, kaiten.$('.days-hint').textContent]);
+  assert.equal(hints[0][0], false);
+  assert.match(hints[0][1], /^по датам в Kaiten \(\d\d\.\d\d–\d\d\.\d\d\) — \d+ будн(?:ий день|их дня|их дней)$/);
+  assert.deepEqual(hints.slice(1), [[true, ''], [true, '']]);
+});
+
 test('После «Начать планирование» напоминание просит вписать новый спринт и нажать «Закончить»', async () => {
   // Arrange
   const sprint = { id: 503, start_date: ago(14 * DAY), finish_date: ago(3600000), actual_finish_date: ago(1800000) };
