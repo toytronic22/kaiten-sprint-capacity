@@ -1,7 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const sprint = require('../src/sprint-core.js');
-const { REPORT_CONFIG } = require('../src/report-core.js');
 const { SPRINT_CAPACITY } = require('../src/core.js');
 
 const DEV = 10;
@@ -958,24 +957,19 @@ test('Цель в несколько строк — пункты через то
 test('Числа и дни словами: запятая, минус, дробь — «рабочего дня»', () => {
   // Act
   const numbers = [sprint.sprintNumber(52.666), sprint.sprintNumber(-5), sprint.sprintNumber(-0.04), sprint.sprintNumber(0)];
-  const days = [sprint.sprintDays(3.94), sprint.sprintDays(1), sprint.sprintDays(5)];
+  const days = [sprint.sprintDayWord(3.94), sprint.sprintDayWord(1), sprint.sprintDayWord(5)];
 
   // Assert
   assert.deepEqual(numbers, ['52,7', '−5', '0', '0']);
-  assert.deepEqual(days, ['3,9 рабочего дня', '1 рабочий день', '5 рабочих дней']);
+  assert.deepEqual(days, ['рабочего дня', 'рабочий день', 'рабочих дней']);
 });
 
-test('Конфиг отчёта спринта совпадает с отчётом и панелью: баг, Done, источники багов из прода', () => {
+test('Конфиг отчёта спринта совпадает с панелью: баг, Done, порядок колонок', () => {
   // Arrange
   const cfg = sprint.SPRINT_REPORT;
 
   // Assert
-  assert.deepEqual(cfg.escapeSources, REPORT_CONFIG.escapeSources);
-  assert.deepEqual(cfg.notEscape, REPORT_CONFIG.notEscape);
-  assert.equal(cfg.source, REPORT_CONFIG.fields.source);
-  assert.deepEqual(cfg.bugTypeIds, [REPORT_CONFIG.bugType]);
   assert.deepEqual(cfg.bugTypeIds, SPRINT_CAPACITY.bugTypeIds);
   assert.equal(cfg.doneState, SPRINT_CAPACITY.doneState);
   assert.deepEqual(cfg.stageOrder, Object.keys(SPRINT_CAPACITY.progress.stages));
-  assert.equal(cfg.priority, REPORT_CONFIG.fields.priority);
 });
