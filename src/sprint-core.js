@@ -172,10 +172,12 @@ function sprintTarget({ next, sprintId, boardId, cfg }) {
   return 'снята со спринта';
 }
 
-function sprintSummary({ sprint, now, columns = {}, cfg = SPRINT_REPORT }) {
+function sprintSummary({ sprint, now, columns = {}, nextStart = null, cfg = SPRINT_REPORT }) {
   const id = sprint.id;
   const boardId = sprint.board_id;
-  const { start, end } = sprintPeriod(sprint, cfg);
+  const period = sprintPeriod(sprint, cfg);
+  const start = period.start;
+  const end = nextStart !== null && nextStart > start ? Math.min(period.end, nextStart - 1) : period.end;
   const created = sprintTime(sprint.created) === null ? start : sprintTime(sprint.created);
   const closedAt = sprint.actual_finish_date ? sprintTime(sprint.actual_finish_date) : null;
   const close = closedAt === null ? now : closedAt - cfg.closeGapMs;
@@ -700,17 +702,17 @@ async function sprintReportLoad({ cards, boardId, now, columns, load, loadBugs =
   const currentId = sprintCurrentId(cards) || store.read(key);
   if (!currentId) throw new Error('у карт доски нет спринта — новый спринт в Kaiten ещё не начат');
   store.write(key, currentId);
-  const summaryOf = async (id) => {
+  const summaryOf = async (id, nextStart = null) => {
     const cached = store.read(`sprintSummary.${id}`);
-    if (cached && cached.v === cfg.cacheVersion && cached.summary) return cached.summary;
+    if (cached && cached.v === cfg.cacheVersion && cached.summary && cached.nextStart === nextStart) return cached.summary;
     const raw = await load(id);
-    const summary = sprintSummary({ sprint: (raw && raw.data) || raw, now, columns, cfg });
-    if (summary.closedAt !== null) store.write(`sprintSummary.${id}`, { v: cfg.cacheVersion, summary });
+    const summary = sprintSummary({ sprint: (raw && raw.data) || raw, now, columns, nextStart, cfg });
+    if (summary.closedAt !== null) store.write(`sprintSummary.${id}`, { v: cfg.cacheVersion, nextStart, summary });
     return summary;
   };
   const before = async (summary) => {
     if (!summary.prevId) return null;
-    const previous = await summaryOf(summary.prevId);
+    const previous = await summaryOf(summary.prevId, summary.start);
     return previous.boardId === summary.boardId && previous.id < summary.id ? previous : null;
   };
   const current = await summaryOf(currentId);

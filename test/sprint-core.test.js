@@ -502,6 +502,28 @@ test('Загрузчик: воскресенье прошло, а в Kaiten сп
   assert.deepEqual([section.title, section.note, section.tone], ['Итоги спринта 28.09–11.10', 'предварительные: в Kaiten ещё не завершён', 'warn']);
 });
 
+test('Загрузчик: конец спринта в Kaiten залезает на первый день следующего — спринт кончается накануне, карты, положенные в него в этот день, не считаются', async () => {
+  // Arrange
+  const sprints = chain();
+  const late = sprints[502];
+  late.finish_date = new Date(Date.parse(late.finish_date) + DAY).toISOString();
+  late.cards.push(card(5029));
+  late.cardUpdates.push(version(5029, '2026-09-28T02:00:00.000Z', 502, 1, 1, 13));
+  const store = memoryStore();
+  const first = loader(sprints);
+  const second = loader(sprints);
+  const view = (summary) => [sprint.sprintDate(summary.end, CFG), summary.added.tasks, summary.carry.cards];
+
+  // Act
+  const alone = await sprint.sprintReportLoad({ cards: [{ sprint_id: 502 }], boardId: DEV, now: NOW, columns: COLUMNS, load: first.load, store, cfg: CFG });
+  const chained = await sprint.sprintReportLoad({ cards: [{ sprint_id: 503 }], boardId: DEV, now: NOW, columns: COLUMNS, load: second.load, store, cfg: CFG });
+
+  // Assert
+  assert.deepEqual(view(alone.last), ['28.09', 1, 1]);
+  assert.deepEqual(view(chained.last), ['27.09', 0, 0]);
+  assert.deepEqual(second.loads, [503, 502]);
+});
+
 test('Загрузчик: у карт нет спринта — берёт запомненный, нечего брать — понятная ошибка', async () => {
   // Arrange
   const { load } = loader(chain());
