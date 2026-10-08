@@ -207,7 +207,7 @@ const page = ({ hostname, stored = {}, opener = null, clipboard = true, holst = 
 const flush = () => new Promise((resolve) => setImmediate(resolve));
 const plain = (value) => JSON.parse(JSON.stringify(value));
 
-const overloadedKaiten = (stored = {}) => page({
+const overloadedKaiten = (stored = {}, comments = []) => page({
   hostname: 'dodopizza.kaiten.ru',
   stored: {
     'sprintCapacity.v1.board': '68084',
@@ -217,8 +217,14 @@ const overloadedKaiten = (stored = {}) => page({
   },
   fetch: (url) => Promise.resolve({
     ok: true,
-    json: () => Promise.resolve(url.startsWith('/api/cards?') ? [{ id: 1, title: 'Карта 1', size: 30, properties: { id_499149: [16232407] }, state: 1 }] : []),
+    json: () => Promise.resolve(url.startsWith('/api/cards?') ? [{ id: 1, title: 'Карта 1', size: 30, properties: { id_499149: [16232407] }, state: 1 }] : url.endsWith('/comments') ? comments : []),
   }),
+});
+
+const planningStart = (takenAt) => ({
+  text: `Снимок начала планирования, Staff Core. Осталось: Бэк 20 · Фронт 0 · QA 0.\n\n\`\`\`json\n${JSON.stringify({ boardId: 68084, takenAt, totals: { back: 20, front: 0, qa: 0 }, doneIds: [] })}\n\`\`\``,
+  created: takenAt,
+  author: { full_name: 'Тестировщик' },
 });
 
 test('Перегруз: гуси бегут при каждом открытии панели, а обновление в открытой панели их не зовёт', async () => {
@@ -496,6 +502,38 @@ test('«В Holst» без выбора спринта: одна кнопка с 
   const html = kaiten.$('.summary').innerHTML;
   assert.doesNotMatch(html, /<select data-act="holst-sprint"/);
   assert.match(html, /data-act="to-holst"[^>]*title="Процент, розовый список, отчёт идущего спринта и рядом — итоги прошлого"[^>]*>В Holst<\/button><span>процент, список и отчёт спринта<\/span>/);
+  assert.doesNotMatch(html.match(/<button[^>]*data-act="to-holst"[^>]*>/)[0], /again/);
+});
+
+test('Кнопки планирования спрятаны в свёрнутой раскрывашке «Планирование», у «Начать» подсказка, когда нажимать', async () => {
+  // Arrange
+  const kaiten = overloadedKaiten();
+
+  // Act
+  await flush();
+
+  // Assert
+  const planning = kaiten.$('.planning');
+  assert.equal(planning.hidden, false);
+  assert.equal(planning.open, undefined);
+  assert.match(planning.innerHTML, /^<summary>Планирование<\/summary><div class="inner">/);
+  assert.match(planning.innerHTML, /<button type="button" data-act="start-planning" title="Когда: один раз за спринт — когда садитесь планировать следующий\. В середине спринта не нажимать\.\nЧто сделает: запомнит для всей команды, сколько SP осталось в работе\.[^"]*"\s*>Начать планирование<\/button>/);
+  assert.doesNotMatch(planning.innerHTML, /end-planning/);
+  assert.doesNotMatch(kaiten.$('.summary').innerHTML, /planning/);
+});
+
+test('После «Начать планирование» в раскрывашке появляется «Закончить планирование» с подсказкой, когда нажимать', async () => {
+  // Arrange
+  const kaiten = overloadedKaiten({}, [planningStart('2026-10-05T07:00:00.000Z')]);
+
+  // Act
+  await flush();
+
+  // Assert
+  const html = kaiten.$('.planning').innerHTML;
+  assert.match(html, /data-act="start-planning" title="Когда: один раз за спринт[^"]*" class="again">Начать планирование<\/button><span title="Тестировщик">с /);
+  assert.match(html, /<button type="button" data-act="end-planning" title="Когда: сразу после планирования, когда спринт собран\.\nЧто сделает: всё, что прилетит в спринт после, панель покажет жёлтым «сверху \+N»\.[^"]*">Закончить планирование<\/button>/);
+  assert.doesNotMatch(kaiten.$('.summary').innerHTML, /planning/);
 });
 
 test('Закладка на доске Holst: здоровается с Kaiten и отдаёт вход только Kaiten', () => {

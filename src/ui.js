@@ -151,6 +151,7 @@ button { font: inherit; color: inherit; background: none; border: 0; border-radi
 .plan button.again:hover { background: var(--line); }
 .plan span { color: var(--muted); font-size: 12px; white-space: nowrap; }
 .plan + .plan { margin-top: 8px; }
+.planning .plan:first-child { margin-top: 0; }
 .top { margin-left: 6px; padding: 0 6px; border-radius: 9px; background: #4d3d12; color: #f3cd62; font-size: 11px; font-weight: 600; }
 .bar .over-top { background: #c9a227; }
 .panel.collapsed .body { display: none; }
@@ -618,6 +619,7 @@ const PANEL_HTML = `
         </div>
       </div>
     </details>
+    <details class="planning" hidden></details>
     <details class="warnings"></details>
   </div>
 </div>`;
@@ -1113,6 +1115,20 @@ const ISSUE_LABELS = {
 
 const PROGRESS_HINT = 'Прогресс спринта: карта и баг весят свои SP, баг без оценки — 0, задача без оценки — 1 SP. Готовность по колонке: To Do 0%, Doing 30%, Review 65%, Design Review и Test 80%, Waiting for release 97%, Done 100%';
 
+const PLAN_START_HINT = [
+  'Когда: один раз за спринт — когда садитесь планировать следующий. В середине спринта не нажимать.',
+  'Что сделает: запомнит для всей команды, сколько SP осталось в работе. Дальше строки покажут «осталось + прибавилось», а карты, которые уже в Done, перестанут считаться.',
+  'Перед нажатием проверьте «Команда и дни»: панель запишет их в отчёт как capacity уходящего спринта по факту.',
+  'Нажать ещё раз: запомненное заменится у всех, а «Закончить планирование» нужно будет нажать заново.',
+].join('\n');
+
+const PLAN_END_HINT = [
+  'Когда: сразу после планирования, когда спринт собран.',
+  'Что сделает: всё, что прилетит в спринт после, панель покажет жёлтым «сверху +N».',
+  'Перед нажатием проверьте «Команда и дни»: панель запишет их в отчёт как capacity нового спринта по плану.',
+  'Нажать ещё раз: «сверху» начнёт считаться от нового нажатия, план capacity перезапишется.',
+].join('\n');
+
 function escapeHtml(value) {
   const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
   return String(value).replace(/[&<>"']/g, (char) => map[char]);
@@ -1245,14 +1261,24 @@ function sprintCapacityMount(config) {
     const percent = report.progress.percent === null ? '—' : `${report.progress.percent}%`;
     const of = `${report.done.count} из ${report.done.of} ${plural(report.done.of, ['карты', 'карт', 'карт'])} · ${formatNumber(report.done.points)} SP`;
     const done = `<div class="done" title="${escapeHtml(PROGRESS_HINT)}"><span>Done</span><b>${percent}</b><span class="of">${of}</span></div>`;
-    const since = snapshot ? `<span title="${escapeHtml(snapshot.author)}">с ${snapshotTime(snapshot.takenAt)}</span>` : '';
-    const plan = `<div class="plan"><button type="button" data-act="start-planning"${snapshot ? ' class="again"' : ''}${data.busy ? ' disabled' : ''}>Начать планирование</button>${since}</div>`;
-    const endSince = planEnd ? `<span title="${escapeHtml(planEnd.author)}">${snapshotTime(planEnd.takenAt)}</span>` : '';
-    const end = snapshot ? `<div class="plan"><button type="button" data-act="end-planning"${planEnd ? ' class="again"' : ''}${data.busy ? ' disabled' : ''}>Закончить планирование</button>${endSince}</div>` : '';
     const holst = boardConfig(boardId, config).holst
-      ? `<div class="plan"><button type="button" data-act="to-holst" class="again" title="Процент, розовый список, отчёт идущего спринта и рядом — итоги прошлого"${data.busy ? ' disabled' : ''}>В Holst</button><span>процент, список и отчёт спринта</span></div>`
+      ? `<div class="plan"><button type="button" data-act="to-holst" title="Процент, розовый список, отчёт идущего спринта и рядом — итоги прошлого"${data.busy ? ' disabled' : ''}>В Holst</button><span>процент, список и отчёт спринта</span></div>`
       : '';
-    box.innerHTML = rows + legend + done + plan + end + holst;
+    box.innerHTML = rows + legend + done + holst;
+  };
+
+  const renderPlanning = () => {
+    const box = $('.planning');
+    box.hidden = !report;
+    if (!report) {
+      box.innerHTML = '';
+      return;
+    }
+    const since = snapshot ? `<span title="${escapeHtml(snapshot.author)}">с ${snapshotTime(snapshot.takenAt)}</span>` : '';
+    const start = `<div class="plan"><button type="button" data-act="start-planning" title="${escapeHtml(PLAN_START_HINT)}"${snapshot ? ' class="again"' : ''}${data.busy ? ' disabled' : ''}>Начать планирование</button>${since}</div>`;
+    const endSince = planEnd ? `<span title="${escapeHtml(planEnd.author)}">${snapshotTime(planEnd.takenAt)}</span>` : '';
+    const end = snapshot ? `<div class="plan"><button type="button" data-act="end-planning" title="${escapeHtml(PLAN_END_HINT)}"${planEnd ? ' class="again"' : ''}${data.busy ? ' disabled' : ''}>Закончить планирование</button>${endSince}</div>` : '';
+    box.innerHTML = `<summary>Планирование</summary><div class="inner">${start}${end}</div>`;
   };
 
   const renderWarnings = () => {
@@ -1275,6 +1301,7 @@ function sprintCapacityMount(config) {
   const render = () => {
     renderStatus();
     renderSummary();
+    renderPlanning();
     renderWarnings();
     renderHolstKey();
   };
