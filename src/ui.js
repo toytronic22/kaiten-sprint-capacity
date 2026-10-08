@@ -113,6 +113,7 @@ button { font: inherit; color: inherit; background: none; border: 0; border-radi
 @keyframes noir-rain-far { to { background-position: 0 90px; } }
 @keyframes noir-grain { 0% { transform: translate(0, 0); } 20% { transform: translate(-7%, 4%); } 40% { transform: translate(5%, -6%); } 60% { transform: translate(-3%, -8%); } 80% { transform: translate(8%, 3%); } }
 .error { margin: 10px 14px 0; padding: 8px 10px; background: #4a2428; color: #ffb4b8; border-radius: 8px; font-size: 12px; }
+.tip { margin: 10px 14px 0; padding: 8px 10px; background: #4d3d12; color: #f3cd62; border-radius: 8px; font-size: 12px; }
 .summary { padding: 12px 14px 14px; }
 .summary.stale { opacity: .55; }
 .row + .row { margin-top: 12px; }
@@ -166,6 +167,7 @@ details[open] > summary::after { transform: rotate(90deg); }
 .team .th { color: var(--muted); font-size: 11px; text-align: center; }
 .days { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
 .days label { display: flex; flex-direction: column; gap: 3px; color: var(--muted); font-size: 11px; }
+.shared { margin-top: 10px; color: var(--muted); font-size: 11px; }
 input[type=text], input[type=password] { width: 100%; box-sizing: border-box; font: inherit; color: inherit; padding: 5px 8px; text-align: center; border: 1px solid var(--line); border-radius: 8px; background: var(--field); }
 input[type=text]:focus, input[type=password]:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(91, 156, 246, .2); }
 input[type=text]::placeholder { color: #666c75; }
@@ -600,6 +602,7 @@ const PANEL_HTML = `
     <button type="button" class="icon" data-act="close" title="Закрыть">×</button>
   </header>
   <div class="status"></div>
+  <div class="remind"></div>
   <div class="summary"></div>
   <div class="holst-login" hidden></div>
   <div class="body">
@@ -617,6 +620,7 @@ const PANEL_HTML = `
           <label>праздников ${PANEL_INPUT('holidays', '0')}</label>
           <label>SP в день ${PANEL_INPUT('coefficient', '1')}</label>
         </div>
+        <div class="shared"></div>
       </div>
     </details>
     <details class="planning" hidden></details>
@@ -1118,8 +1122,8 @@ const PROGRESS_HINT = 'Прогресс спринта: карта и баг в�
 const PLAN_START_HINT = [
   'Когда: один раз за спринт — когда садитесь планировать следующий. В середине спринта не нажимать.',
   'Что сделает: запомнит для всей команды, сколько SP осталось в работе. Дальше строки покажут «осталось + прибавилось», а карты, которые уже в Done, перестанут считаться.',
-  'Перед нажатием проверьте «Команда и дни»: панель запишет их в отчёт как capacity уходящего спринта по факту.',
-  'Нажать ещё раз: запомненное заменится у всех, а «Закончить планирование» нужно будет нажать заново.',
+  `Перед нажатием проверьте «Команда и дни»: панель запишет их в отчёт как capacity уходящего спринта по факту, а потом обнулит «нет, чел.-дн» и «праздников» и вернёт «рабочих дней» к ${defaultSettings().workDays} — впишите их на новый спринт.`,
+  'Нажать ещё раз в течение трёх дней: запомненное заменится у всех, «Команда и дни» не обнулятся, а «Закончить планирование» нужно будет нажать заново.',
 ].join('\n');
 
 const PLAN_END_HINT = [
@@ -1128,6 +1132,11 @@ const PLAN_END_HINT = [
   'Перед нажатием проверьте «Команда и дни»: панель запишет их в отчёт как capacity нового спринта по плану.',
   'Нажать ещё раз: «сверху» начнёт считаться от нового нажатия, план capacity перезапишется.',
 ].join('\n');
+
+const REMIND_TEXT = {
+  start: 'Пора планировать спринт. 1) Проверьте «Команда и дни»: это факт уходящего спринта. 2) Нажмите «Начать планирование».',
+  end: 'Планирование идёт. 1) Впишите «Команда и дни» на новый спринт: людей, отпуска и отгулы, праздники, рабочие дни. 2) Нажмите «Закончить планирование».',
+};
 
 function escapeHtml(value) {
   const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
@@ -1160,6 +1169,9 @@ function sprintCapacityMount(config) {
   const REFRESH_MS = 60000;
   const HOLST_WAIT_MS = 300000;
   const HOLST_PING_MS = 500;
+  const SAVE_DELAY_MS = 2000;
+  const SPRINT_DATES_MS = 21600000;
+  const SPRINT_RETRY_MS = 600000;
   let storageBroken = false;
   const readStored = (key, fallback) => {
     let raw = null;
@@ -1187,9 +1199,26 @@ function sprintCapacityMount(config) {
   const knownBoard = (id) => config.boards.some((board) => board.id === id);
   let boardId = readStored('board', null);
   if (!knownBoard(boardId)) boardId = config.boards[0].id;
-  const settingsKey = () => `settings.${boardId}`;
-  const loadSettings = () => normalizeSettings(readStored(settingsKey(), boardId === config.boards[0].id ? readStored('settings', null) : null));
-  let settings = loadSettings();
+  const localSettings = (board) => normalizeSettings(readStored(`settings.${board}`, board === config.boards[0].id ? readStored('settings', null) : null));
+  const readEdits = (board) => {
+    const raw = readStored(`edits.${board}`, null);
+    const ok = raw && typeof raw === 'object' && Number.isFinite(raw.at) && raw.values && typeof raw.values === 'object' && !Array.isArray(raw.values);
+    return ok ? { at: raw.at, values: raw.values } : { at: 0, values: {} };
+  };
+  let edits = readEdits(boardId);
+  let shared = null;
+  let sharedAt = 0;
+  let commentsLoaded = false;
+  let settings = withSettingEdits(localSettings(boardId), edits.values);
+  let saveTimer = null;
+  let saveChain = Promise.resolve();
+  let savingBoard = null;
+  let saveError = null;
+  let sprintDates = null;
+  let sprintDatesError = null;
+  let sprintDatesBusy = false;
+  let sprintDatesTried = 0;
+  let remindBefore = null;
   let collapsed = readStored('collapsed', false) === true;
   let snapshot = null;
   let planEnd = null;
@@ -1215,9 +1244,15 @@ function sprintCapacityMount(config) {
 
   const cardLink = (item) => `<a href="${window.location.origin}/${item.id}" target="_blank" rel="noopener">${escapeHtml(item.title || item.id)}</a>`;
 
+  const applySettings = () => {
+    settings = withSettingEdits(shared ? shared.settings : localSettings(boardId), edits.values);
+  };
+
   const recompute = () => {
     report = data.cards ? buildReport({ cards: data.cards, settings, snapshot, planEnd, config: boardConfig(boardId, config) }) : null;
   };
+
+  const reminder = () => (commentsLoaded && !data.snapshotError && report ? planningReminder({ sprint: sprintDates, snapshot, planEnd, now: Date.now() }) : null);
 
   const renderStatus = () => {
     let when = 'загружаю…';
@@ -1227,12 +1262,32 @@ function sprintCapacityMount(config) {
     const messages = [];
     if (data.error) messages.push(`${data.error.message || data.error}${data.loadedAt ? ` — цифры на ${clockTime(data.loadedAt)}` : ''}`);
     if (data.snapshotError) messages.push(`Общий снимок: ${data.snapshotError.message || data.snapshotError}`);
+    if (saveError) messages.push(`«Команда и дни» не сохранились: ${saveError.message || saveError} — повторю`);
+    if (sprintDatesError) messages.push(`Напоминание о планировании: даты спринта не загрузились (${sprintDatesError.message || sprintDatesError})`);
     if (report) messages.push(...report.problems);
     const unknown = report ? unknownColumnsText(report.progress.unknown.map((item) => item.column)) : null;
     if (unknown) messages.push(`Прогресс: ${unknown}`);
     if (storageBroken) messages.push('Браузер не сохраняет вписанное');
     $('.status').innerHTML = messages.map((message) => `<div class="error">${escapeHtml(message)}</div>`).join('');
     $('[data-act="refresh"]').disabled = data.busy;
+  };
+
+  const renderRemind = () => {
+    const kind = reminder();
+    $('.remind').innerHTML = kind ? `<div class="tip">${escapeHtml(REMIND_TEXT[kind])}</div>` : '';
+    if (kind && kind !== remindBefore) {
+      $('.planning').open = true;
+      $('.settings').open = true;
+    }
+    remindBefore = kind;
+  };
+
+  const renderShared = () => {
+    let text = 'Пока только в этом браузере. Любая правка сохранится для всей команды';
+    if (Object.keys(edits.values).length || savingBoard === boardId) text = saveError ? 'Не сохранилось — повторю при обновлении' : 'Сохраняю для всей команды…';
+    else if (shared) text = `Общие для команды · последняя правка: ${shared.author ? `${shared.author}, ` : ''}${snapshotTime(shared.savedAt)}`;
+    else if (!commentsLoaded) text = data.snapshotError ? 'Общие не загрузились — показываю вписанное в этом браузере' : 'Загружаю общие…';
+    $('.shared').textContent = text;
   };
 
   const renderRow = (row) => {
@@ -1275,7 +1330,8 @@ function sprintCapacityMount(config) {
       return;
     }
     const since = snapshot ? `<span title="${escapeHtml(snapshot.author)}">с ${snapshotTime(snapshot.takenAt)}</span>` : '';
-    const start = `<div class="plan"><button type="button" data-act="start-planning" title="${escapeHtml(PLAN_START_HINT)}"${snapshot ? ' class="again"' : ''}${data.busy ? ' disabled' : ''}>Начать планирование</button>${since}</div>`;
+    const again = snapshot && reminder() !== 'start';
+    const start = `<div class="plan"><button type="button" data-act="start-planning" title="${escapeHtml(PLAN_START_HINT)}"${again ? ' class="again"' : ''}${data.busy ? ' disabled' : ''}>Начать планирование</button>${since}</div>`;
     const endSince = planEnd ? `<span title="${escapeHtml(planEnd.author)}">${snapshotTime(planEnd.takenAt)}</span>` : '';
     const end = snapshot ? `<div class="plan"><button type="button" data-act="end-planning" title="${escapeHtml(PLAN_END_HINT)}"${planEnd ? ' class="again"' : ''}${data.busy ? ' disabled' : ''}>Закончить планирование</button>${endSince}</div>` : '';
     box.innerHTML = `<summary>Планирование</summary><div class="inner">${start}${end}</div>`;
@@ -1300,9 +1356,11 @@ function sprintCapacityMount(config) {
 
   const render = () => {
     renderStatus();
+    renderRemind();
     renderSummary();
     renderPlanning();
     renderWarnings();
+    renderShared();
     renderHolstKey();
   };
 
@@ -1316,18 +1374,95 @@ function sprintCapacityMount(config) {
   const fillSettings = () => {
     for (const label of shadow.querySelectorAll('[data-label]')) label.textContent = boardConfig(boardId, config).labels[label.dataset.label];
     for (const input of shadow.querySelectorAll('.settings input[data-set]')) {
-      const value = input.dataset.set.split('.').reduce((node, key) => node[key], settings);
-      input.value = value === 0 && input.placeholder === '0' ? '' : formatNumber(value);
+      if (input === shadow.activeElement) continue;
+      const path = input.dataset.set;
+      const value = path.split('.').reduce((node, key) => node[key], settings);
+      input.value = edits.values[path] !== undefined ? edits.values[path] : value === 0 && input.placeholder === '0' ? '' : formatNumber(value);
     }
   };
 
-  const setSetting = (path, raw) => {
-    const next = JSON.parse(JSON.stringify(settings));
-    const keys = path.split('.');
-    const parent = keys.slice(0, -1).reduce((node, key) => node[key], next);
-    parent[keys[keys.length - 1]] = raw;
-    settings = normalizeSettings(next);
-    writeStored(settingsKey(), settings);
+  const pushSettings = async (board, transform) => {
+    const sent = board === boardId ? edits : readEdits(board);
+    if (!transform && !Object.keys(sent.values).length) return;
+    savingBoard = board;
+    if (board === boardId && !closed) renderShared();
+    try {
+      const latest = settingsFromComments(await kaitenCardComments(config.snapshotCardId), board);
+      const merged = withSettingEdits(latest ? latest.settings : localSettings(board), sent.values);
+      const next = transform ? transform(merged) : merged;
+      let record = latest;
+      if (!latest || JSON.stringify(latest.settings) !== JSON.stringify(next)) {
+        const savedAt = new Date().toISOString();
+        const created = await kaitenAddComment(config.snapshotCardId, settingsComment({ boardId: board, savedAt, settings: next }, config));
+        record = { boardId: board, savedAt, settings: next, author: (created && created.author && created.author.full_name) || 'вы' };
+      }
+      const current = board === boardId ? edits : readEdits(board);
+      const values = Object.fromEntries(Object.entries(current.values).filter(([path, raw]) => sent.values[path] !== raw));
+      const rest = Object.keys(values).length ? { at: current.at, values } : { at: 0, values: {} };
+      writeStored(`edits.${board}`, rest);
+      writeStored(`settings.${board}`, record.settings);
+      if (board === boardId && !closed) {
+        shared = record;
+        sharedAt = Date.now();
+        edits = rest;
+        saveError = null;
+        applySettings();
+        recompute();
+        fillSettings();
+      }
+    } catch (error) {
+      if (board === boardId && !transform) saveError = error;
+      throw error;
+    } finally {
+      savingBoard = null;
+      if (board === boardId && !closed) render();
+    }
+  };
+
+  const queueSave = (board, transform = null) => {
+    const job = saveChain.then(() => pushSettings(board, transform));
+    saveChain = job.catch(() => {});
+    return job;
+  };
+
+  const saveNow = () => {
+    window.clearTimeout(saveTimer);
+    saveTimer = null;
+    return queueSave(boardId).catch(() => {});
+  };
+
+  const saveSoon = () => {
+    window.clearTimeout(saveTimer);
+    saveTimer = window.setTimeout(saveNow, SAVE_DELAY_MS);
+  };
+
+  const loadSprintDates = async () => {
+    const board = boardId;
+    const id = sprintCurrentId(data.cards) || readStored(`sprint.${board}`, null);
+    if (!id) return;
+    const cached = readStored(`sprintDates.${id}`, null);
+    const valid = cached && cached.id === id && Number.isFinite(cached.start) && Number.isFinite(cached.finish) && (cached.closedAt === null || Number.isFinite(cached.closedAt));
+    sprintDates = valid ? cached : sprintDates && sprintDates.id === id ? sprintDates : null;
+    if (valid && (cached.closedAt !== null || Date.now() - cached.at < SPRINT_DATES_MS)) return;
+    if (sprintDatesBusy || Date.now() - sprintDatesTried < SPRINT_RETRY_MS) return;
+    sprintDatesBusy = true;
+    sprintDatesTried = Date.now();
+    try {
+      const raw = await kaitenSprint(id);
+      const sprint = (raw && raw.data) || raw || {};
+      const dates = { id, start: sprintTime(sprint.start_date), finish: sprintTime(sprint.finish_date), closedAt: sprint.actual_finish_date ? sprintTime(sprint.actual_finish_date) : null, at: Date.now() };
+      if (!Number.isFinite(dates.start) || !Number.isFinite(dates.finish)) throw new Error('у спринта в Kaiten нет дат');
+      writeStored(`sprintDates.${id}`, dates);
+      writeStored(`sprint.${board}`, id);
+      if (board === boardId) {
+        sprintDates = dates;
+        sprintDatesError = null;
+      }
+    } catch (error) {
+      if (board === boardId) sprintDatesError = error;
+    }
+    sprintDatesBusy = false;
+    if (board === boardId && !closed) render();
   };
 
   const refresh = async () => {
@@ -1341,10 +1476,12 @@ function sprintCapacityMount(config) {
     } catch (error) {
       loaded.error = error;
     }
+    const asked = Date.now();
     try {
       const comments = await kaitenCardComments(config.snapshotCardId);
       loaded.snapshot = snapshotFromComments(comments, board);
       loaded.planEnd = planEndFromComments(comments, loaded.snapshot);
+      loaded.shared = settingsFromComments(comments, board);
     } catch (error) {
       loaded.snapshotError = error;
     }
@@ -1365,25 +1502,48 @@ function sprintCapacityMount(config) {
       snapshot = loaded.snapshot;
       planEnd = loaded.planEnd;
       data.snapshotError = null;
+      if (asked >= sharedAt) shared = loaded.shared;
+      if (shared) writeStored(`settings.${board}`, shared.settings);
+      if (!commentsLoaded && shared && edits.at < Date.parse(shared.savedAt)) {
+        edits = { at: 0, values: {} };
+        writeStored(`edits.${board}`, edits);
+      }
+      commentsLoaded = true;
     }
+    applySettings();
     recompute();
+    fillSettings();
     render();
     checkChaos();
+    if (!loaded.snapshotError && Object.keys(edits.values).length && savingBoard === null && saveTimer === null) saveNow();
+    loadSprintDates();
   };
 
   const startPlanning = async () => {
-    const text = snapshot
-      ? `${boardTitle(boardId, config)}: начать планирование заново? Снимок от ${snapshotTime(snapshot.takenAt)} заменится текущей доской у всей команды.`
-      : `${boardTitle(boardId, config)}: запомнить для всей команды, сколько сейчас осталось в работе? Карты в Done дальше не считаются.`;
+    const fresh = planningFresh(snapshot, Date.now());
+    const text = fresh
+      ? `${boardTitle(boardId, config)}: начать планирование для всей команды? Панель запомнит, сколько сейчас осталось в работе (карты в Done дальше не считаются), и запишет «Команда и дни» как факт уходящего спринта. Потом «нет, чел.-дн» и «праздников» обнулятся, а «рабочих дней» вернутся к ${defaultSettings().workDays} — впишите их на новый спринт.`
+      : `${boardTitle(boardId, config)}: начать планирование заново? Снимок от ${snapshotTime(snapshot.takenAt)} заменится текущей доской у всей команды. «Команда и дни» не обнулятся.`;
     if (!window.confirm(text)) return;
     data.busy = true;
     render();
     const board = boardId;
+    const facts = settings;
+    if (saveTimer !== null) saveNow();
+    let taken = false;
     try {
       const cards = await kaitenBoardCards(board);
-      await kaitenAddComment(config.snapshotCardId, snapshotComment(takeSnapshot({ cards, settings, now: Date.now(), boardId: board, config: boardConfig(board, config) }), config));
+      await kaitenAddComment(config.snapshotCardId, snapshotComment(takeSnapshot({ cards, settings: facts, now: Date.now(), boardId: board, config: boardConfig(board, config) }), config));
+      taken = true;
     } catch (error) {
       window.alert(`Снимок не сохранился: ${error.message || error}`);
+    }
+    if (taken && fresh) {
+      try {
+        await queueSave(board, resetForNewSprint);
+      } catch (error) {
+        window.alert(`«Команда и дни» не обнулились: ${error.message || error}. Впишите их на новый спринт вручную: «нет, чел.-дн», «праздников» и «рабочих дней».`);
+      }
     }
     data.busy = false;
     await refresh();
@@ -1399,9 +1559,11 @@ function sprintCapacityMount(config) {
     render();
     const board = boardId;
     const start = snapshot;
+    const plan = settings;
+    if (saveTimer !== null) saveNow();
     try {
       const cards = await kaitenBoardCards(board);
-      await kaitenAddComment(config.snapshotCardId, planEndComment(takePlanEnd({ cards, snapshot: start, settings, now: Date.now(), boardId: board, config: boardConfig(board, config) }), config));
+      await kaitenAddComment(config.snapshotCardId, planEndComment(takePlanEnd({ cards, snapshot: start, settings: plan, now: Date.now(), boardId: board, config: boardConfig(board, config) }), config));
     } catch (error) {
       window.alert(`Конец планирования не сохранился: ${error.message || error}`);
     }
@@ -1714,6 +1876,7 @@ function sprintCapacityMount(config) {
   };
 
   const close = () => {
+    if (saveTimer !== null) saveNow();
     closed = true;
     window.clearInterval(timer);
     window.clearTimeout(chaosTimer);
@@ -1746,9 +1909,19 @@ function sprintCapacityMount(config) {
 
   const switchBoard = (id) => {
     if (!knownBoard(id) || id === boardId) return;
+    if (saveTimer !== null) saveNow();
     boardId = id;
     writeStored('board', boardId);
-    settings = loadSettings();
+    edits = readEdits(boardId);
+    shared = null;
+    sharedAt = 0;
+    commentsLoaded = false;
+    saveError = null;
+    sprintDates = null;
+    sprintDatesError = null;
+    sprintDatesTried = 0;
+    remindBefore = null;
+    applySettings();
     snapshot = null;
     planEnd = null;
     chaosBefore = false;
@@ -1767,10 +1940,13 @@ function sprintCapacityMount(config) {
   shadow.addEventListener('input', (event) => {
     const target = event.target;
     if (!target.dataset.set) return;
-    setSetting(target.dataset.set, target.value);
+    edits = { at: Date.now(), values: { ...edits.values, [target.dataset.set]: target.value } };
+    writeStored(`edits.${boardId}`, edits);
+    applySettings();
     recompute();
     render();
     checkChaosLater();
+    saveSoon();
   });
 
   shadow.addEventListener('keydown', (event) => {

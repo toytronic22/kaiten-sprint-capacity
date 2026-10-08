@@ -725,3 +725,119 @@ test('прогресс спринта 28.09–11.10 на доске Staff Core 3
   // Assert
   assert.deepEqual([progress.points, progress.percent], [86, 28]);
 });
+
+test('общие «Команда и дни»: комментарий с доской, людьми и capacity, читается обратно свежий своей доски', () => {
+  // Arrange
+  const settings = core.normalizeSettings({ workDays: 10, holidays: 1, team: { back: { people: 3, absence: 2 }, front: { people: 2 }, qa: { people: 1 } } });
+  const record = { boardId: CORE_BOARD, savedAt: '2026-10-08T09:00:00.000Z', settings };
+  const make = (boardId, savedAt, back, extra = {}) => ({ text: core.settingsComment({ boardId, savedAt, settings: settingsWith({ back: { people: back } }) }), created: savedAt, ...extra });
+  const comments = [
+    make(CORE_BOARD, '2026-10-01T09:00:00.000Z', 1),
+    { text: core.settingsComment(record), created: '2026-10-08T09:00:01Z', author: { full_name: 'Aleksey Martynov' } },
+    make(MOBILE_BOARD, '2026-10-09T09:00:00.000Z', 7),
+    make(CORE_BOARD, '2026-10-10T09:00:00.000Z', 9, { deleted: true }),
+    { text: 'Команда и дни. ```json\n{"settings":\n```', created: '2026-10-11T09:00:00Z' },
+  ];
+
+  // Act
+  const actual = core.settingsFromComments(comments, CORE_BOARD);
+
+  // Assert
+  assert.ok(comments[1].text.startsWith('Команда и дни, Staff Core. Людей: Бэк 3, нет 2 · Фронт 2 · QA 1. Рабочих дней 10, праздников 1, SP в день 1. Capacity, чел.-дн.: Бэк 25 · Фронт 18 · QA 9.\n'));
+  assert.deepEqual(actual, { ...record, author: 'Aleksey Martynov' });
+  assert.equal(core.settingsFromComments(comments, MOBILE_BOARD).settings.team.back.people, 7);
+  assert.deepEqual([core.settingsFromComments([], CORE_BOARD), core.settingsFromComments(null, CORE_BOARD)], [null, null]);
+  assert.deepEqual([core.snapshotFromComments(comments, CORE_BOARD), core.capacityLogFromComments(comments)], [null, []]);
+});
+
+test('общие «Команда и дни» без людей и на мобилке: подписи доски, «не вписано», без capacity', () => {
+  // Arrange
+  const savedAt = '2026-10-08T09:00:00.000Z';
+
+  // Act
+  const empty = core.settingsComment({ boardId: MOBILE_BOARD, savedAt, settings: core.defaultSettings() });
+  const mobile = core.settingsComment({ boardId: MOBILE_BOARD, savedAt, settings: settingsWith({ front: { people: 2, absence: 1.5 } }) });
+
+  // Assert
+  assert.ok(empty.startsWith('Команда и дни, Staff Mobile. Людей: не вписано. Рабочих дней 10, праздников 0, SP в день 1.\n'));
+  assert.ok(mobile.startsWith('Команда и дни, Staff Mobile. Людей: Mobile 2, нет 1,5. Рабочих дней 10, праздников 0, SP в день 1. Capacity, чел.-дн.: Mobile 18,5.\n'));
+});
+
+test('правки «Команды и дней» ложатся поверх общих по полям: пустое и мусор — по умолчанию, чужие пути не трогаются', () => {
+  // Arrange
+  const base = core.normalizeSettings({ workDays: 9, coefficient: 0.5, team: { back: { people: 3, absence: 2 }, qa: { people: 1 } } });
+  const values = { 'team.back.absence': '4,5', 'team.qa.people': '', holidays: 'abc', 'team.front.people': '2', '__proto__.polluted': '1', 'team.back': '7', size: '3' };
+
+  // Act
+  const actual = core.withSettingEdits(base, values);
+
+  // Assert
+  assert.deepEqual(actual, core.normalizeSettings({ workDays: 9, holidays: 0, coefficient: 0.5, team: { back: { people: 3, absence: 4.5 }, front: { people: 2 }, qa: { people: 0 } } }));
+  assert.equal({}.polluted, undefined);
+  assert.deepEqual(base.team.back, { people: 3, absence: 2 });
+  assert.deepEqual(core.withSettingEdits(base, null), base);
+});
+
+test('новый спринт: «нет, чел.-дн» и праздники обнуляются, рабочих дней снова 10, люди и SP в день остаются', () => {
+  // Arrange
+  const settings = core.normalizeSettings({ workDays: 7, holidays: 2, coefficient: 0.8, team: { back: { people: 3, absence: 4 }, front: { people: 2, absence: 1 }, qa: { people: 1, absence: 0.5 } } });
+
+  // Act
+  const actual = core.resetForNewSprint(settings);
+
+  // Assert
+  assert.deepEqual(actual, core.normalizeSettings({ workDays: 10, holidays: 0, coefficient: 0.8, team: { back: { people: 3 }, front: { people: 2 }, qa: { people: 1 } } }));
+  assert.equal(settings.team.back.absence, 4);
+  assert.equal(settings.workDays, 7);
+});
+
+test('повтор «Начать планирование»: в первые три дня после снимка — повтор, позже и без снимка — новое планирование', () => {
+  // Arrange
+  const snapshot = { takenAt: '2026-10-12T07:00:00.000Z' };
+  const hour = 3600000;
+  const taken = Date.parse(snapshot.takenAt);
+
+  // Act
+  const actual = [core.planningFresh(null, taken), core.planningFresh(snapshot, taken + 2 * hour), core.planningFresh(snapshot, taken + 71 * hour), core.planningFresh(snapshot, taken + 73 * hour)];
+
+  // Assert
+  assert.deepEqual(actual, [true, false, false, true]);
+});
+
+test('напоминание о планировании: у границы спринта — «начать», после начала без конца — «закончить», посреди спринта — ничего', () => {
+  // Arrange
+  const msk = (text) => Date.parse(`${text}+03:00`);
+  const at = (text) => ({ takenAt: new Date(msk(text)).toISOString() });
+  const sprint = { start: msk('2026-09-28T00:00:00'), finish: msk('2026-10-11T23:59:59.999'), closedAt: null };
+  const next = { start: msk('2026-10-12T00:00:00'), finish: msk('2026-10-25T23:59:59.999'), closedAt: null };
+  const short = { start: msk('2026-10-14T00:00:00'), finish: msk('2026-10-22T23:59:59.999'), closedAt: null };
+  const closedFriday = { ...sprint, closedAt: msk('2026-10-09T18:00:00') };
+  const old = at('2026-09-28T10:00:00');
+  const oldEnd = at('2026-09-28T12:00:00');
+  const started = at('2026-10-12T10:00:00');
+  const ended = at('2026-10-12T12:00:00');
+  const cases = [
+    ['посреди спринта', sprint, old, oldEnd, '2026-10-05T12:00:00', null],
+    ['последний день спринта', sprint, old, oldEnd, '2026-10-11T12:00:00', 'start'],
+    ['утро после конца', sprint, old, oldEnd, '2026-10-12T09:00:00', 'start'],
+    ['неделю не планировали', sprint, old, oldEnd, '2026-10-18T20:00:00', 'start'],
+    ['больше недели после конца', sprint, old, oldEnd, '2026-10-19T09:00:00', null],
+    ['нажали «Начать»', sprint, started, null, '2026-10-12T11:00:00', 'end'],
+    ['нажали «Закончить»', sprint, started, ended, '2026-10-12T13:00:00', null],
+    ['«Закончить» забыли, прошло три дня', sprint, started, null, '2026-10-15T11:00:00', null],
+    ['новый спринт заведён до планирования', next, old, oldEnd, '2026-10-12T09:00:00', 'start'],
+    ['новый спринт идёт четвёртый день', next, old, oldEnd, '2026-10-15T01:00:00', null],
+    ['спринт со среды по четверг: последний день', short, at('2026-10-14T10:00:00'), at('2026-10-14T12:00:00'), '2026-10-22T10:00:00', 'start'],
+    ['спринт со среды по четверг: середина', short, at('2026-10-14T10:00:00'), at('2026-10-14T12:00:00'), '2026-10-19T10:00:00', null],
+    ['спринт закрыли в пятницу', closedFriday, old, oldEnd, '2026-10-12T10:00:00', 'start'],
+    ['спланировали в пятницу до закрытия', closedFriday, at('2026-10-09T15:00:00'), at('2026-10-09T16:00:00'), '2026-10-12T10:00:00', null],
+    ['дат спринта нет', null, old, oldEnd, '2026-10-12T09:00:00', null],
+    ['снимков ещё не было', sprint, null, null, '2026-10-12T09:00:00', 'start'],
+  ];
+
+  // Act
+  const actual = cases.map(([name, item, snapshot, planEnd, now]) => [name, core.planningReminder({ sprint: item, snapshot, planEnd, now: msk(now) })]);
+
+  // Assert
+  assert.deepEqual(actual, cases.map(([name, , , , , expected]) => [name, expected]));
+});
