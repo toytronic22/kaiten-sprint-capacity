@@ -635,11 +635,14 @@ function sprintRange(summary, cfg = SPRINT_REPORT) {
   return `${sprintDate(summary.start, cfg)}–${sprintDate(summary.end, cfg)}`;
 }
 
-function sprintDaysHint(dates, now, cfg = SPRINT_REPORT) {
+function sprintDaysHint({ dates, now, workDays = null, plannedAt = null }, cfg = SPRINT_REPORT) {
   if (!dates || dates.closedAt !== null) return null;
   const period = sprintBounds(dates.start, dates.finish, cfg);
   if (now > period.end) return null;
-  return `по датам в Kaiten (${sprintRange(period, cfg)}) — ${sprintCount(sprintDaysLeft(period.start, period.end, cfg), SPRINT_WORDS.weekday)}`;
+  if (plannedAt !== null && plannedAt >= (period.start + period.end + 1) / 2) return null;
+  const days = sprintDaysLeft(period.start, period.end, cfg);
+  const text = `по датам в Kaiten (${sprintRange(period, cfg)}) — ${sprintCount(days, SPRINT_WORDS.weekday)}`;
+  return workDays === null || workDays === days ? { text, off: false } : { text: `${text}, а вписано ${sprintNumber(workDays)}`, off: true };
 }
 
 function sprintGroups(list) {

@@ -202,15 +202,44 @@ test('Подсказка у «рабочих дней»: будни между �
 
   // Act
   const hints = [
-    sprint.sprintDaysHint(wednesday, now),
-    sprint.sprintDaysHint(twoWeeks, now),
-    sprint.sprintDaysHint({ ...twoWeeks, closedAt: Date.parse('2026-10-12T07:00:00.000Z') }, now),
-    sprint.sprintDaysHint(twoWeeks, Date.parse('2026-10-11T21:00:00.000Z')),
-    sprint.sprintDaysHint(null, now),
+    sprint.sprintDaysHint({ dates: wednesday, now }),
+    sprint.sprintDaysHint({ dates: twoWeeks, now }),
+    sprint.sprintDaysHint({ dates: { ...twoWeeks, closedAt: Date.parse('2026-10-12T07:00:00.000Z') }, now }),
+    sprint.sprintDaysHint({ dates: twoWeeks, now: Date.parse('2026-10-11T21:00:00.000Z') }),
+    sprint.sprintDaysHint({ dates: null, now }),
   ];
 
   // Assert
-  assert.deepEqual(hints, ['по датам в Kaiten (14.10–22.10) — 7 будних дней', 'по датам в Kaiten (28.09–11.10) — 10 будних дней', null, null, null]);
+  assert.deepEqual(hints, [{ text: 'по датам в Kaiten (14.10–22.10) — 7 будних дней', off: false }, { text: 'по датам в Kaiten (28.09–11.10) — 10 будних дней', off: false }, null, null, null]);
+});
+
+test('Подсказка у «рабочих дней» желтеет, когда вписано не столько, сколько будней между датами спринта', () => {
+  // Arrange
+  const wednesday = { start: Date.parse('2026-10-13T19:00:00.000Z'), finish: Date.parse('2026-10-22T18:59:59.999Z'), closedAt: null };
+  const now = Date.parse('2026-10-08T09:00:00.000Z');
+
+  // Act
+  const hints = [7, 10, 6.5].map((workDays) => sprint.sprintDaysHint({ dates: wednesday, now, workDays }));
+
+  // Assert
+  assert.deepEqual(hints, [
+    { text: 'по датам в Kaiten (14.10–22.10) — 7 будних дней', off: false },
+    { text: 'по датам в Kaiten (14.10–22.10) — 7 будних дней, а вписано 10', off: true },
+    { text: 'по датам в Kaiten (14.10–22.10) — 7 будних дней, а вписано 6,5', off: true },
+  ]);
+});
+
+test('Подсказки у «рабочих дней» нет, если «Начать планирование» нажали во второй половине спринта: поля уже про следующий', () => {
+  // Arrange
+  const twoWeeks = { start: Date.parse('2026-09-27T21:00:00.000Z'), finish: Date.parse('2026-10-11T20:59:59.999Z'), closedAt: null };
+  const now = Date.parse('2026-10-08T09:00:00.000Z');
+  const planned = ['2026-09-25T12:00:00.000Z', '2026-09-28T07:00:00.000Z', '2026-10-04T20:59:59.999Z', '2026-10-04T21:00:00.000Z', '2026-10-08T07:00:00.000Z'];
+
+  // Act
+  const hints = planned.map((at) => sprint.sprintDaysHint({ dates: twoWeeks, now, workDays: 7, plannedAt: Date.parse(at) }));
+
+  // Assert
+  assert.deepEqual(hints.map((hint) => hint && hint.off), [true, true, true, null, null]);
 });
 
 test('Текущий спринт доски: самый частый у карт, при равенстве больший, без спринта — нет', () => {
