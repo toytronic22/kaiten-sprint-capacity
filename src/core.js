@@ -398,6 +398,7 @@ function withSettingEdits(base, values) {
 
 function resetForNewSprint(settings) {
   const next = normalizeSettings(settings);
+  next.workDays = defaultSettings().workDays;
   next.holidays = 0;
   for (const direction of DIRECTIONS) next.team[direction].absence = 0;
   return next;

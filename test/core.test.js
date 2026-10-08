@@ -778,7 +778,7 @@ test('правки «Команды и дней» ложатся поверх о
   assert.deepEqual(core.withSettingEdits(base, null), base);
 });
 
-test('новый спринт: «нет, чел.-дн» и праздники обнуляются, люди, рабочие дни и SP в день остаются', () => {
+test('новый спринт: «нет, чел.-дн» и праздники обнуляются, рабочих дней снова 10, люди и SP в день остаются', () => {
   // Arrange
   const settings = core.normalizeSettings({ workDays: 7, holidays: 2, coefficient: 0.8, team: { back: { people: 3, absence: 4 }, front: { people: 2, absence: 1 }, qa: { people: 1, absence: 0.5 } } });
 
@@ -786,8 +786,9 @@ test('новый спринт: «нет, чел.-дн» и праздники о
   const actual = core.resetForNewSprint(settings);
 
   // Assert
-  assert.deepEqual(actual, core.normalizeSettings({ workDays: 7, holidays: 0, coefficient: 0.8, team: { back: { people: 3 }, front: { people: 2 }, qa: { people: 1 } } }));
+  assert.deepEqual(actual, core.normalizeSettings({ workDays: 10, holidays: 0, coefficient: 0.8, team: { back: { people: 3 }, front: { people: 2 }, qa: { people: 1 } } }));
   assert.equal(settings.team.back.absence, 4);
+  assert.equal(settings.workDays, 7);
 });
 
 test('повтор «Начать планирование»: в первые три дня после снимка — повтор, позже и без снимка — новое планирование', () => {

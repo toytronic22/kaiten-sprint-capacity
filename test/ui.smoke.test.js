@@ -520,6 +520,7 @@ test('Кнопки планирования спрятаны в свёрнуто
   assert.equal(planning.open, undefined);
   assert.match(planning.innerHTML, /^<summary>Планирование<\/summary><div class="inner">/);
   assert.match(planning.innerHTML, /<button type="button" data-act="start-planning" title="Когда: один раз за спринт — когда садитесь планировать следующий\. В середине спринта не нажимать\.\nЧто сделает: запомнит для всей команды, сколько SP осталось в работе\.[^"]*"\s*>Начать планирование<\/button>/);
+  assert.match(planning.innerHTML, /обнулит «нет, чел\.-дн» и «праздников» и вернёт «рабочих дней» к 10 — впишите их на новый спринт\./);
   assert.doesNotMatch(planning.innerHTML, /end-planning/);
   assert.doesNotMatch(kaiten.$('.summary').innerHTML, /planning/);
 });
@@ -693,11 +694,11 @@ test('Неотправленная правка старше чужого сох
   assert.deepEqual(posted(fresh, core.SETTINGS_MARK).map((item) => item.settings.team.back.people), [5]);
 });
 
-test('«Начать планирование» нового цикла: снимок пишет «Команду и дни» как факт, потом «нет, чел.-дн» и праздники обнуляются у всех', async () => {
+test('«Начать планирование» нового цикла: снимок пишет «Команду и дни» как факт, потом у всех «нет, чел.-дн» и праздники обнуляются, рабочих дней снова 10', async () => {
   // Arrange
   const asked = [];
   const kaiten = teamKaiten({
-    comments: [teamComment(ago(3600000), { holidays: 1, team: { back: { people: 3, absence: 2 }, front: { people: 2, absence: 1 } } })],
+    comments: [teamComment(ago(3600000), { workDays: 7, holidays: 1, team: { back: { people: 3, absence: 2 }, front: { people: 2, absence: 1 } } })],
     confirm: (text) => asked.push(text) > 0,
   });
   await flush();
@@ -708,9 +709,9 @@ test('«Начать планирование» нового цикла: сни�
 
   // Assert
   const posts = kaiten.requests.filter((item) => item.method === 'POST').map((item) => item.body.text.split(',')[0]);
-  assert.match(asked[0], /^Staff Core: начать планирование для всей команды\? .*Потом «нет, чел\.-дн» и «праздников» обнулятся — впишите их на новый спринт\.$/);
+  assert.match(asked[0], /^Staff Core: начать планирование для всей команды\? .*Потом «нет, чел\.-дн» и «праздников» обнулятся, а «рабочих дней» вернутся к 10 — впишите их на новый спринт\.$/);
   assert.deepEqual(posts, ['Снимок начала планирования', 'Команда и дни']);
-  assert.deepEqual(posted(kaiten, SNAPSHOT)[0].capacity, { back: 25, front: 17 });
+  assert.deepEqual(posted(kaiten, SNAPSHOT)[0].capacity, { back: 16, front: 11 });
   assert.deepEqual(posted(kaiten, core.SETTINGS_MARK)[0].settings, core.normalizeSettings({ team: { back: { people: 3 }, front: { people: 2 } } }));
   assert.deepEqual(kaiten.alerts, []);
 });
@@ -779,7 +780,7 @@ test('После «Начать планирование» напоминани�
   assert.match(kaiten.$('.planning').innerHTML, /class="again">Начать планирование<\/button>/);
 });
 
-test('Снимок записан, а обнулить «Команду и дни» не вышло — панель просит обнулить вручную и не обещает повторить', async () => {
+test('Снимок записан, а обнулить «Команду и дни» не вышло — панель просит вписать новый спринт вручную и не обещает повторить', async () => {
   // Arrange
   const kaiten = teamKaiten({
     comments: [teamComment(ago(3600000), { team: { back: { people: 3, absence: 2 } } })],
@@ -793,7 +794,7 @@ test('Снимок записан, а обнулить «Команду и дн�
   await flush();
 
   // Assert
-  assert.deepEqual(kaiten.alerts, ['«Команда и дни» не обнулились: нет сети. Обнулите «нет, чел.-дн» и «праздников» вручную.']);
+  assert.deepEqual(kaiten.alerts, ['«Команда и дни» не обнулились: нет сети. Впишите их на новый спринт вручную: «нет, чел.-дн», «праздников» и «рабочих дней».']);
   assert.equal(kaiten.requests.filter((item) => item.method === 'POST' && item.body.text.startsWith(SNAPSHOT)).length, 1);
   assert.doesNotMatch(kaiten.$('.status').innerHTML, /повторю/);
 });
