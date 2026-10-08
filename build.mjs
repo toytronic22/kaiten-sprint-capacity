@@ -15,11 +15,6 @@ if (!EXPORT_LINE.test(holstCore)) {
   throw new Error('В src/holst-core.js нет строки с module.exports — сборка остановлена, проверьте её вид');
 }
 
-const reportCore = read('./src/report-core.js');
-if (!EXPORT_LINE.test(reportCore)) {
-  throw new Error('В src/report-core.js нет строки с module.exports — сборка остановлена, проверьте её вид');
-}
-
 const sprintCore = read('./src/sprint-core.js');
 if (!EXPORT_LINE.test(sprintCore)) {
   throw new Error('В src/sprint-core.js нет строки с module.exports — сборка остановлена, проверьте её вид');
@@ -38,7 +33,7 @@ const wrap = (parts) => {
 };
 
 const holstLogin = read('./src/holst-login.js');
-const script = wrap([core.replace(EXPORT_LINE, ''), holstCore.replace(EXPORT_LINE, ''), reportCore.replace(EXPORT_LINE, ''), sprintCore.replace(EXPORT_LINE, ''), read('./src/kaiten.js'), read('./src/toast.js'), holstLogin, read('./src/holst.js'), read('./src/time.js'), read('./src/report.js'), read('./src/ui.js'), 'sprintCapacityMount(SPRINT_CAPACITY);']);
+const script = wrap([core.replace(EXPORT_LINE, ''), holstCore.replace(EXPORT_LINE, ''), sprintCore.replace(EXPORT_LINE, ''), read('./src/kaiten.js'), read('./src/toast.js'), holstLogin, read('./src/holst.js'), read('./src/ui.js'), 'sprintCapacityMount(SPRINT_CAPACITY);']);
 const holstScript = wrap([read('./src/toast.js'), holstLogin, 'holstHandoff();']);
 
 const PAGES = 'https://toytronic22.github.io/kaiten-sprint-capacity/';
@@ -74,7 +69,6 @@ li { margin: 4px 0; }
 <li>Holst откроется в новой вкладке. Нажмите там закладку «Ёмкость спринта». Holst напишет «Вход работает — эту вкладку можно закрыть», а буква H в панели станет зелёной. Готово.</li>
 </ol>
 <p>Шаги 4–6 — один раз на браузер.</p>
-<p>Сводка спринта в Time (доска Staff Core): нажмите красную букву T, вставьте ссылку на канал Time и нажмите «Открыть Time». В открывшейся вкладке Time нажмите эту же закладку — буква T станет зелёной. Вкладку Time не закрывайте: через неё уходят сводки.</p>
 <p><a href="https://github.com/toytronic22/kaiten-sprint-capacity#readme">Как пользоваться и как считает</a></p>
 <p>Не перетаскивается — создайте закладку вручную и вставьте в поле адреса этот код:</p>
 <textarea readonly onclick="this.select()">${escapeHtml(bookmarklet)}</textarea>
