@@ -324,7 +324,7 @@ async function holstApply(payload, token) {
     const place = chart && !chart.problem ? percentLabelPlace(chart) : null;
     const percentProblem = !labelRoot && chart && chart.problem ? chart.problem : null;
     const labelMove = moveLabel && Boolean(place);
-    const labelWrite = labelChanged && !percentProblem;
+    const labelWrite = Boolean(labelItems) && !percentProblem;
     const sprintReport = payload.sprint || null;
     const reportRaw = sprintReport && sprintReport.report ? sprintReport.report : null;
     const reportFound = reportRaw ? holstReportFind(Y, objects, listRun.report) : null;
@@ -356,7 +356,7 @@ async function holstApply(payload, token) {
     const unknown = unknownColumnsText(payload.unknown);
     const percentLine = payload.percent === null ? `Процент не написал: ${payload.of ? 'у карт спринта нет оценки' : 'в спринте нет карт'}`
       : percentProblem ? `Процент не написал: ${percentProblem}`
-      : `Спринт: ${payload.percent}%${labelWrite ? ' — написал над графиком' : ''}, в Done ${payload.done} из ${payload.of}`;
+      : `Спринт: ${payload.percent}%${labelWrite && labelChanged ? ' — написал над графиком' : ''}, в Done ${payload.done} из ${payload.of}`;
     if (!listChanged && !labelWrite && !labelMove && !cleanup && !fit && !forcedFont && !reportChanged && !pastChanged) {
       const why = `${payload.percent === null ? 'список как в Kaiten' : `над графиком уже ${payload.percent}%, список как в Kaiten`}${reportWrite ? ', отчёт спринта тот же' : ''}`;
       return { ok: !percentProblem, calm: !percentProblem && !reportProblem, text: [`${payload.title}: обновлять нечего — ${why}`, ...(percentProblem ? [percentLine] : []), ...(reportProblem ? [reportProblem] : []), ...(unknown ? [`Прогресс: ${unknown}`] : [])].join('\n') };
