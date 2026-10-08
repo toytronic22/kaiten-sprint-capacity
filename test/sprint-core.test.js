@@ -957,11 +957,11 @@ test('Цель в несколько строк — пункты через то
 test('Числа и дни словами: запятая, минус, дробь — «рабочего дня»', () => {
   // Act
   const numbers = [sprint.sprintNumber(52.666), sprint.sprintNumber(-5), sprint.sprintNumber(-0.04), sprint.sprintNumber(0)];
-  const days = [sprint.sprintDays(3.94), sprint.sprintDays(1), sprint.sprintDays(5)];
+  const days = [sprint.sprintDayWord(3.94), sprint.sprintDayWord(1), sprint.sprintDayWord(5)];
 
   // Assert
   assert.deepEqual(numbers, ['52,7', '−5', '0', '0']);
-  assert.deepEqual(days, ['3,9 рабочего дня', '1 рабочий день', '5 рабочих дней']);
+  assert.deepEqual(days, ['рабочего дня', 'рабочий день', 'рабочих дней']);
 });
 
 test('Конфиг отчёта спринта совпадает с панелью: баг, Done, порядок колонок', () => {

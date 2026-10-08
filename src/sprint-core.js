@@ -403,10 +403,6 @@ function sprintDayWord(value) {
   return Number.isInteger(rounded) ? sprintForm(rounded, SPRINT_WORDS.day) : 'рабочего дня';
 }
 
-function sprintDays(value) {
-  return `${sprintNumber(value)} ${sprintDayWord(value)}`;
-}
-
 function sprintDate(ms, cfg = SPRINT_REPORT) {
   const iso = new Date(ms + cfg.mskMs).toISOString();
   return `${iso.slice(8, 10)}.${iso.slice(5, 7)}`;
@@ -737,4 +733,4 @@ async function sprintReportLoad({ cards, boardId, now, columns, load, loadBugs =
   return { last, running, history, historyProblem, currentId, focus, bugs };
 }
 
-if (typeof module !== 'undefined') module.exports = { SPRINT_REPORT, sprintTime, sprintMonday, sprintPeriod, sprintFinished, sprintIsBug, sprintEscaped, sprintSource, sprintPriority, sprintCurrentId, sprintVersions, sprintWorkdays, sprintDaysLeft, sprintMedian, sprintPercentile, sprintSummary, sprintBugWindow, sprintBugs, sprintNumber, sprintDays, sprintDate, sprintFocus, sprintReportBlocks, sprintReportLoad };
+if (typeof module !== 'undefined') module.exports = { SPRINT_REPORT, sprintTime, sprintMonday, sprintPeriod, sprintFinished, sprintIsBug, sprintEscaped, sprintSource, sprintPriority, sprintCurrentId, sprintVersions, sprintWorkdays, sprintDaysLeft, sprintMedian, sprintPercentile, sprintSummary, sprintBugWindow, sprintBugs, sprintNumber, sprintDayWord, sprintDate, sprintFocus, sprintReportBlocks, sprintReportLoad };
