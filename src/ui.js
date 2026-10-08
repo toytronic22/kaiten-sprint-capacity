@@ -168,6 +168,7 @@ details[open] > summary::after { transform: rotate(90deg); }
 .days { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
 .days label { display: flex; flex-direction: column; gap: 3px; color: var(--muted); font-size: 11px; }
 .days-hint { margin-top: 6px; color: var(--muted); font-size: 11px; }
+.days-hint.off { color: #f3cd62; }
 .shared { margin-top: 10px; color: var(--muted); font-size: 11px; }
 input[type=text], input[type=password] { width: 100%; box-sizing: border-box; font: inherit; color: inherit; padding: 5px 8px; text-align: center; border: 1px solid var(--line); border-radius: 8px; background: var(--field); }
 input[type=text]:focus, input[type=password]:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(91, 156, 246, .2); }
@@ -1293,9 +1294,10 @@ function sprintCapacityMount(config) {
   };
 
   const renderDaysHint = () => {
-    const text = sprintDaysHint(sprintDates, Date.now());
-    $('.days-hint').hidden = !text;
-    $('.days-hint').textContent = text || '';
+    const hint = sprintDaysHint({ dates: sprintDates, now: Date.now(), workDays: commentsLoaded ? settings.workDays : null, plannedAt: snapshot ? Date.parse(snapshot.takenAt) : null });
+    $('.days-hint').hidden = !hint;
+    $('.days-hint').textContent = hint ? hint.text : '';
+    $('.days-hint').classList.toggle('off', Boolean(hint && hint.off));
   };
 
   const renderRow = (row) => {
@@ -1522,10 +1524,10 @@ function sprintCapacityMount(config) {
     applySettings();
     recompute();
     fillSettings();
+    loadSprintDates();
     render();
     checkChaos();
     if (!loaded.snapshotError && Object.keys(edits.values).length && savingBoard === null && saveTimer === null) saveNow();
-    loadSprintDates();
   };
 
   const startPlanning = async () => {

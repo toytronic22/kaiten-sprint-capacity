@@ -612,6 +612,7 @@ test('Закладка на Holst без входа в Holst — просит в
 const DAY = 86400000;
 const SNAPSHOT = 'Снимок начала планирования';
 const ago = (ms) => new Date(Date.now() - ms).toISOString();
+const mskMidnight = (days) => new Date(Math.floor((Date.now() + 10800000) / DAY) * DAY - 10800000 + days * DAY).toISOString();
 const teamComment = (savedAt, settings, author = 'Тестировщик') => ({
   text: core.settingsComment({ boardId: 68084, savedAt, settings: core.normalizeSettings(settings) }),
   created: savedAt,
@@ -769,7 +770,7 @@ test('Посреди спринта напоминания нет, а даты �
 
 test('Подсказка у «рабочих дней»: будни по датам спринта в Kaiten; у закончившегося спринта и без спринта её нет', async () => {
   // Arrange
-  const running = { id: 502, start_date: ago(5 * DAY), finish_date: ago(-9 * DAY), actual_finish_date: null };
+  const running = { id: 502, start_date: mskMidnight(-5), finish_date: mskMidnight(9), actual_finish_date: null };
   const ended = { id: 501, start_date: ago(16 * DAY), finish_date: ago(2 * DAY), actual_finish_date: null };
 
   // Act
@@ -777,10 +778,53 @@ test('Подсказка у «рабочих дней»: будни по дат�
   await flush();
 
   // Assert
-  const hints = kaitens.map((kaiten) => [kaiten.$('.days-hint').hidden, kaiten.$('.days-hint').textContent]);
+  const hints = kaitens.map((kaiten) => [kaiten.$('.days-hint').hidden, kaiten.$('.days-hint').textContent, kaiten.$('.days-hint').classList.contains('off')]);
   assert.equal(hints[0][0], false);
-  assert.match(hints[0][1], /^по датам в Kaiten \(\d\d\.\d\d–\d\d\.\d\d\) — \d+ будн(?:ий день|их дня|их дней)$/);
-  assert.deepEqual(hints.slice(1), [[true, ''], [true, '']]);
+  assert.match(hints[0][1], /^по датам в Kaiten \(\d\d\.\d\d–\d\d\.\d\d\) — 10 будних дней$/);
+  assert.deepEqual(hints.slice(1), [[true, '', false], [true, '', false]]);
+  assert.equal(hints[0][2], false);
+});
+
+test('Подсказка у «рабочих дней» желтеет, когда вписано не столько, сколько будней по датам спринта, и гаснет после правки', async () => {
+  // Arrange
+  const sprint = { id: 502, start_date: mskMidnight(-5), finish_date: mskMidnight(9), actual_finish_date: null };
+  const kaiten = teamKaiten({ sprintId: 502, sprint, comments: [teamComment(ago(3600000), { workDays: 8, team: { back: { people: 3 } } })] });
+  await flush();
+  const wrong = [kaiten.$('.days-hint').textContent, kaiten.$('.days-hint').classList.contains('off')];
+
+  // Act
+  kaiten.type('workDays', '10');
+
+  // Assert
+  assert.match(wrong[0], /^по датам в Kaiten \(\d\d\.\d\d–\d\d\.\d\d\) — 10 будних дней, а вписано 8$/);
+  assert.equal(wrong[1], true);
+  assert.match(kaiten.$('.days-hint').textContent, /^по датам в Kaiten \(\d\d\.\d\d–\d\d\.\d\d\) — 10 будних дней$/);
+  assert.equal(kaiten.$('.days-hint').classList.contains('off'), false);
+});
+
+test('Подсказки у «рабочих дней» нет, если «Начать планирование» нажали во второй половине спринта: поля уже про следующий', async () => {
+  // Arrange
+  const sprint = { id: 502, start_date: mskMidnight(-10), finish_date: mskMidnight(4), actual_finish_date: null };
+
+  // Act
+  const kaitens = [planningStart(mskMidnight(-11)), planningStart(ago(3600000))].map((comment) => teamKaiten({ sprintId: 502, sprint, comments: [comment] }));
+  await flush();
+
+  // Assert
+  assert.deepEqual(kaitens.map((kaiten) => kaiten.$('.days-hint').hidden), [false, true]);
+});
+
+test('Подсказка у «рабочих дней» видна сразу, когда даты спринта панель помнит с прошлого открытия', async () => {
+  // Arrange
+  const dates = { id: 502, start: Date.parse(mskMidnight(-5)), finish: Date.parse(mskMidnight(9)) - 1, closedAt: null, at: Date.now() - 3600000 };
+
+  // Act
+  const kaiten = teamKaiten({ sprintId: 502, stored: { 'sprintCapacity.v1.sprintDates.502': JSON.stringify(dates) } });
+  await flush();
+
+  // Assert
+  assert.match(kaiten.$('.days-hint').textContent, /^по датам в Kaiten \(\d\d\.\d\d–\d\d\.\d\d\) — 10 будних дней$/);
+  assert.equal(kaiten.requests.filter((item) => item.url.startsWith('/api/sprints/')).length, 0);
 });
 
 test('После «Начать планирование» напоминание просит вписать новый спринт и нажать «Закончить»', async () => {
