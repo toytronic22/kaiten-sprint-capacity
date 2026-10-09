@@ -1088,3 +1088,131 @@ test('Конфиг отчёта спринта совпадает с панел�
   assert.equal(cfg.doneState, SPRINT_CAPACITY.doneState);
   assert.deepEqual(cfg.stageOrder, Object.keys(SPRINT_CAPACITY.progress.stages));
 });
+
+const scaleSprint = (id, from, to, created, closed, cards, cardUpdates) => ({ id, board_id: DEV, title: `Спринт ${id}`, goal: '', created, start_date: from, finish_date: to, actual_finish_date: closed, cards, cardUpdates });
+
+test('Шкала спринта: с 12.10.2026 00:00 по Москве — новая, минутой раньше, без даты и без границы в настройках — старая', () => {
+  // Arrange
+  const since = Date.parse('2026-10-12T00:00:00+03:00');
+
+  // Act
+  const scales = [since, since - 60000, null, NaN].map((at) => sprint.sprintNewScale(at, CFG));
+  const withoutBorder = sprint.sprintNewScale(since, { ...CFG, scaleSince: null });
+
+  // Assert
+  assert.deepEqual([...scales, withoutBorder], [true, false, false, false, false]);
+});
+
+test('Спринт в новой шкале: карты плана, оценённые до 12.10 и пересчитанные в первые три дня, — в плане по новой оценке, разница отдельно; не пересчитанные — предупреждение', () => {
+  // Arrange
+  const data = scaleSprint(600, '2026-10-11T21:00:00.000Z', '2026-10-25T20:59:59.999Z', '2026-10-12T06:00:00.000Z', '2026-10-26T06:00:00.000Z', [card(201), card(202), card(203), card(204)], [
+    version(201, '2026-10-01T05:00:00.000Z', 550, 1, 1, 3),
+    version(201, '2026-10-12T06:00:10.000Z', 600, 1, 1, 3),
+    version(201, '2026-10-13T06:00:00.000Z', 600, 1, 1, 6),
+    version(201, '2026-10-15T06:00:00.000Z', 600, 4, 3, 6),
+    version(202, '2026-10-01T05:00:00.000Z', 550, 1, 1, 2),
+    version(202, '2026-10-12T04:00:00.000Z', 550, 1, 1, 4),
+    version(202, '2026-10-12T06:00:10.000Z', 600, 1, 1, 4),
+    version(202, '2026-10-16T06:00:00.000Z', 600, 4, 3, 4),
+    version(203, '2026-09-20T05:00:00.000Z', 550, 2, 2, 5),
+    version(203, '2026-10-12T06:00:10.000Z', 600, 2, 2, 5),
+    version(204, '2026-10-01T05:00:00.000Z', 550, 1, 1, 2),
+    version(204, '2026-10-12T06:00:10.000Z', 600, 1, 1, 2),
+    version(204, '2026-10-19T06:00:00.000Z', 600, 2, 2, 4),
+  ]);
+  const now = Date.parse('2026-11-02T12:00:00.000Z');
+
+  // Act
+  const result = sprint.sprintSummary({ sprint: data, now, columns: COLUMNS, cfg: CFG });
+  const old = { ...result, newScale: false, done: { ...result.done, sp: 7 } };
+  const report = sprint.sprintReportBlocks({ last: result, history: [old], capacityLog: [], now, cfg: CFG });
+
+  // Assert
+  assert.deepEqual([result.newScale, result.plan.sp, result.reestimate, result.done.sp, result.done.planSp0, result.carry.sp], [true, 17, 2, 10, 10, 9]);
+  assert.deepEqual(result.rescale, { plan: 3, stale: { cards: 2, sp: 7 }, carry: { cards: 0, before: 0, after: 0 } });
+  assert.equal(result.plan.sp + result.reestimate + result.reestimateCarry + result.added.sp - result.left.sp, result.done.sp + result.carry.sp);
+  assert.deepEqual(block(report, 'last', 'plan'), {
+    key: 'plan',
+    title: 'План на старте',
+    value: '17 SP',
+    caption: '4 карты',
+    lines: [
+      { text: 'первый спринт в новой шкале (1 SP = 4 часа) — SP с прошлыми спринтами не сравниваем', tone: 'note' },
+      { text: '2 карты · 7 SP — по оценке до 12.10, в новую шкалу не пересчитали', tone: 'warn' },
+    ],
+  });
+  assert.deepEqual(block(report, 'last', 'changes').lines, [
+    { text: 'Переоценили карты плана: +2 SP' },
+    { text: 'Карты плана, оценённые до 12.10, пересчитали в новую шкалу (1 SP = 4 часа): +3 SP — план на старте уже по новой оценке', tone: 'note' },
+  ]);
+});
+
+test('Velocity и «дошло в прошлых спринтах» — только по спринтам той же шкалы; проценты плана — через границу', () => {
+  // Arrange
+  const now = Date.parse('2026-11-20T12:00:00.000Z');
+  const summary = (id, from, newScale, sp, planSp) => ({ ...sprint.sprintSummary({ sprint: chainSprint(id, from), now, columns: COLUMNS, cfg: CFG }), newScale, done: { tasks: 1, bugs: 0, sp, planSp, planSp0: planSp, addedSp: 0 }, plan: { cards: 1, bugs: 0, sp: 10 } });
+  const older = summary(502, '2026-09-14', false, 6, 6);
+  const old = summary(503, '2026-09-28', false, 8, 8);
+  const first = summary(504, '2026-10-12', true, 14, 7);
+  const second = summary(505, '2026-10-26', true, 20, 9);
+  const blocksOf = (last, history) => sprint.sprintReportBlocks({ last, history, capacityLog: [], now, cfg: CFG });
+
+  // Act
+  const atFirst = blocksOf(first, [old, older]);
+  const atSecond = blocksOf(second, [first, old, older]);
+  const atOld = blocksOf(old, [older]);
+
+  // Assert
+  assert.deepEqual(block(atFirst, 'last', 'plan').lines.map((line) => line.text), ['первый спринт в новой шкале (1 SP = 4 часа) — SP с прошлыми спринтами не сравниваем']);
+  assert.deepEqual(block(atSecond, 'last', 'plan').lines.map((line) => line.text), ['в прошлом спринте до прода дошло 14 SP']);
+  assert.deepEqual(block(atOld, 'last', 'plan').lines.map((line) => line.text), ['в прошлом спринте до прода дошло 6 SP']);
+  assert.deepEqual(block(atSecond, 'last', 'start').lines, [{ text: 'прошлые спринты: 60% → 80% → 70%' }]);
+});
+
+test('Спринт в старой шкале, перенос через 12.10: SP — по оценке до 12.10, в том числе если переоценили до завершения в Kaiten; оценка в новой шкале — отдельной строкой', () => {
+  // Arrange
+  const data = scaleSprint(550, '2026-09-27T21:00:00.000Z', '2026-10-11T20:59:59.999Z', '2026-09-28T06:00:00.000Z', '2026-10-12T05:00:00.000Z', [card(301), card(302), card(303), card(304)], [
+    version(301, '2026-09-28T06:00:10.000Z', 550, 1, 1, 3),
+    version(301, '2026-10-01T06:00:00.000Z', 550, 2, 2, 3),
+    version(301, '2026-10-12T04:30:00.000Z', 550, 2, 2, 6),
+    version(301, '2026-10-12T08:00:00.000Z', 600, 2, 2, 6),
+    version(302, '2026-09-28T06:00:10.000Z', 550, 2, 2, 2),
+    version(302, '2026-10-12T08:00:00.000Z', 600, 2, 2, 2),
+    version(302, '2026-10-13T06:00:00.000Z', 600, 2, 2, 5),
+    version(303, '2026-09-28T06:00:10.000Z', 550, 1, 1, 4),
+    version(303, '2026-10-12T08:00:00.000Z', 600, 1, 1, 4),
+    version(304, '2026-09-28T06:00:10.000Z', 550, 1, 1, 1),
+  ]);
+  const now = Date.parse('2026-10-20T12:00:00.000Z');
+
+  // Act
+  const result = sprint.sprintSummary({ sprint: data, now, columns: COLUMNS, cfg: CFG });
+  const report = sprint.sprintReportBlocks({ last: result, capacityLog: [], now, cfg: CFG });
+
+  // Assert
+  assert.deepEqual([result.newScale, result.plan.sp, result.reestimate, result.reestimateCarry, result.carry.sp], [false, 10, 0, 0, 10]);
+  assert.deepEqual(result.rescale.carry, { cards: 3, before: 9, after: 15 });
+  assert.deepEqual(block(report, 'last', 'carry'), {
+    key: 'carry',
+    title: 'Не дошло до прода',
+    value: '10 SP',
+    caption: '4 задачи',
+    lines: [{ text: 'To Do — 2 карты · 5 SP' }, { text: 'Doing — 2 карты · 5 SP' }, { text: 'перенос в новой шкале (1 SP = 4 часа), 3 из 4 карт: 9 SP → 15 SP', tone: 'note' }],
+  });
+  assert.deepEqual(block(report, 'last', 'changes').lines, [{ text: 'план не менялся' }]);
+});
+
+test('Загрузчик: завершённый спринт попадает в кэш через три дня после завершения в Kaiten — пока переоценивают перенос, считается заново', async () => {
+  // Arrange
+  const sprints = { 504: chainSprint(504, '2026-10-12', { closed: false, previous: 503 }), 503: chainSprint(503, '2026-09-28', { previous: 502 }), 502: chainSprint(502, '2026-09-14') };
+  const early = memoryStore();
+  const late = memoryStore();
+
+  // Act
+  await sprint.sprintReportLoad({ cards: [{ sprint_id: 504 }], boardId: DEV, now: Date.parse('2026-10-13T12:00:00.000Z'), columns: COLUMNS, load: loader(sprints).load, store: early, cfg: CFG });
+  await sprint.sprintReportLoad({ cards: [{ sprint_id: 504 }], boardId: DEV, now: Date.parse('2026-10-16T12:00:00.000Z'), columns: COLUMNS, load: loader(sprints).load, store: late, cfg: CFG });
+
+  // Assert
+  assert.deepEqual([early.read('sprintSummary.503'), early.read('sprintSummary.502').v], [null, 7]);
+  assert.equal(late.read('sprintSummary.503').v, 7);
+});

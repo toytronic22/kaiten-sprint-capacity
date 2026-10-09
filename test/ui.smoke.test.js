@@ -124,7 +124,7 @@ const fakeTab = () => {
   return tab;
 };
 
-const page = ({ hostname, stored = {}, opener = null, clipboard = true, holst = 'ok', confirm = () => false, fetch = () => Promise.reject(new Error('нет сети в тесте')) }) => {
+const page = ({ hostname, stored = {}, opener = null, clipboard = true, holst = 'ok', confirm = () => false, fetch = () => Promise.reject(new Error('нет сети в тесте')), now = null }) => {
   const env = { stored: new Map(Object.entries(stored)), timers: [], listeners: {}, opened: [], alerts: [], copied: [], blockPopups: false, holst, sockets: [] };
   const shadow = remember(fakeElement(), new Map([['.holst-login', remember(Object.assign(fakeElement(), { hidden: true }))], ['.geese', null]]));
   const body = fakeElement();
@@ -185,6 +185,7 @@ const page = ({ hostname, stored = {}, opener = null, clipboard = true, holst = 
     confirm,
     opener,
   };
+  if (now !== null) context.Date = class extends Date { constructor(...args) { super(...(args.length ? args : [now])); } static now() { return now; } };
   context.window = context;
   vm.createContext(context);
   vm.runInContext(bundle, context);
@@ -219,7 +220,7 @@ const overloadedKaiten = (stored = {}, comments = []) => page({
   },
   fetch: (url) => Promise.resolve({
     ok: true,
-    json: () => Promise.resolve(url.startsWith('/api/cards?') ? [{ id: 1, title: 'Карта 1', size: 30, properties: { id_499149: [16232407] }, state: 1 }] : url.endsWith('/comments') ? comments : []),
+    json: () => Promise.resolve(url.startsWith('/api/cards?') ? [{ id: 1, title: 'Карта 1', size: 50, properties: { id_499149: [16232407] }, state: 1 }] : url.endsWith('/comments') ? comments : []),
   }),
 });
 
@@ -611,7 +612,8 @@ test('Закладка на Holst без входа в Holst — просит в
 
 const DAY = 86400000;
 const SNAPSHOT = 'Снимок начала планирования';
-const ago = (ms) => new Date(Date.now() - ms).toISOString();
+const LATER = Date.parse('2026-10-14T12:00:00+03:00');
+const ago = (ms, now = Date.now()) => new Date(now - ms).toISOString();
 const mskMidnight = (days) => new Date(Math.floor((Date.now() + 10800000) / DAY) * DAY - 10800000 + days * DAY).toISOString();
 const teamComment = (savedAt, settings, author = 'Тестировщик') => ({
   text: core.settingsComment({ boardId: 68084, savedAt, settings: core.normalizeSettings(settings) }),
@@ -620,12 +622,13 @@ const teamComment = (savedAt, settings, author = 'Тестировщик') => ({
 });
 const posted = (env, mark) => env.requests.filter((item) => item.method === 'POST' && item.body.text.startsWith(mark)).map((item) => JSON.parse(item.body.text.match(/```json\s*([\s\S]*?)```/)[1]));
 
-const teamKaiten = ({ stored = {}, comments = [], sprint = null, sprintId = null, confirm = () => false, fail = () => false } = {}) => {
+const teamKaiten = ({ stored = {}, comments = [], sprint = null, sprintId = null, confirm = () => false, fail = () => false, now = null } = {}) => {
   const requests = [];
   const env = page({
     hostname: 'dodopizza.kaiten.ru',
     stored: { 'sprintCapacity.v1.board': '68084', 'sprintCapacity.v1.settings.68084': JSON.stringify({ team: { back: { people: 1 } } }), ...stored },
     confirm,
+    now,
     fetch: (url, options = {}) => {
       const body = options.body ? JSON.parse(options.body) : null;
       requests.push({ url, method: options.method || 'GET', body });
@@ -633,7 +636,7 @@ const teamKaiten = ({ stored = {}, comments = [], sprint = null, sprintId = null
       let reply = [];
       if (url.startsWith('/api/cards?')) reply = [{ id: 1, title: 'Карта 1', size: 30, properties: { id_499149: [16232407] }, state: 1, ...(sprintId ? { sprint_id: sprintId } : {}) }];
       else if (url.endsWith('/comments') && body) {
-        reply = { text: body.text, created: new Date().toISOString(), author: { full_name: 'Алексей' } };
+        reply = { text: body.text, created: new Date(now === null ? Date.now() : now).toISOString(), author: { full_name: 'Алексей' } };
         comments.unshift(reply);
       } else if (url.endsWith('/comments')) reply = comments.slice();
       else if (url.startsWith('/api/sprints/') && sprint) reply = { data: sprint };
@@ -645,7 +648,7 @@ const teamKaiten = ({ stored = {}, comments = [], sprint = null, sprintId = null
 
 test('«Команда и дни» общие: панель берёт их из служебной карты, а не вписанное в этом браузере', async () => {
   // Arrange
-  const kaiten = teamKaiten({ comments: [teamComment(ago(3600000), { team: { back: { people: 3 }, front: { people: 2 } } })] });
+  const kaiten = teamKaiten({ now: LATER, comments: [teamComment(ago(3600000, LATER), { team: { back: { people: 3 }, front: { people: 2 } } })] });
 
   // Act
   await flush();
@@ -680,12 +683,12 @@ test('Правка в «Команде и днях» через две секу�
 
 test('Неотправленная правка старше чужого сохранения при открытии выбрасывается, свежая — уходит команде', async () => {
   // Arrange
-  const comments = () => [teamComment(ago(3600000), { team: { back: { people: 3 } } })];
+  const comments = () => [teamComment(ago(3600000, LATER), { team: { back: { people: 3 } } })];
   const edit = (at) => ({ 'sprintCapacity.v1.edits.68084': JSON.stringify({ at, values: { 'team.back.people': '5' } }) });
 
   // Act
-  const stale = teamKaiten({ stored: edit(Date.now() - 2 * 3600000), comments: comments() });
-  const fresh = teamKaiten({ stored: edit(Date.now() - 600000), comments: comments() });
+  const stale = teamKaiten({ now: LATER, stored: edit(LATER - 2 * 3600000), comments: comments() });
+  const fresh = teamKaiten({ now: LATER, stored: edit(LATER - 600000), comments: comments() });
   await flush();
 
   // Assert
@@ -699,7 +702,8 @@ test('«Начать планирование» нового цикла: сни�
   // Arrange
   const asked = [];
   const kaiten = teamKaiten({
-    comments: [teamComment(ago(3600000), { workDays: 7, holidays: 1, team: { back: { people: 3, absence: 2 }, front: { people: 2, absence: 1 } } })],
+    now: LATER,
+    comments: [teamComment(ago(3600000, LATER), { workDays: 7, holidays: 1, team: { back: { people: 3, absence: 2 }, front: { people: 2, absence: 1 } } })],
     confirm: (text) => asked.push(text) > 0,
   });
   await flush();
@@ -714,6 +718,26 @@ test('«Начать планирование» нового цикла: сни�
   assert.deepEqual(posts, ['Снимок начала планирования', 'Команда и дни']);
   assert.deepEqual(posted(kaiten, SNAPSHOT)[0].capacity, { back: 16, front: 11 });
   assert.deepEqual(posted(kaiten, core.SETTINGS_MARK)[0].settings, core.normalizeSettings({ team: { back: { people: 3 }, front: { people: 2 } } }));
+  assert.deepEqual(kaiten.alerts, []);
+});
+
+test('После 12.10 «Команда и дни», сохранённые до 12.10, считаются с SP в день 2, и «Начать планирование» записывает 2 для всей команды', async () => {
+  // Arrange
+  const kaiten = teamKaiten({
+    now: LATER,
+    comments: [teamComment('2026-10-09T09:00:00.000Z', { team: { back: { people: 3 } } })],
+    confirm: () => true,
+  });
+  await flush();
+  const before = kaiten.$('.summary').innerHTML;
+
+  // Act
+  kaiten.click('start-planning');
+  await flush();
+
+  // Assert
+  assert.match(before, /<span class="of"> \/ 60<\/span>/);
+  assert.deepEqual(posted(kaiten, core.SETTINGS_MARK).map((item) => [item.settings.coefficient, item.settings.team.back.people]), [[2, 3]]);
   assert.deepEqual(kaiten.alerts, []);
 });
 
