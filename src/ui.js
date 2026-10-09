@@ -622,7 +622,7 @@ const PANEL_HTML = `
           <label>праздников ${PANEL_INPUT('holidays', '0')}</label>
           <label title="Сколько SP один человек делает за рабочий день. С 12.10.2026 1 SP — 4 часа работы одного человека, поэтому 2">SP в день ${PANEL_INPUT('coefficient', '1')}</label>
         </div>
-        <div class="days-hint" title="Будни с понедельника по пятницу между датами спринта в Kaiten. Праздники панель не знает — их вписывают в «праздников»" hidden></div>
+        <div class="days-hint" title="Будни с понедельника по пятницу между датами спринта в Kaiten. Праздники и рабочие субботы — по производственному календарю РФ на 2026 и 2027 годы. Сверяется с разницей «рабочих дней» и «праздников», сама поля не меняет" hidden></div>
         <div class="shared"></div>
       </div>
     </details>
@@ -1296,7 +1296,7 @@ function sprintCapacityMount(config) {
   };
 
   const renderDaysHint = () => {
-    const hint = sprintDaysHint({ dates: sprintDates, now: Date.now(), workDays: commentsLoaded ? settings.workDays : null, plannedAt: snapshot ? Date.parse(snapshot.takenAt) : null });
+    const hint = sprintDaysHint({ dates: sprintDates, now: Date.now(), workDays: commentsLoaded ? settings.workDays : null, holidays: commentsLoaded ? settings.holidays : 0, plannedAt: snapshot ? Date.parse(snapshot.takenAt) : null });
     $('.days-hint').hidden = !hint;
     $('.days-hint').textContent = hint ? hint.text : '';
     $('.days-hint').classList.toggle('off', Boolean(hint && hint.off));
