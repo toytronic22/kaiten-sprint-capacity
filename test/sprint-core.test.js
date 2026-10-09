@@ -229,6 +229,48 @@ test('Подсказка у «рабочих дней» желтеет, когд
   ]);
 });
 
+test('Производственный календарь: в 2026 и 2027 годах по 247 рабочих дней, праздники выпадают, рабочая суббота считается', () => {
+  // Arrange
+  const year = (value) => [Date.parse(`${value}-01-01T00:00:00+03:00`), Date.parse(`${value}-12-31T23:59:59.999+03:00`)];
+
+  // Act
+  const days = [2026, 2027].map((value) => sprint.sprintDaysLeft(...year(value)));
+  const aroundHoliday = sprint.sprintWorkdays(Date.parse('2026-11-03T12:00:00+03:00'), Date.parse('2026-11-05T12:00:00+03:00'));
+  const aroundSaturday = sprint.sprintWorkdays(Date.parse('2027-02-19T12:00:00+03:00'), Date.parse('2027-02-22T12:00:00+03:00'));
+  const calendar = sprint.sprintCalendar(Date.parse('2027-02-15T00:00:00+03:00'), Date.parse('2027-02-28T23:59:59.999+03:00'));
+
+  // Assert
+  assert.deepEqual(days, [247, 247]);
+  assert.equal(aroundHoliday, 1);
+  assert.equal(aroundSaturday, 1.5);
+  assert.deepEqual(calendar, { weekdays: 10, workdays: 9, holidays: ['2027-02-22', '2027-02-23'], saturdays: ['2027-02-20'], unknownYears: [] });
+});
+
+test('Подсказка у «рабочих дней» называет праздники и рабочие субботы спринта и сверяет разницу «рабочих дней» и «праздников»', () => {
+  // Arrange
+  const dates = (from, to) => ({ start: Date.parse(`${from}T00:00:00+03:00`), finish: Date.parse(`${to}T23:59:59.999+03:00`), closedAt: null });
+  const november = dates('2026-10-26', '2026-11-08');
+  const now = Date.parse('2026-10-09T09:00:00.000Z');
+
+  // Act
+  const plain = sprint.sprintDaysHint({ dates: dates('2026-10-12', '2026-10-25'), now });
+  const entered = [[10, 1], [9, 0], [10, 0], [9, 1]].map(([workDays, holidays]) => sprint.sprintDaysHint({ dates: november, now, workDays, holidays }));
+  const february = sprint.sprintDaysHint({ dates: dates('2027-02-15', '2027-02-28'), now });
+  const newYear = sprint.sprintDaysHint({ dates: dates('2027-12-27', '2028-01-09'), now });
+
+  // Assert
+  const holiday = 'по датам в Kaiten (26.10–08.11) — 10 будних дней, из них праздник 04.11 — итого 9 рабочих дней';
+  assert.deepEqual(plain, { text: 'по датам в Kaiten (12.10–25.10) — 10 будних дней', off: false });
+  assert.deepEqual(entered, [
+    { text: holiday, off: false },
+    { text: holiday, off: false },
+    { text: `${holiday}, а вписано 10`, off: true },
+    { text: `${holiday}, а вписано 9 − 1 = 8`, off: true },
+  ]);
+  assert.deepEqual(february, { text: 'по датам в Kaiten (15.02–28.02) — 10 будних дней, из них праздники 22.02, 23.02, плюс рабочая суббота 20.02 — итого 9 рабочих дней', off: false });
+  assert.deepEqual(newYear, { text: 'по датам в Kaiten (27.12–09.01) — 10 будних дней, из них праздник 31.12 — итого 9 рабочих дней; праздников 2028 года панель не знает', off: false });
+});
+
 test('Подсказки у «рабочих дней» нет, если «Начать планирование» нажали во второй половине спринта: поля уже про следующий', () => {
   // Arrange
   const twoWeeks = { start: Date.parse('2026-09-27T21:00:00.000Z'), finish: Date.parse('2026-10-11T20:59:59.999Z'), closedAt: null };
@@ -1213,6 +1255,6 @@ test('Загрузчик: завершённый спринт попадает �
   await sprint.sprintReportLoad({ cards: [{ sprint_id: 504 }], boardId: DEV, now: Date.parse('2026-10-16T12:00:00.000Z'), columns: COLUMNS, load: loader(sprints).load, store: late, cfg: CFG });
 
   // Assert
-  assert.deepEqual([early.read('sprintSummary.503'), early.read('sprintSummary.502').v], [null, 7]);
-  assert.equal(late.read('sprintSummary.503').v, 7);
+  assert.deepEqual([early.read('sprintSummary.503'), early.read('sprintSummary.502').v], [null, CFG.cacheVersion]);
+  assert.equal(late.read('sprintSummary.503').v, CFG.cacheVersion);
 });

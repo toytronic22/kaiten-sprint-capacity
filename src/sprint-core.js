@@ -16,7 +16,10 @@ const SPRINT_REPORT = {
   escapeSources: [217075, 16194797, 217080],
   notEscape: [69403781, 69525693],
   history: 3,
-  cacheVersion: 7,
+  cacheVersion: 8,
+  holidays: ['2026-01-01', '2026-01-02', '2026-01-05', '2026-01-06', '2026-01-07', '2026-01-08', '2026-01-09', '2026-02-23', '2026-03-09', '2026-05-01', '2026-05-11', '2026-06-12', '2026-11-04', '2026-12-31', '2027-01-01', '2027-01-04', '2027-01-05', '2027-01-06', '2027-01-07', '2027-01-08', '2027-02-22', '2027-02-23', '2027-03-08', '2027-05-03', '2027-05-10', '2027-06-14', '2027-11-04', '2027-11-05', '2027-12-31'],
+  workSaturdays: ['2027-02-20'],
+  calendarYears: [2026, 2027],
   scaleSince: Date.parse('2026-10-12T00:00:00+03:00'),
   rescaleMs: 259200000,
   testStage: 'test',
@@ -30,7 +33,7 @@ const SPRINT_REPORT = {
   teams: { 68084: [68084, 1108487, 1108490, 1524136], 1321013: [1321013, 1321144, 1322638, 1522287] },
   backlogs: [1108490, 1322638],
   cardUrl: 'https://dodopizza.kaiten.ru/',
-  legend: 'SP — story points, оценка карты. С 12.10.2026 1 SP — 4 часа работы одного человека, SP до и после этой даты не сравниваем. Карта — задача или баг в Kaiten. В проде — карта в колонке Done. Дни — рабочие, по Москве.',
+  legend: 'SP — story points, оценка карты. С 12.10.2026 1 SP — 4 часа работы одного человека, SP до и после этой даты не сравниваем. Карта — задача или баг в Kaiten. В проде — карта в колонке Done. Дни — рабочие, по Москве: без выходных и праздников.',
 };
 
 const SPRINT_WORDS = {
@@ -146,27 +149,52 @@ function sprintVersions(sprint) {
   return byCard;
 }
 
+function sprintDayKey(day, cfg = SPRINT_REPORT) {
+  return new Date(day * cfg.dayMs).toISOString().slice(0, 10);
+}
+
+function sprintWeekday(day) {
+  const weekday = (day + 4) % 7;
+  return weekday >= 1 && weekday <= 5;
+}
+
+function sprintWorkday(day, cfg = SPRINT_REPORT) {
+  const key = sprintDayKey(day, cfg);
+  return cfg.workSaturdays.includes(key) || (sprintWeekday(day) && !cfg.holidays.includes(key));
+}
+
 function sprintWorkdays(from, to, cfg = SPRINT_REPORT) {
   let day = from + cfg.mskMs;
   const last = to + cfg.mskMs;
   let total = 0;
   while (day < last) {
-    const next = Math.min(last, (Math.floor(day / cfg.dayMs) + 1) * cfg.dayMs);
-    const weekday = new Date(day).getUTCDay();
-    if (weekday >= 1 && weekday <= 5) total += next - day;
+    const index = Math.floor(day / cfg.dayMs);
+    const next = Math.min(last, (index + 1) * cfg.dayMs);
+    if (sprintWorkday(index, cfg)) total += next - day;
     day = next;
   }
   return total / cfg.dayMs;
 }
 
-function sprintDaysLeft(now, end, cfg = SPRINT_REPORT) {
-  let count = 0;
-  const last = Math.floor((end + cfg.mskMs) / cfg.dayMs);
-  for (let day = Math.floor((now + cfg.mskMs) / cfg.dayMs); day <= last; day += 1) {
-    const weekday = (day + 4) % 7;
-    if (weekday >= 1 && weekday <= 5) count += 1;
+function sprintCalendar(from, to, cfg = SPRINT_REPORT) {
+  const result = { weekdays: 0, workdays: 0, holidays: [], saturdays: [], unknownYears: [] };
+  const last = Math.floor((to + cfg.mskMs) / cfg.dayMs);
+  for (let day = Math.floor((from + cfg.mskMs) / cfg.dayMs); day <= last; day += 1) {
+    const key = sprintDayKey(day, cfg);
+    const year = Number(key.slice(0, 4));
+    if (!cfg.calendarYears.includes(year) && !result.unknownYears.includes(year)) result.unknownYears.push(year);
+    const weekday = sprintWeekday(day);
+    const workday = sprintWorkday(day, cfg);
+    if (weekday) result.weekdays += 1;
+    if (workday) result.workdays += 1;
+    if (weekday && !workday) result.holidays.push(key);
+    if (!weekday && workday) result.saturdays.push(key);
   }
-  return count;
+  return result;
+}
+
+function sprintDaysLeft(now, end, cfg = SPRINT_REPORT) {
+  return sprintCalendar(now, end, cfg).workdays;
 }
 
 function sprintMedian(values) {
@@ -681,14 +709,24 @@ function sprintRange(summary, cfg = SPRINT_REPORT) {
   return `${sprintDate(summary.start, cfg)}–${sprintDate(summary.end, cfg)}`;
 }
 
-function sprintDaysHint({ dates, now, workDays = null, plannedAt = null }, cfg = SPRINT_REPORT) {
+function sprintDayList(keys) {
+  return keys.map((key) => `${key.slice(8, 10)}.${key.slice(5, 7)}`).join(', ');
+}
+
+function sprintDaysHint({ dates, now, workDays = null, holidays = 0, plannedAt = null }, cfg = SPRINT_REPORT) {
   if (!dates || dates.closedAt !== null) return null;
   const period = sprintBounds(dates.start, dates.finish, cfg);
   if (now > period.end) return null;
   if (plannedAt !== null && plannedAt >= (period.start + period.end + 1) / 2) return null;
-  const days = sprintDaysLeft(period.start, period.end, cfg);
-  const text = `по датам в Kaiten (${sprintRange(period, cfg)}) — ${sprintCount(days, SPRINT_WORDS.weekday)}`;
-  return workDays === null || workDays === days ? { text, off: false } : { text: `${text}, а вписано ${sprintNumber(workDays)}`, off: true };
+  const calendar = sprintCalendar(period.start, period.end, cfg);
+  let text = `по датам в Kaiten (${sprintRange(period, cfg)}) — ${sprintCount(calendar.weekdays, SPRINT_WORDS.weekday)}`;
+  if (calendar.holidays.length) text += `, из них ${calendar.holidays.length > 1 ? 'праздники' : 'праздник'} ${sprintDayList(calendar.holidays)}`;
+  if (calendar.saturdays.length) text += `, плюс ${calendar.saturdays.length > 1 ? 'рабочие субботы' : 'рабочая суббота'} ${sprintDayList(calendar.saturdays)}`;
+  if (calendar.workdays !== calendar.weekdays) text += ` — итого ${sprintCount(calendar.workdays, SPRINT_WORDS.day)}`;
+  if (calendar.unknownYears.length) text += `; праздников ${calendar.unknownYears.join(' и ')} ${calendar.unknownYears.length > 1 ? 'годов' : 'года'} панель не знает`;
+  const entered = workDays === null ? null : workDays - (holidays || 0);
+  if (entered === null || entered === calendar.workdays) return { text, off: false };
+  return { text: `${text}, а вписано ${holidays ? `${sprintNumber(workDays)} − ${sprintNumber(holidays)} = ${sprintNumber(entered)}` : sprintNumber(workDays)}`, off: true };
 }
 
 function sprintGroups(list) {
@@ -796,4 +834,4 @@ async function sprintReportLoad({ cards, boardId, now, columns, load, loadBugs =
   return { last, running, history, historyProblem, currentId, focus, bugs };
 }
 
-if (typeof module !== 'undefined') module.exports = { SPRINT_REPORT, sprintTime, sprintPeriod, sprintFinished, sprintIsBug, sprintNewScale, sprintEscaped, sprintSource, sprintPriority, sprintCurrentId, sprintVersions, sprintWorkdays, sprintDaysLeft, sprintMedian, sprintPercentile, sprintSummary, sprintBugWindow, sprintBugs, sprintNumber, sprintDayWord, sprintDate, sprintDaysHint, sprintFocus, sprintReportBlocks, sprintReportLoad };
+if (typeof module !== 'undefined') module.exports = { SPRINT_REPORT, sprintTime, sprintPeriod, sprintFinished, sprintIsBug, sprintNewScale, sprintEscaped, sprintSource, sprintPriority, sprintCurrentId, sprintVersions, sprintWorkdays, sprintCalendar, sprintDaysLeft, sprintMedian, sprintPercentile, sprintSummary, sprintBugWindow, sprintBugs, sprintNumber, sprintDayWord, sprintDate, sprintDaysHint, sprintFocus, sprintReportBlocks, sprintReportLoad };
