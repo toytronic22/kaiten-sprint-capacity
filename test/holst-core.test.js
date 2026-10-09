@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const H = require('../src/holst-core.js');
 const { SPRINT_CAPACITY, buildReport, defaultSettings, takeSnapshot } = require('../src/core.js');
+const { SPRINT_REPORT } = require('../src/sprint-core.js');
 
 const url = (id) => `https://dodopizza.kaiten.ru/${id}`;
 const text = (value, marks) => (marks ? { text: value, marks } : { text: value });
@@ -97,6 +98,15 @@ test('Окно подсветки: с 00:00 прошлого рабочего д
   assert.equal(H.holstLookback(at(10, 5, 10)), at(10, 2, 0));
   assert.equal(H.holstLookback(at(10, 6, 10)), at(10, 5, 0));
   assert.equal(H.holstLookback(at(1, 1, 10)), new Date(2025, 11, 31).getTime());
+});
+
+test('Окно подсветки: праздники РФ пропускает, рабочую субботу считает, годы вне календаря — только без выходных', () => {
+  const at = (year, month, day, h = 0) => new Date(year, month - 1, day, h).getTime();
+  assert.equal(H.holstLookback(at(2026, 11, 5, 10), SPRINT_REPORT), at(2026, 11, 3));
+  assert.equal(H.holstLookback(at(2027, 2, 24, 10), SPRINT_REPORT), at(2027, 2, 20));
+  assert.equal(H.holstLookback(at(2026, 10, 12, 10), SPRINT_REPORT), at(2026, 10, 9));
+  assert.equal(H.holstLookback(at(2028, 1, 4, 10), SPRINT_REPORT), at(2028, 1, 3));
+  assert.equal(H.holstLookback(at(2026, 11, 5, 10)), at(2026, 11, 4));
 });
 
 test('В понедельник подсвечено всё с пятницы: пятница, суббота, воскресенье и сам понедельник', () => {
@@ -393,6 +403,22 @@ test('Payload для Holst: баг помечен, остальные карты
   // Assert
   assert.deepEqual(payload.cards.map((item) => [item.id, item.bug === true]), [[1, true], [2, false]]);
   assert.equal('bug' in payload.cards[1], false);
+});
+
+test('После праздника подсвечены карты, сдвинутые в последний рабочий день перед ним', () => {
+  // Arrange
+  const iso = (day, h) => new Date(2026, 10, day, h).toISOString();
+  const moved = (id, day) => ({ id, title: `Карта ${id}`, state: 2, column_id: 20, column: { title: 'Doing' }, column_changed_at: iso(day, 15) });
+  const cards = [moved(1, 3), moved(2, 2)];
+  const histories = Object.fromEntries(cards.map((card) => [card.id, [{ changed: iso(1, 10), column_id: 10 }, { changed: card.column_changed_at, column_id: 20 }]]));
+  const report = buildReport({ cards, settings: defaultSettings() });
+
+  // Act
+  const payload = H.holstPayload({ cards, report, histories, columns: { 10: 'To Do', 20: 'Doing' }, now: new Date(2026, 10, 5, 11).getTime(), config: SPRINT_CAPACITY, holst: { board: 'b', group: 'g', sticker: 's' }, kaiten: 'https://dodopizza.kaiten.ru', title: 'Staff Core', calendar: SPRINT_REPORT });
+
+  // Assert
+  assert.equal(payload.since, new Date(2026, 10, 3).getTime());
+  assert.deepEqual(Object.fromEntries(payload.cards.map((item) => [item.id, item.mark])), { 1: 'work', 2: null });
 });
 
 test('Первый понедельник спринта: подсвечены карты, сдвинутые в пятницу прошлого спринта', () => {

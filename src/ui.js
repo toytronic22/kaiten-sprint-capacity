@@ -1815,7 +1815,7 @@ function sprintCapacityMount(config) {
       const sprintJob = Promise.all([sprintReportLoad({ cards, boardId: board, now, columns, load: kaitenSprint, loadBugs: sprintBugCards, store: { read: (key) => readStored(key, null), write: writeStored } }), capacityLog])
         .then(([loaded, log]) => ({ report: sprintReportBlocks({ ...loaded, capacity: capacityDays(settings), capacityLog: log, labels: settingsNow.labels, now }) }))
         .catch((error) => ({ problem: error.message || String(error) }));
-      const since = holstLookback(now);
+      const since = holstLookback(now, SPRINT_REPORT);
       const historyIds = holstHistoryIds(cards, since);
       const [historyList, activityList] = await Promise.all([
         Promise.all(historyIds.map((id) => kaitenLocationHistory(id))),
@@ -1826,7 +1826,7 @@ function sprintCapacityMount(config) {
       const foreignIds = holstForeignBoards(cards, histories);
       const foreignList = await Promise.all(foreignIds.map((id) => kaitenBoard(id)));
       const boards = Object.fromEntries(foreignIds.map((id, index) => [id, foreignList[index].title]));
-      const payload = holstPayload({ cards, report: current, doneAtStart: snapshot ? snapshot.doneIds : [], histories, columns, boards, renames, now, config: settingsNow, holst: settingsNow.holst, kaiten: location.origin, title: boardTitle(board, config) });
+      const payload = holstPayload({ cards, report: current, doneAtStart: snapshot ? snapshot.doneIds : [], histories, columns, boards, renames, now, config: settingsNow, holst: settingsNow.holst, kaiten: location.origin, title: boardTitle(board, config), calendar: SPRINT_REPORT });
       payload.sprint = await sprintJob;
       sprintToast(`${payload.title}: пишу в Holst…`);
       const result = await holstApply(payload, token);
