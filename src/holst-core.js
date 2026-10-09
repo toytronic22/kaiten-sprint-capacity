@@ -81,16 +81,23 @@ function holstOldTitles(activity, title) {
   return result;
 }
 
-function holstLookback(now) {
+function holstWorkday(day, calendar) {
+  const pad = (number) => String(number).padStart(2, '0');
+  const key = `${day.getFullYear()}-${pad(day.getMonth() + 1)}-${pad(day.getDate())}`;
+  if ((calendar.workSaturdays || []).includes(key)) return true;
+  return day.getDay() !== 0 && day.getDay() !== 6 && !(calendar.holidays || []).includes(key);
+}
+
+function holstLookback(now, calendar = {}) {
   const day = localDay(now);
-  do day.setDate(day.getDate() - 1); while (day.getDay() === 0 || day.getDay() === 6);
+  do day.setDate(day.getDate() - 1); while (!holstWorkday(day, calendar));
   return day.getTime();
 }
 
-function holstCards({ cards, doneAtStart = [], bugs = [], histories = {}, columns = {}, boards = {}, renames = {}, now, config }) {
+function holstCards({ cards, doneAtStart = [], bugs = [], histories = {}, columns = {}, boards = {}, renames = {}, now, config, calendar = {} }) {
   const bugIds = new Set(bugs);
   const skip = new Set(doneAtStart);
-  const since = holstLookback(now);
+  const since = holstLookback(now, calendar);
   const title = (id) => columns[id] || `колонка ${id}`;
   return cards
     .filter((card) => !(card.state === config.doneState && skip.has(card.id)))
@@ -126,7 +133,7 @@ function holstHistoryIds(cards, since) {
   return cards.filter((card) => card.column_changed_at && new Date(card.column_changed_at).getTime() >= since).map((card) => card.id);
 }
 
-function holstPayload({ cards, report, doneAtStart = [], histories = {}, columns = {}, boards = {}, renames = {}, now, config, holst, kaiten, title }) {
+function holstPayload({ cards, report, doneAtStart = [], histories = {}, columns = {}, boards = {}, renames = {}, now, config, holst, kaiten, title, calendar = {} }) {
   return {
     v: 1,
     board: holst.board,
@@ -136,12 +143,12 @@ function holstPayload({ cards, report, doneAtStart = [], histories = {}, columns
     title,
     kaiten,
     generatedAt: now,
-    since: holstLookback(now),
+    since: holstLookback(now, calendar),
     percent: report.progress.percent,
     done: report.done.count,
     of: report.done.of,
     unknown: report.progress.unknown.map((item) => item.column),
-    cards: holstCards({ cards, doneAtStart, bugs: report.bugs.cards.map((item) => item.id), histories, columns, boards, renames, now, config }),
+    cards: holstCards({ cards, doneAtStart, bugs: report.bugs.cards.map((item) => item.id), histories, columns, boards, renames, now, config, calendar }),
   };
 }
 
