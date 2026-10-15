@@ -1,0 +1,471 @@
+{
+ "capturedAt": "2026-09-28T09:10:30.000Z",
+ "cards": [
+  {
+   "id": 334443,
+   "created": "2026-05-12T14:54:13.185Z",
+   "sprint_id": 302027,
+   "size": 13,
+   "properties": {
+    "id_9002": "8",
+    "id_9004": [
+     329378
+    ],
+    "id_9005": [
+     333430
+    ]
+   },
+   "board_id": 303040,
+   "column_id": 313170,
+   "state": 2,
+   "version": 26,
+   "updated": "2026-09-28T09:09:59.119Z"
+  },
+  {
+   "id": 335456,
+   "created": "2026-08-14T18:29:36.242Z",
+   "sprint_id": 302027,
+   "size": null,
+   "properties": {},
+   "board_id": 303040,
+   "column_id": 312157,
+   "state": 1,
+   "version": 22,
+   "updated": "2026-09-28T09:09:59.119Z"
+  },
+  {
+   "id": 336469,
+   "created": "2026-08-19T08:15:33.611Z",
+   "sprint_id": 302027,
+   "size": 2,
+   "properties": {
+    "id_9002": "2",
+    "id_9004": [
+     330391
+    ],
+    "id_9005": [
+     332417
+    ]
+   },
+   "board_id": 303040,
+   "column_id": 313170,
+   "state": 2,
+   "version": 17,
+   "updated": "2026-09-28T09:09:59.119Z"
+  },
+  {
+   "id": 339508,
+   "created": "2026-09-03T09:52:25.876Z",
+   "sprint_id": 302027,
+   "size": 2,
+   "properties": {
+    "id_9002": "2",
+    "id_9004": [
+     330391
+    ],
+    "id_9005": [
+     333430
+    ]
+   },
+   "board_id": 303040,
+   "column_id": 312157,
+   "state": 1,
+   "version": 13,
+   "updated": "2026-09-28T09:09:59.119Z"
+  },
+  {
+   "id": 340521,
+   "created": "2026-09-04T08:20:40.963Z",
+   "sprint_id": 302027,
+   "size": 2,
+   "properties": {
+    "id_9004": [
+     329378
+    ],
+    "id_9005": [
+     332417
+    ]
+   },
+   "board_id": 303040,
+   "column_id": 314183,
+   "state": 2,
+   "version": 25,
+   "updated": "2026-09-28T09:09:59.119Z"
+  },
+  {
+   "id": 341534,
+   "created": "2026-09-09T07:03:40.775Z",
+   "sprint_id": 302027,
+   "size": 3,
+   "properties": {
+    "id_9002": "3",
+    "id_9004": [
+     329378
+    ],
+    "id_9005": [
+     332417
+    ]
+   },
+   "board_id": 303040,
+   "column_id": 312157,
+   "state": 1,
+   "version": 8,
+   "updated": "2026-09-28T09:09:59.119Z"
+  },
+  {
+   "id": 342547,
+   "created": "2026-09-14T09:07:55.249Z",
+   "sprint_id": 302027,
+   "size": null,
+   "properties": {},
+   "board_id": 303040,
+   "column_id": 325326,
+   "state": 2,
+   "version": 9,
+   "updated": "2026-09-28T09:09:59.119Z"
+  },
+  {
+   "id": 343560,
+   "created": "2026-09-15T09:51:40.446Z",
+   "sprint_id": 302027,
+   "size": 3,
+   "properties": {
+    "id_9002": "2",
+    "id_9004": [
+     329378
+    ],
+    "id_9005": [
+     333430
+    ]
+   },
+   "board_id": 303040,
+   "column_id": 312157,
+   "state": 1,
+   "version": 9,
+   "updated": "2026-09-28T09:09:59.119Z"
+  },
+  {
+   "id": 344573,
+   "created": "2026-09-15T11:31:30.829Z",
+   "sprint_id": 302027,
+   "size": 6,
+   "properties": {
+    "id_9002": "3",
+    "id_9004": [
+     329378
+    ],
+    "id_9005": [
+     333430
+    ]
+   },
+   "board_id": 303040,
+   "column_id": 313170,
+   "state": 2,
+   "version": 9,
+   "updated": "2026-09-28T09:09:59.119Z"
+  },
+  {
+   "id": 345586,
+   "created": "2026-09-17T07:33:52.282Z",
+   "sprint_id": 302027,
+   "size": 3,
+   "properties": {
+    "id_9004": [
+     329378
+    ],
+    "id_9005": [
+     332417
+    ]
+   },
+   "board_id": 303040,
+   "column_id": 314183,
+   "state": 2,
+   "version": 9,
+   "updated": "2026-09-28T09:09:59.119Z"
+  },
+  {
+   "id": 346599,
+   "created": "2026-09-18T13:07:37.915Z",
+   "sprint_id": 302027,
+   "size": 2,
+   "properties": {
+    "id_9004": [
+     329378,
+     330391
+    ],
+    "id_9005": [
+     333430
+    ]
+   },
+   "board_id": 303040,
+   "column_id": 314183,
+   "state": 2,
+   "version": 8,
+   "updated": "2026-09-28T09:09:59.119Z"
+  },
+  {
+   "id": 347612,
+   "created": "2026-09-21T10:48:18.078Z",
+   "sprint_id": 302027,
+   "size": 2,
+   "properties": {
+    "id_9004": [
+     329378
+    ],
+    "id_9005": [
+     332417
+    ]
+   },
+   "board_id": 303040,
+   "column_id": 314183,
+   "state": 2,
+   "version": 11,
+   "updated": "2026-09-28T09:09:59.119Z"
+  },
+  {
+   "id": 348625,
+   "created": "2026-09-23T07:44:25.934Z",
+   "sprint_id": 302027,
+   "size": 10,
+   "properties": {
+    "id_9002": "5",
+    "id_9004": [
+     329378,
+     330391,
+     331404
+    ],
+    "id_9005": [
+     333430
+    ]
+   },
+   "board_id": 303040,
+   "column_id": 313170,
+   "state": 2,
+   "version": 8,
+   "updated": "2026-09-28T09:09:59.119Z"
+  },
+  {
+   "id": 349638,
+   "created": "2026-09-24T06:21:12.578Z",
+   "sprint_id": 302027,
+   "size": null,
+   "properties": {},
+   "board_id": 303040,
+   "column_id": 314183,
+   "state": 2,
+   "version": 9,
+   "updated": "2026-09-28T09:09:59.119Z"
+  },
+  {
+   "id": 350651,
+   "created": "2026-09-24T08:23:49.790Z",
+   "sprint_id": null,
+   "size": null,
+   "properties": {},
+   "board_id": 301014,
+   "column_id": 304053,
+   "state": 2,
+   "version": 1,
+   "updated": "2026-09-24T08:23:49.790Z"
+  },
+  {
+   "id": 351664,
+   "created": "2026-09-24T08:24:45.667Z",
+   "sprint_id": null,
+   "size": null,
+   "properties": {},
+   "board_id": 301014,
+   "column_id": 304053,
+   "state": 2,
+   "version": 2,
+   "updated": "2026-09-24T08:24:55.410Z"
+  },
+  {
+   "id": 352677,
+   "created": "2026-09-24T08:33:02.358Z",
+   "sprint_id": 302027,
+   "size": 8,
+   "properties": {
+    "id_9002": "5",
+    "id_9004": [
+     329378
+    ],
+    "id_9005": [
+     333430
+    ]
+   },
+   "board_id": 303040,
+   "column_id": 312157,
+   "state": 1,
+   "version": 6,
+   "updated": "2026-09-28T09:09:59.119Z"
+  },
+  {
+   "id": 353690,
+   "created": "2026-09-24T08:33:04.542Z",
+   "sprint_id": 302027,
+   "size": 7,
+   "properties": {
+    "id_9002": "5",
+    "id_9004": [
+     329378
+    ],
+    "id_9005": [
+     333430
+    ]
+   },
+   "board_id": 303040,
+   "column_id": 312157,
+   "state": 1,
+   "version": 7,
+   "updated": "2026-09-28T09:09:59.119Z"
+  },
+  {
+   "id": 354703,
+   "created": "2026-09-24T08:58:25.426Z",
+   "sprint_id": 302027,
+   "size": 5,
+   "properties": {
+    "id_9002": "5",
+    "id_9004": [
+     329378
+    ],
+    "id_9005": [
+     332417
+    ]
+   },
+   "board_id": 303040,
+   "column_id": 312157,
+   "state": 1,
+   "version": 8,
+   "updated": "2026-09-28T09:09:59.119Z"
+  },
+  {
+   "id": 355716,
+   "created": "2026-09-24T12:09:06.605Z",
+   "sprint_id": 302027,
+   "size": 1,
+   "properties": {
+    "id_9002": "1",
+    "id_9004": [
+     330391
+    ],
+    "id_9005": [
+     332417
+    ]
+   },
+   "board_id": 303040,
+   "column_id": 312157,
+   "state": 1,
+   "version": 9,
+   "updated": "2026-09-28T09:09:59.119Z"
+  },
+  {
+   "id": 356729,
+   "created": "2026-09-24T12:14:25.361Z",
+   "sprint_id": 302027,
+   "size": null,
+   "properties": {
+    "id_9004": [
+     329378
+    ],
+    "id_9005": [
+     333430
+    ]
+   },
+   "board_id": 303040,
+   "column_id": 312157,
+   "state": 1,
+   "version": 6,
+   "updated": "2026-09-28T09:09:59.119Z"
+  },
+  {
+   "id": 357742,
+   "created": "2026-09-25T12:36:15.652Z",
+   "sprint_id": 302027,
+   "size": 1,
+   "properties": {
+    "id_9002": "1",
+    "id_9004": [
+     330391
+    ],
+    "id_9005": [
+     332417
+    ]
+   },
+   "board_id": 303040,
+   "column_id": 312157,
+   "state": 1,
+   "version": 13,
+   "updated": "2026-09-28T09:09:59.119Z"
+  },
+  {
+   "id": 358755,
+   "created": "2026-09-25T14:24:18.147Z",
+   "sprint_id": null,
+   "size": null,
+   "properties": {},
+   "board_id": 324313,
+   "column_id": 327352,
+   "state": 2,
+   "version": 7,
+   "updated": "2026-09-28T07:30:07.024Z"
+  },
+  {
+   "id": 359768,
+   "created": "2026-09-25T14:24:24.059Z",
+   "sprint_id": 302027,
+   "size": null,
+   "properties": {},
+   "board_id": 303040,
+   "column_id": 312157,
+   "state": 1,
+   "version": 4,
+   "updated": "2026-09-28T09:09:59.119Z"
+  },
+  {
+   "id": 360781,
+   "created": "2026-09-25T14:24:26.448Z",
+   "sprint_id": 302027,
+   "size": null,
+   "properties": {},
+   "board_id": 303040,
+   "column_id": 312157,
+   "state": 1,
+   "version": 4,
+   "updated": "2026-09-28T09:09:59.119Z"
+  },
+  {
+   "id": 361794,
+   "created": "2026-09-25T14:24:32.054Z",
+   "sprint_id": 302027,
+   "size": null,
+   "properties": {},
+   "board_id": 303040,
+   "column_id": 312157,
+   "state": 1,
+   "version": 4,
+   "updated": "2026-09-28T09:09:59.119Z"
+  },
+  {
+   "id": 362807,
+   "created": "2026-09-26T14:53:15.925Z",
+   "sprint_id": 302027,
+   "size": 3,
+   "properties": {
+    "id_9002": "3",
+    "id_9004": [
+     329378
+    ],
+    "id_9005": [
+     332417
+    ]
+   },
+   "board_id": 303040,
+   "column_id": 312157,
+   "state": 1,
+   "version": 8,
+   "updated": "2026-09-28T09:09:59.119Z"
+  }
+ ]
+}

@@ -1,0 +1,40 @@
+name: Страница
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Загрузчики панели
+        env:
+          PANEL_URL: ${{ vars.PANEL_URL }}
+        run: |
+          case "$PANEL_URL" in https://*/) ;; *) echo "PANEL_URL должен быть https-адресом со слешем в конце"; exit 1 ;; esac
+          mkdir -p site
+          for file in sprint-capacity.js holst-sprint.js; do
+            printf "(()=>{const s=document.createElement('script');s.src='%s%s?t='+Date.now();s.onload=()=>s.remove();s.onerror=()=>{s.remove();alert('Ёмкость спринта: панель не загрузилась, проверьте интернет')};document.head.appendChild(s)})();\n" "$PANEL_URL" "$file" > "site/$file"
+          done
+          cp pages/index.html site/index.html
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4

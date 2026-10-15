@@ -1,0 +1,10 @@
+{
+  "name": "kaiten-sprint-capacity",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Закладка-панель для Kaiten: нагрузка спринта по бэку, фронту и QA против человеко-дней",
+  "scripts": {
+    "test": "node --test",
+    "build": "node build.mjs"
+  }
+}
