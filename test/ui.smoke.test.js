@@ -617,7 +617,7 @@ test('Закладка на Holst: Kaiten не ответил — вход ко�
 
   // Assert
   assert.deepEqual(holst.copied, ['test-holst-2']);
-  assert.match(holst.alerts[0], /Вставить вход вручную/);
+  assert.match(holst.alerts[0], /нажмите красную букву H вверху → «Вставить вход вручную»/);
   assert.deepEqual(holst.listeners.message, []);
 });
 
@@ -971,6 +971,8 @@ const dailyAct = (kaiten, act, data = {}) => (kaiten.$('.daily').listeners.click
 const dailyPart = (kaiten, name) => kaiten.$('.daily').querySelector(`[data-part="${name}"]`);
 
 const dailySide = (kaiten) => kaiten.shadow.children.find((element) => element.className === 'daily-side');
+const flyCard = (kaiten) => dailySide(kaiten).children.find((element) => element.className === 'fly');
+const dailyDay = (kaiten, key) => JSON.parse(kaiten.stored.get(`sprintCapacity.v1.daily.${key}.day`));
 const pullLever = (kaiten) => (dailySide(kaiten).listeners.keydown || []).forEach((listener) => listener({ key: 'Enter', preventDefault() {}, target: { closest: () => dailySide(kaiten).querySelector('.knob') } }));
 const pickSkin = (kaiten, skin) => (kaiten.shadow.listeners.click || []).forEach((listener) => listener({ target: { closest: () => ({ dataset: { act: 'skin', skin } }) } }));
 const styles = (kaiten) => kaiten.shadow.children.filter((element) => element.tagName === 'STYLE').map((element) => element.textContent);
@@ -1204,7 +1206,7 @@ test('Дейлик: все рассказали — на барабане «Те
   assert.equal(JSON.parse(kaiten.stored.get('sprintCapacity.v1.daily.core.day')).seq, 10);
 });
 
-test('Дейлик: при «уменьшить движение» имя у рычага — нового говорящего, а не прошлого', async () => {
+test('Дейлик: при «уменьшить движение» барабан показывает нового говорящего, а не прошлого, табличка у рычага не вылетает', async () => {
   // Arrange
   const kaiten = page({ hostname: 'example.kaiten.ru', reduced: true, stored: { 'sprintCapacity.v1.board': '303040' } });
   await flush();
@@ -1215,9 +1217,26 @@ test('Дейлик: при «уменьшить движение» имя у р�
   pullLever(kaiten);
 
   // Assert
-  const card = dailySide(kaiten).children.find((element) => element.className === 'fly');
-  assert.equal(card.innerHTML, '<small>Говорит</small><b>Михаил В.</b>');
   assert.equal(dailyPart(kaiten, 'reel').textContent, 'Михаил В.');
+  assert.equal(flyCard(kaiten), undefined);
+});
+
+test('Дейлик: на вкладке дейлика рычаг двигает очередь, а табличка «Говорит …» у рычага не вылетает — имя уже в барабане', async () => {
+  // Arrange
+  const kaiten = page({ hostname: 'example.kaiten.ru', now: Date.parse('2026-10-19T07:00:00.000Z'), audio: fakeAudio([]), fetch: clipFetch([]), stored: { 'sprintCapacity.v1.board': '319248' } });
+  await flush();
+  kaiten.click('daily');
+  await flush();
+
+  // Act
+  pullLever(kaiten);
+  await settle();
+  kaiten.runTimers(1450);
+
+  // Assert
+  assert.equal(dailyPart(kaiten, 'reel').textContent, 'Артём Л.');
+  assert.deepEqual([dailyDay(kaiten, 'mobile').current, dailyDay(kaiten, 'mobile').done], ['Артём Л.', ['Михаил В.']]);
+  assert.equal(flyCard(kaiten), undefined);
 });
 
 test('Дейлик: сохранённый список сокращает фамилии до буквы и хранится в панели у своей команды', async () => {
@@ -1432,9 +1451,7 @@ test('Дейлик: рычаг ещё вдвое тише — рубильник
   assert.ok(gears.every((item) => Math.abs(item.level - item.gain * lever.level) < 1e-9), gears.map((item) => item.level).join(' '));
 });
 
-const flyCard = (kaiten) => dailySide(kaiten).children.find((element) => element.className === 'fly');
 const dragLever = (kaiten) => ['pointerdown', 'pointermove', 'pointerup'].forEach((type, index) => (dailySide(kaiten).listeners[type] || []).forEach((listener) => listener({ button: 0, clientY: index ? 600 : 100, pointerId: 1, preventDefault() {}, target: { closest: () => dailySide(kaiten).querySelector('.knob') } })));
-const dailyDay = (kaiten, key) => JSON.parse(kaiten.stored.get(`sprintCapacity.v1.daily.${key}.day`));
 
 test('Рычаг на вкладке «Спринт» звучит как в дейлике, двигает очередь и выпускает карточку с тем, кто говорит; дейлик не открывается', async () => {
   // Arrange
@@ -1644,6 +1661,18 @@ test('Дейлик: картинки и звуки рычага берутся �
     assert.ok(existsSync(path.join(root, 'assets', 'daily', file)), file);
     assert.ok(existsSync(path.join(root, 'dist', 'daily', file)), file);
   }
+});
+
+test('Страница установки ведёт к букве H правее времени — кнопки «↻» в панели нет', () => {
+  // Arrange
+  const install = readFileSync(path.join(root, 'dist', 'install.html'), 'utf8');
+
+  // Act
+  const step = install.split('<li>').find((item) => item.includes('«Открыть Holst»'));
+
+  // Assert
+  assert.match(step, /^Вернитесь в Kaiten\. Вверху панели, правее времени, нажмите красную букву H/);
+  assert.doesNotMatch(install, /↻/);
 });
 
 test('Дейлик не подключается к Holst даже со входом; вкладка «Спринт» закрывает его', async () => {

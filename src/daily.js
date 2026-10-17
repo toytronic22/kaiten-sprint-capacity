@@ -810,6 +810,7 @@ function dailyPanel({ shadow, box, tabs, config, store, send, check, share, skin
 
   const flyOut = () => {
     stopFly();
+    if (visible) return;
     const current = view();
     const { queue } = current;
     const card = document.createElement('div');
