@@ -1,6 +1,6 @@
 function kaitenError(status, path) {
   const text = status === 401 || status === 403
-    ? 'Kaiten не пускает — войдите в Kaiten и нажмите ↻'
+    ? 'Kaiten не пускает — войдите в Kaiten, панель обновится сама за минуту'
     : `Kaiten ответил ${status} на ${path}`;
   const error = new Error(text);
   error.status = status;
@@ -38,6 +38,12 @@ async function kaitenCardComments(cardId) {
 
 async function kaitenAddComment(cardId, text) {
   return kaitenJson(`/api/cards/${cardId}/comments`, { text });
+}
+
+async function kaitenDeleteComment(cardId, commentId) {
+  const path = `/api/cards/${cardId}/comments/${commentId}`;
+  const response = await fetch(path, { method: 'DELETE', credentials: 'include', headers: { accept: 'application/json' } });
+  if (!response.ok) throw kaitenError(response.status, path);
 }
 
 async function kaitenBoard(boardId) {

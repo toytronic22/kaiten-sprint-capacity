@@ -29,6 +29,7 @@ const SPRINT_REPORT = {
   capacityAfterMs: 604800000,
   labels: { back: 'Бэк', front: 'Фронт', qa: 'QA' },
   stageOrder: ['to do', 'doing', 'review', 'design review', 'test', 'waiting for release', 'done'],
+  doneColumn: 'done',
   stageMin: 0.05,
   stageTop: 4,
   boards: { 303040: 'Development', 319248: 'Mobile', 317222: 'Inbox', 320261: 'Inbox Mobile', 318235: 'бэклог', 321274: 'бэклог Mobile', 324313: 'дежурка', 322287: 'дежурка Mobile', 323300: 'HR' },
@@ -862,6 +863,16 @@ function sprintDaysHint({ dates, now, workDays = null, holidays = 0, plannedAt =
   return { text: `${text}, а вписано ${holidays ? `${sprintNumber(workDays)} − ${sprintNumber(holidays)} = ${sprintNumber(entered)}` : sprintNumber(workDays)}`, off: true };
 }
 
+function sprintFinishHint({ dates, cards = [], now }, cfg = SPRINT_REPORT) {
+  if (!dates || dates.closedAt !== null || !Number.isFinite(dates.start) || !Number.isFinite(dates.finish)) return null;
+  const period = sprintBounds(dates.start, dates.finish, cfg);
+  if (now <= period.end) return null;
+  const done = cards.filter((card) => String((card.column && card.column.title) || '').replace(/\s+/g, ' ').trim().toLowerCase() === cfg.doneColumn).length;
+  const head = `Спринт закончился ${sprintDate(period.end, cfg)}, в Kaiten не завершён`;
+  const tail = `В Done — ${sprintCount(done, SPRINT_WORDS.card)}`;
+  return { head, tail, text: `${head}. ${tail}`, done };
+}
+
 function sprintGroups(list) {
   return list.filter(Boolean).map(([key, title, note, blocks]) => ({ key, title, note, blocks: blocks.filter(Boolean) })).filter((group) => group.blocks.length);
 }
@@ -985,4 +996,4 @@ async function sprintReportLoad({ cards, boardId, now, columns, load, loadBugs =
   return { last, running, history, historyProblem, tagsProblem, currentId, focus, bugs };
 }
 
-if (typeof module !== 'undefined') module.exports = { SPRINT_REPORT, sprintTime, sprintPeriod, sprintFinished, sprintIsBug, sprintNewScale, sprintEscaped, sprintSource, sprintPriority, sprintCurrentId, sprintVersions, sprintWorkdays, sprintCalendar, sprintDaysLeft, sprintMedian, sprintPercentile, sprintSummary, sprintBugWindow, sprintBugs, sprintNumber, sprintDayWord, sprintDate, sprintDaysHint, sprintFocus, sprintReportBlocks, sprintOptionalTags, sprintReportLoad };
+if (typeof module !== 'undefined') module.exports = { SPRINT_REPORT, sprintFinishHint, sprintTime, sprintPeriod, sprintFinished, sprintIsBug, sprintNewScale, sprintEscaped, sprintSource, sprintPriority, sprintCurrentId, sprintVersions, sprintWorkdays, sprintCalendar, sprintDaysLeft, sprintMedian, sprintPercentile, sprintSummary, sprintBugWindow, sprintBugs, sprintNumber, sprintDayWord, sprintDate, sprintDaysHint, sprintFocus, sprintReportBlocks, sprintOptionalTags, sprintReportLoad };

@@ -406,7 +406,7 @@ test('конец планирования: пишется комментарие
   // Arrange
   const snapshot = { boardId: MOBILE_BOARD, takenAt: '2026-09-29T09:00:00.000Z', totals: { back: 1, front: 1, qa: 1 }, doneIds: [] };
   const planEnd = { boardId: MOBILE_BOARD, takenAt: '2026-09-29T11:00:00.000Z', startedAt: snapshot.takenAt, totals: { back: 20, front: 6.5, qa: 12 } };
-  const comment = { text: core.planEndComment(planEnd), created: '2026-09-29T11:00:01Z', author: { full_name: 'Aleksey Martynov' } };
+  const comment = { text: core.planEndComment(planEnd), created: '2026-09-29T11:00:01Z', author: { full_name: 'Mikhail Titov' } };
   const older = { text: core.planEndComment({ ...planEnd, totals: { back: 2, front: 2, qa: 2 } }), created: '2026-09-29T10:00:00Z' };
   const deleted = { text: core.planEndComment({ ...planEnd, totals: { back: 9, front: 9, qa: 9 } }), created: '2026-09-29T12:00:00Z', deleted: true };
   const broken = { text: 'Конец планирования. ```json\n{"totals":\n```', created: '2026-09-29T13:00:00Z' };
@@ -418,7 +418,7 @@ test('конец планирования: пишется комментарие
 
   // Assert
   assert.ok(comment.text.startsWith('Конец планирования, Mobile team. После планирования: Бэк 20 · Mobile 6,5 · QA 12.'));
-  assert.deepEqual(actual, { ...planEnd, author: 'Aleksey Martynov' });
+  assert.deepEqual(actual, { ...planEnd, author: 'Mikhail Titov' });
   assert.deepEqual(core.snapshotFromComments(comments, MOBILE_BOARD).totals, snapshot.totals);
   assert.equal(core.planEndFromComments(comments, { ...snapshot, takenAt: '2026-09-30T09:00:00.000Z' }), null);
   assert.equal(core.planEndFromComments(comments, { ...snapshot, boardId: CORE_BOARD }), null);
@@ -461,7 +461,7 @@ test('журнал capacity из служебной карты: старт из 
   const start = { boardId: CORE_BOARD, takenAt: '2026-09-28T09:00:00.000Z', totals: { back: 1, front: 1, qa: 1 }, doneIds: [], capacity: { back: 30, front: 18 } };
   const end = { boardId: MOBILE_BOARD, takenAt: '2026-09-28T12:00:00.000Z', startedAt: start.takenAt, totals: { back: 2, front: 2, qa: 2 }, capacity: { back: 20, qa: 7.5 } };
   const comments = [
-    { text: core.snapshotComment(start), created: '2026-09-28T09:00:01Z', author: { full_name: 'Aleksey Martynov' } },
+    { text: core.snapshotComment(start), created: '2026-09-28T09:00:01Z', author: { full_name: 'Mikhail Titov' } },
     { text: core.planEndComment(end), created: '2026-09-28T12:00:01Z' },
     { text: core.snapshotComment({ ...start, capacity: undefined }), created: '2026-09-28T10:00:00Z' },
     { text: core.planEndComment({ ...end, capacity: { back: 99 } }), created: '2026-09-28T13:00:00Z', deleted: true },
@@ -509,14 +509,14 @@ test('снимок: испорченный или без доски не при�
 test('общий снимок: пишется комментарием в Kaiten с названием доски и читается обратно', () => {
   // Arrange
   const snapshot = { boardId: MOBILE_BOARD, takenAt: '2026-09-29T09:00:00.000Z', totals: { back: 20, front: 6.5, qa: 12 }, doneIds: [4, 5] };
-  const comment = { text: core.snapshotComment(snapshot), created: '2026-09-29T09:00:01Z', author: { full_name: 'Aleksey Martynov' } };
+  const comment = { text: core.snapshotComment(snapshot), created: '2026-09-29T09:00:01Z', author: { full_name: 'Mikhail Titov' } };
 
   // Act
   const actual = core.snapshotFromComments([comment], MOBILE_BOARD);
 
   // Assert
   assert.ok(comment.text.startsWith('Снимок начала планирования, Mobile team. Осталось: Бэк 20 · Mobile 6,5 · QA 12.'));
-  assert.deepEqual(actual, { ...snapshot, author: 'Aleksey Martynov' });
+  assert.deepEqual(actual, { ...snapshot, author: 'Mikhail Titov' });
 });
 
 test('общий снимок: берётся последний своей доски, удалённые, чужие и испорченные комментарии не считаются', () => {
@@ -733,7 +733,7 @@ test('общие «Команда и дни»: комментарий с дос�
   const make = (boardId, savedAt, back, extra = {}) => ({ text: core.settingsComment({ boardId, savedAt, settings: settingsWith({ back: { people: back } }) }), created: savedAt, ...extra });
   const comments = [
     make(CORE_BOARD, '2026-10-01T09:00:00.000Z', 1),
-    { text: core.settingsComment(record), created: '2026-10-08T09:00:01Z', author: { full_name: 'Aleksey Martynov' } },
+    { text: core.settingsComment(record), created: '2026-10-08T09:00:01Z', author: { full_name: 'Mikhail Titov' } },
     make(MOBILE_BOARD, '2026-10-09T09:00:00.000Z', 7),
     make(CORE_BOARD, '2026-10-10T09:00:00.000Z', 9, { deleted: true }),
     { text: 'Команда и дни. ```json\n{"settings":\n```', created: '2026-10-11T09:00:00Z' },
@@ -744,10 +744,69 @@ test('общие «Команда и дни»: комментарий с дос�
 
   // Assert
   assert.ok(comments[1].text.startsWith('Команда и дни, Core team. Людей: Бэк 3, нет 2 · Фронт 2 · QA 1. Рабочих дней 10, праздников 1, SP в день 1. Capacity, чел.-дн.: Бэк 25 · Фронт 18 · QA 9.\n'));
-  assert.deepEqual(actual, { ...record, author: 'Aleksey Martynov' });
+  assert.deepEqual(actual, { ...record, author: 'Mikhail Titov' });
   assert.equal(core.settingsFromComments(comments, MOBILE_BOARD).settings.team.back.people, 7);
   assert.deepEqual([core.settingsFromComments([], CORE_BOARD), core.settingsFromComments(null, CORE_BOARD)], [null, null]);
   assert.deepEqual([core.snapshotFromComments(comments, CORE_BOARD), core.capacityLogFromComments(comments)], [null, []]);
+});
+
+test('общие ведущий и список дейлика: комментарий «Дейлик» с доской, читается обратно свежий своей доски, пустой список — по умолчанию', () => {
+  // Arrange
+  const record = { boardId: CORE_BOARD, savedAt: '2026-10-08T09:00:00.000Z', people: ['Михаил Н.', 'Михаил В.', 'Павел Т.'], host: 'Михаил В.' };
+  const make = (boardId, savedAt, host, extra = {}) => ({ text: core.dailyComment({ boardId, savedAt, people: null, host }), created: savedAt, ...extra });
+  const comments = [
+    make(CORE_BOARD, '2026-10-01T09:00:00.000Z', 'Женя'),
+    { text: core.dailyComment(record), created: '2026-10-08T09:00:01Z', author: { full_name: 'Mikhail Titov' } },
+    make(MOBILE_BOARD, '2026-10-09T09:00:00.000Z', 'Лена Н.'),
+    make(CORE_BOARD, '2026-10-10T09:00:00.000Z', 'Денис', { deleted: true }),
+    { text: 'Дейлик. ```json\n{"host":\n```', created: '2026-10-11T09:00:00Z' },
+    { text: core.settingsComment({ boardId: CORE_BOARD, savedAt: '2026-10-12T09:00:00.000Z', settings: core.normalizeSettings({}) }), created: '2026-10-12T09:00:00Z' },
+  ];
+
+  // Act
+  const actual = core.dailyFromComments(comments, CORE_BOARD);
+  const mobile = core.dailyFromComments(comments, MOBILE_BOARD);
+
+  // Assert
+  assert.equal(comments[1].text.split('\n')[0], 'Дейлик, Core team. Ведущий: Михаил В.; список: Михаил Н., Михаил В., Павел Т.');
+  assert.equal(comments[2].text.split('\n')[0], 'Дейлик, Mobile team. Ведущий: Лена Н.; список: по умолчанию');
+  assert.deepEqual(actual, { ...record, author: 'Mikhail Titov' });
+  assert.deepEqual(mobile, { boardId: MOBILE_BOARD, savedAt: '2026-10-09T09:00:00.000Z', people: null, host: 'Лена Н.', author: '' });
+  assert.equal(core.dailyComment({ boardId: CORE_BOARD, savedAt: record.savedAt, people: [], host: '' }).split('\n')[0], 'Дейлик, Core team. Ведущий: не выбран; список: по умолчанию');
+  assert.deepEqual([core.dailyFromComments([], CORE_BOARD), core.dailyFromComments(null, CORE_BOARD)], [null, null]);
+  assert.equal(core.settingsFromComments(comments, CORE_BOARD).savedAt, '2026-10-12T09:00:00.000Z');
+});
+
+test('старые общие настройки: только тот же вид и та же доска, старше четырёх дней, с номером и разобранным JSON; снимки не трогает никогда', () => {
+  // Arrange
+  const now = Date.parse('2026-10-17T12:00:00.000Z');
+  const at = (days, extra = 0) => new Date(now - days * 86400000 - extra).toISOString();
+  const team = (id, boardId, created, extra = {}) => ({ id, text: core.settingsComment({ boardId, savedAt: created, settings: core.normalizeSettings({}) }), created, ...extra });
+  const daily = (id, boardId, created) => ({ id, text: core.dailyComment({ boardId, savedAt: created, people: null, host: 'Тимур Л.' }), created });
+  const comments = [
+    team(1, CORE_BOARD, at(4, 1000)),
+    team(2, CORE_BOARD, at(4)),
+    team(3, CORE_BOARD, at(10)),
+    team(4, MOBILE_BOARD, at(10)),
+    team(5, CORE_BOARD, at(10), { deleted: true }),
+    { ...team(6, CORE_BOARD, at(10)), id: undefined },
+    { id: 7, text: 'Команда и дни. ```json\n{"boardId":\n```', created: at(10) },
+    daily(8, CORE_BOARD, at(10)),
+    { id: 9, text: core.snapshotComment({ boardId: CORE_BOARD, takenAt: at(20), totals: { back: 1, front: 0, qa: 0 }, capacity: null }), created: at(20) },
+  ];
+
+  // Act
+  const settings = core.staleComments(comments, core.SETTINGS_MARK, CORE_BOARD, now);
+  const dailies = core.staleComments(comments, core.DAILY_MARK, CORE_BOARD, now);
+  const mobile = core.staleComments(comments, core.SETTINGS_MARK, MOBILE_BOARD, now);
+  const snapshots = core.staleComments(comments, 'Снимок начала планирования', CORE_BOARD, now);
+
+  // Assert
+  assert.deepEqual(settings, [1, 3]);
+  assert.deepEqual(dailies, [8]);
+  assert.deepEqual(mobile, [4]);
+  assert.deepEqual(snapshots, []);
+  assert.deepEqual([core.staleComments(null, core.SETTINGS_MARK, CORE_BOARD, now), core.staleComments([], core.DAILY_MARK, CORE_BOARD, now)], [[], []]);
 });
 
 test('общие «Команда и дни» без людей и на мобилке: подписи доски, «не вписано», без capacity', () => {
@@ -896,7 +955,7 @@ test('SP в день стёрли: после 12.10 — 2, до 12.10 — 1', ()
   assert.deepEqual(actual, [2, 1]);
 });
 
-test('с 12.10 баги считаются по оценке: в нагрузке, на доске и в Done, баг без оценки — 0 и без замечаний; до 12.10 — по-старому', () => {
+test('с 12.10 баги считаются по оценке: в нагрузке, на доске и в Done, баг без оценки — 0 и без замечаний, баг без Platform делится на бэк и фронт; до 12.10 — по-старому', () => {
   // Arrange
   const now = Date.parse('2026-10-14T12:00:00+03:00');
   const cards = [
@@ -904,7 +963,7 @@ test('с 12.10 баги считаются по оценке: в нагрузк�
     card(2, { size: 2, platforms: [FRONT], state: DONE, type: WEB_BUG }),
     card(3, { type: WEB_BUG }),
     card(4, { size: 4, sp: 3, platforms: [BACK] }),
-    card(5, { size: 1, type: WEB_BUG }),
+    card(5, { size: 2, type: WEB_BUG }),
   ];
 
   // Act
@@ -912,13 +971,35 @@ test('с 12.10 баги считаются по оценке: в нагрузк�
   const before = core.buildReport({ cards, settings: core.defaultSettings(), now: Date.parse('2026-10-09T12:00:00+03:00') });
 
   // Assert
-  assert.deepEqual(totals(after), [6, 2, 3]);
-  assert.deepEqual([after.board.points, after.board.cards.length, after.done.points, after.done.percent, after.notCounted.points], [12, 5, 2, 20, 1]);
-  assert.deepEqual(after.warnings.map((warning) => [warning.issue, warning.item.id]), [['noPlatform', 5]]);
-  assert.deepEqual([after.bugs.cards.map((item) => item.id), after.bugs.points], [[1, 2, 3, 5], 8]);
+  assert.deepEqual(totals(after), [7.7, 2.3, 3]);
+  assert.deepEqual([after.board.points, after.board.cards.length, after.done.points, after.done.percent, after.notCounted.points], [13, 5, 2, 20, 0]);
+  assert.deepEqual(after.warnings, []);
+  assert.deepEqual([after.bugs.cards.map((item) => item.id), after.bugs.points], [[1, 2, 3, 5], 9]);
   assert.deepEqual(totals(before), [3, 0, 1]);
   assert.deepEqual([before.board.points, before.done.points, before.warnings.length, before.notCounted.points], [4, 0, 0, 0]);
-  assert.deepEqual([before.bugs.cards.map((item) => item.id), before.bugs.points], [[1, 2, 3, 5], 8]);
+  assert.deepEqual([before.bugs.cards.map((item) => item.id), before.bugs.points], [[1, 2, 3, 5], 9]);
+});
+
+test('баг с оценкой без Platform: 85% разработки в бэк, 15% во фронт, на Mobile team — в Mobile, баг с Frontend там тоже делится, без замечания; задача без Platform по-прежнему не считается', () => {
+  // Arrange
+  const now = Date.parse('2026-10-19T12:00:00+03:00');
+  const cards = [
+    card(1, { size: 10, type: WEB_BUG }),
+    card(2, { size: 4, sp: 2, type: WEB_BUG }),
+    card(3, { size: 2, platforms: [FRONT], type: WEB_BUG }),
+    card(4, { size: 3 }),
+  ];
+
+  // Act
+  const coreBoard = core.buildReport({ cards, settings: core.defaultSettings(now), now, config: core.boardConfig(CORE_BOARD) });
+  const mobile = core.buildReport({ cards: cards.slice(0, 3), settings: core.defaultSettings(now), now, config: core.boardConfig(MOBILE_BOARD) });
+
+  // Assert
+  assert.deepEqual(totals(coreBoard), [10.2, 3.8, 2]);
+  assert.deepEqual(coreBoard.warnings.map((warning) => [warning.issue, warning.item.id]), [['noPlatform', 4]]);
+  assert.deepEqual([coreBoard.notCounted.points, coreBoard.notCounted.cards.map((item) => item.id)], [3, [4]]);
+  assert.deepEqual(mobile.rows.map(core.formatRow), ['Бэк: 11,9 из —', 'Mobile: 2,1 из —', 'QA: 2 из —']);
+  assert.deepEqual(mobile.warnings, []);
 });
 
 test('снимок с 12.10 считает SP багов, до 12.10 — нет', () => {
@@ -931,4 +1012,131 @@ test('снимок с 12.10 считает SP багов, до 12.10 — нет'
 
   // Assert
   assert.deepEqual(actual, [{ back: 0, front: 2, qa: 0 }, { back: 3, front: 2, qa: 0 }]);
+});
+
+const BURN_CALENDAR = require('../src/sprint-core.js').SPRINT_REPORT;
+const BURN_COLUMNS = { 1: 'To Do', 2: 'Doing', 3: 'Review', 4: 'Done' };
+
+function burnVersion(id, updated, column, state, size, { board = CORE_BOARD, archived = false, sp = null, order = 1 } = {}) {
+  const properties = sp === null ? {} : { id_9002: String(sp) };
+  return { id, updated, sprint_id: 900, board_id: board, column_id: column, state, size, properties, archived, condition: archived ? 2 : 1, version: order };
+}
+
+function burnSprint() {
+  return {
+    id: 900,
+    board_id: CORE_BOARD,
+    created: '2026-11-02T07:00:00Z',
+    start_date: '2026-11-01T21:00:00Z',
+    finish_date: '2026-11-13T20:59:59.999Z',
+    cards: [{ id: 1, type_id: 1 }, { id: 2, type_id: 1 }, { id: 3, type_id: 1 }, { id: 5, type_id: 1 }, { id: 6, type_id: WEB_BUG.id }],
+    cardUpdates: [
+      burnVersion(1, '2026-11-02T06:00:00Z', 1, 1, 4),
+      burnVersion(1, '2026-11-02T12:00:00Z', 2, 2, 4, { order: 2 }),
+      burnVersion(1, '2026-11-05T10:00:00Z', 4, 3, 4, { order: 3 }),
+      burnVersion(2, '2026-11-02T06:00:00Z', 3, 2, null),
+      burnVersion(3, '2026-10-30T09:00:00Z', 4, 3, 1),
+      burnVersion(5, '2026-11-02T06:00:00Z', 2, 2, 2),
+      burnVersion(5, '2026-11-03T10:00:00Z', 2, 2, 2, { archived: true, order: 2 }),
+      burnVersion(6, '2026-11-02T06:00:00Z', 2, 2, null),
+      burnVersion(7, '2026-11-02T06:00:00Z', 2, 2, 5, { board: MOBILE_BOARD }),
+    ],
+  };
+}
+
+test('процент по дням: конец каждого рабочего дня задним числом, без праздника; сегодня — процент над графиком; впереди — рабочие дни до конца недели', () => {
+  // Arrange
+  const tuesday = Date.parse('2026-11-03T12:00:00Z');
+  const friday = Date.parse('2026-11-06T12:00:00Z');
+
+  // Act
+  const early = core.burnDays({ sprint: burnSprint(), columns: BURN_COLUMNS, percent: 95, now: tuesday, calendar: BURN_CALENDAR });
+  const late = core.burnDays({ sprint: burnSprint(), columns: BURN_COLUMNS, percent: 95, now: friday, calendar: BURN_CALENDAR });
+
+  // Assert
+  assert.deepEqual(early, { start: '2026-11-02', today: '2026-11-03', days: [{ day: '2026-11-02', percent: 43 }, { day: '2026-11-03', percent: 95 }], ahead: ['2026-11-05', '2026-11-06'], week: null });
+  assert.deepEqual(late, {
+    start: '2026-11-02',
+    today: '2026-11-06',
+    days: [{ day: '2026-11-02', percent: 43 }, { day: '2026-11-03', percent: 48 }, { day: '2026-11-05', percent: 94 }, { day: '2026-11-06', percent: 95 }],
+    ahead: [],
+    week: null,
+  });
+});
+
+test('процент по дням: спринт начался раньше этой недели — у понедельника этой недели процент на утро, по истории на полночь; спринт с этой недели — без него', () => {
+  // Arrange
+  const sprint = burnSprint();
+  const done = { ...sprint, cardUpdates: [...sprint.cardUpdates, burnVersion(2, '2026-11-09T09:00:00Z', 4, 3, null, { order: 2 })] };
+
+  // Act
+  const tuesday = core.burnDays({ sprint: done, columns: BURN_COLUMNS, percent: 99, now: Date.parse('2026-11-10T12:00:00Z'), calendar: BURN_CALENDAR });
+  const morning = core.burnDays({ sprint: done, columns: BURN_COLUMNS, percent: 99, now: Date.parse('2026-11-09T05:00:00Z'), calendar: BURN_CALENDAR });
+  const first = core.burnDays({ sprint: done, columns: BURN_COLUMNS, percent: 99, now: Date.parse('2026-11-06T12:00:00Z'), calendar: BURN_CALENDAR });
+
+  // Assert
+  assert.deepEqual(tuesday.week, { day: '2026-11-09', percent: 94 });
+  assert.deepEqual(tuesday.days.slice(-2), [{ day: '2026-11-09', percent: 100 }, { day: '2026-11-10', percent: 99 }]);
+  assert.deepEqual([morning.week, morning.days.slice(-1)], [{ day: '2026-11-09', percent: 94 }, [{ day: '2026-11-09', percent: 99 }]]);
+  assert.equal(first.week, null);
+});
+
+test('процент по дням: Done на старте исключается только по снимку, без снимка считается, как над графиком; без процента над графиком сегодня считается по истории', () => {
+  // Arrange
+  const now = Date.parse('2026-11-03T08:00:00Z');
+
+  // Act
+  const snapshot = core.burnDays({ sprint: burnSprint(), columns: BURN_COLUMNS, doneAtStart: [3], now, calendar: BURN_CALENDAR });
+  const none = core.burnDays({ sprint: burnSprint(), columns: BURN_COLUMNS, now, calendar: BURN_CALENDAR });
+
+  // Assert
+  assert.deepEqual(snapshot.days, [{ day: '2026-11-02', percent: 35 }, { day: '2026-11-03', percent: 35 }]);
+  assert.deepEqual(none.days, [{ day: '2026-11-02', percent: 43 }, { day: '2026-11-03', percent: 43 }]);
+});
+
+test('процент по дням: до начала спринта дней нет, без истории карт — причина, неизвестная колонка — ноль готовности', () => {
+  // Arrange
+  const sprint = burnSprint();
+  const empty = { ...sprint, cardUpdates: [] };
+  const strange = { ...sprint, cardUpdates: [burnVersion(1, '2026-11-02T06:00:00Z', 99, 2, 4), burnVersion(2, '2026-11-02T08:00:00Z', 4, 3, 4)] };
+  const monday = Date.parse('2026-11-02T15:00:00Z');
+
+  // Act
+  const before = core.burnDays({ sprint, columns: BURN_COLUMNS, now: Date.parse('2026-11-01T20:00:00Z'), calendar: BURN_CALENDAR });
+  const none = core.burnDays({ sprint: empty, columns: BURN_COLUMNS, now: monday, calendar: BURN_CALENDAR });
+  const { days: unknown } = core.burnDays({ sprint: strange, columns: BURN_COLUMNS, now: monday, calendar: BURN_CALENDAR });
+
+  // Assert
+  assert.deepEqual([before.days, before.ahead], [[], []]);
+  assert.deepEqual(none, { problem: 'Kaiten не прислал историю карт спринта' });
+  assert.deepEqual(unknown, [{ day: '2026-11-02', percent: 50 }]);
+});
+
+test('процент по дням: спринт кончился по датам, а в Kaiten не завершён — дни идут до сегодня, впереди пусто; рабочая суббота входит', () => {
+  // Arrange
+  const sprint = { ...burnSprint(), created: '2027-02-15T07:00:00Z', start_date: '2027-02-14T21:00:00Z', finish_date: '2027-02-21T20:59:59.999Z', cardUpdates: [burnVersion(1, '2027-02-15T06:00:00Z', 2, 2, 2)] };
+
+  // Act
+  const after = core.burnDays({ sprint, columns: BURN_COLUMNS, now: Date.parse('2027-03-01T12:00:00Z'), calendar: BURN_CALENDAR });
+  const inside = core.burnDays({ sprint, columns: BURN_COLUMNS, now: Date.parse('2027-02-17T12:00:00Z'), calendar: BURN_CALENDAR });
+
+  // Assert
+  assert.deepEqual(after.days.map((item) => item.day), ['2027-02-15', '2027-02-16', '2027-02-17', '2027-02-18', '2027-02-19', '2027-02-20', '2027-02-24', '2027-02-25', '2027-02-26', '2027-03-01']);
+  assert.deepEqual([...new Set(after.days.map((item) => item.percent))], [30]);
+  assert.deepEqual([after.today, after.ahead], ['2027-03-01', []]);
+  assert.deepEqual(inside.ahead, ['2027-02-18', '2027-02-19', '2027-02-20']);
+});
+
+test('процент по дням: впереди — только дни до конца спринта; спринт, заведённый восточнее Москвы, начинается с ближайшей полуночи', () => {
+  // Arrange
+  const short = { ...burnSprint(), finish_date: '2026-11-11T20:59:59.999Z' };
+  const east = { ...burnSprint(), start_date: '2026-11-01T19:00:00Z', finish_date: '2026-11-13T18:59:59.999Z' };
+
+  // Act
+  const shortBurn = core.burnDays({ sprint: short, columns: BURN_COLUMNS, percent: 50, now: Date.parse('2026-11-09T09:00:00Z'), calendar: BURN_CALENDAR });
+  const eastBurn = core.burnDays({ sprint: east, columns: BURN_COLUMNS, percent: 95, now: Date.parse('2026-11-03T12:00:00Z'), calendar: BURN_CALENDAR });
+
+  // Assert
+  assert.deepEqual([shortBurn.today, shortBurn.ahead], ['2026-11-09', ['2026-11-10', '2026-11-11']]);
+  assert.deepEqual([eastBurn.start, eastBurn.days.map((item) => item.day), eastBurn.ahead], ['2026-11-02', ['2026-11-02', '2026-11-03'], ['2026-11-05', '2026-11-06']]);
 });

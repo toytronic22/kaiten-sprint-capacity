@@ -13,8 +13,8 @@ function holstBrowserToken() {
 }
 
 function holstLoginCopy(token) {
-  const done = () => alert('Вход в Holst скопирован.\nВ Kaiten в панели «Ёмкость спринта» нажмите красную точку вверху → «Вставить вход вручную» и вставьте его (Cmd+V, на Windows — Ctrl+V).');
-  const manual = () => prompt('Браузер не дал скопировать сам. Скопируйте вход (Cmd+C, на Windows — Ctrl+C), в Kaiten в панели «Ёмкость спринта» нажмите красную точку вверху → «Вставить вход вручную» и вставьте:', token);
+  const done = () => alert('Вход в Holst скопирован.\nВ Kaiten в панели «Ёмкость спринта» нажмите красную букву H вверху → «Вставить вход вручную» и вставьте его (Cmd+V, на Windows — Ctrl+V).');
+  const manual = () => prompt('Браузер не дал скопировать сам. Скопируйте вход (Cmd+C, на Windows — Ctrl+C), в Kaiten в панели «Ёмкость спринта» нажмите красную букву H вверху → «Вставить вход вручную» и вставьте:', token);
   if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(token).then(done, manual);
   else manual();
 }
@@ -62,5 +62,8 @@ function holstHandoff() {
     stop();
     holstLoginCopy(token);
   }, HOLST_HANDOFF_MS);
+  // Привет без данных: какой Kaiten открыл окно, отсюда не узнать. Вход уходит только в ответ
+  // на ping с проверенного origin Kaiten и только на этот origin — см. listen выше.
+  // nosemgrep: javascript.browser.security.wildcard-postmessage-configuration.wildcard-postmessage-configuration
   window.opener.postMessage({ type: 'sprint-capacity:hello' }, '*');
 }
