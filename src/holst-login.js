@@ -62,5 +62,8 @@ function holstHandoff() {
     stop();
     holstLoginCopy(token);
   }, HOLST_HANDOFF_MS);
+  // Привет без данных: какой Kaiten открыл окно, отсюда не узнать. Вход уходит только в ответ
+  // на ping с проверенного origin Kaiten и только на этот origin — см. listen выше.
+  // nosemgrep: javascript.browser.security.wildcard-postmessage-configuration.wildcard-postmessage-configuration
   window.opener.postMessage({ type: 'sprint-capacity:hello' }, '*');
 }

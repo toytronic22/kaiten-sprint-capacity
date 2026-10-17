@@ -842,7 +842,7 @@ function sprintBugCards() {
   const raw = (id, source, priority, extra = {}) => bug(id, source, { board_id: DEV, condition: 1, archived: false, state: 1, last_moved_to_done_at: null, created: '2026-09-15T05:00:00.000Z', properties: { id_9003: source, id_9001: priority }, ...extra });
   const fixedAt = (at) => ({ state: 3, last_moved_to_done_at: at });
   const vera = { owner: { id: 1, full_name: ' Вера  Тестова ' } };
-  const oleg = { owner: { id: 2, full_name: 'Олег Девов' } };
+  const oleg = { owner: { id: 2, full_name: 'Тимур Девов' } };
   return [
     raw(201, [FEATURE], [255], { ...vera, ...fixedAt('2026-09-20T05:00:00.000Z') }),
     raw(202, [FEATURE], [256], { ...vera, state: 2, board_id: INBOX }),
@@ -1471,4 +1471,47 @@ test('Время до прода по частям в отчёте: до гот�
     { text: 'до готовности к релизу — 3 рабочих дня' },
     { text: 'до готовности — по 1 задаче, она ждёт релиза', tone: 'note' },
   ]);
+});
+
+test('Спринт закончился по датам, а в Kaiten не завершён — подсказка с последним днём и числом карт только в колонке Done', () => {
+  // Arrange
+  const dates = { start: Date.parse('2026-09-27T21:00:00.000Z'), finish: Date.parse('2026-10-11T20:59:59.999Z'), closedAt: null };
+  const now = Date.parse('2026-10-12T07:00:00.000Z');
+  const inColumn = (title) => ({ column: { title } });
+  const cards = [inColumn('Done'), inColumn(' done '), inColumn('Waiting for release'), inColumn('Test'), {}];
+
+  // Act
+  const hint = sprint.sprintFinishHint({ dates, cards, now });
+
+  // Assert
+  assert.deepEqual(hint, { head: 'Спринт закончился 11.10, в Kaiten не завершён', tail: 'В Done — 2 карты', text: 'Спринт закончился 11.10, в Kaiten не завершён. В Done — 2 карты', done: 2 });
+});
+
+test('Подсказки «не завершён» нет, пока идёт последний день, когда спринт завершён в Kaiten и когда дат нет', () => {
+  // Arrange
+  const dates = { start: Date.parse('2026-09-27T21:00:00.000Z'), finish: Date.parse('2026-10-11T20:59:59.999Z'), closedAt: null };
+
+  // Act
+  const hints = [
+    sprint.sprintFinishHint({ dates, now: Date.parse('2026-10-11T20:59:59.000Z') }),
+    sprint.sprintFinishHint({ dates: { ...dates, closedAt: Date.parse('2026-10-12T07:00:00.000Z') }, now: Date.parse('2026-10-12T08:00:00.000Z') }),
+    sprint.sprintFinishHint({ dates: null, now: Date.parse('2026-10-12T08:00:00.000Z') }),
+    sprint.sprintFinishHint({ dates: { start: NaN, finish: NaN, closedAt: null }, now: Date.parse('2026-10-12T08:00:00.000Z') }),
+  ];
+
+  // Assert
+  assert.deepEqual(hints, [null, null, null, null]);
+});
+
+test('Число карт в Done в подсказке склоняется: 1 карта, 5 карт, 0 карт', () => {
+  // Arrange
+  const dates = { start: Date.parse('2026-09-27T21:00:00.000Z'), finish: Date.parse('2026-10-11T20:59:59.999Z'), closedAt: null };
+  const now = Date.parse('2026-10-12T07:00:00.000Z');
+  const done = (count) => Array.from({ length: count }, () => ({ column: { title: 'Done' } }));
+
+  // Act
+  const tails = [1, 5, 0].map((count) => sprint.sprintFinishHint({ dates, cards: done(count), now }).tail);
+
+  // Assert
+  assert.deepEqual(tails, ['В Done — 1 карта', 'В Done — 5 карт', 'В Done — 0 карт']);
 });

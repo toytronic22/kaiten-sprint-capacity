@@ -1,6 +1,6 @@
 const PANEL_CSS = `
 :host { all: initial; }
-.panel { --bg: #26282c; --fg: #e4e6ea; --muted: #9399a3; --line: #383b41; --soft: #30333a; --field: #1e2024; --accent: #5b9cf6; --accent-soft: #34507c; --bad: #f47174; --bad-soft: #7a3438; --good: #4fc47a; --good-soft: #2d5a3c; color-scheme: dark; position: fixed; top: 72px; right: 16px; width: 300px; max-width: calc(100vw - 32px); max-height: calc(100vh - 88px); overflow: auto; z-index: 2147483000; box-sizing: border-box; background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 16px 40px rgba(0, 0, 0, .45); font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
+.panel { --bg: #26282c; --fg: #e4e6ea; --muted: #9399a3; --line: #383b41; --soft: #30333a; --field: #1e2024; --accent: #5b9cf6; --accent-soft: #34507c; --bad: #f47174; --bad-soft: #7a3438; --good: #4fc47a; --good-soft: #2d5a3c; color-scheme: dark; position: fixed; top: 72px; right: 16px; width: var(--panel-w, 340px); height: auto; max-width: calc(100vw - 32px); max-height: min(var(--panel-h, 100vh), 100vh - 88px); overflow: auto; z-index: 2147483000; box-sizing: border-box; background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 16px 40px rgba(0, 0, 0, .45); font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
 header { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 2px; padding: 10px 8px 10px 14px; background: var(--bg); border-bottom: 1px solid var(--line); }
 header b { font-size: 14px; }
 .board { max-width: 150px; padding: 3px 22px 3px 6px; margin-left: -6px; font: 600 14px/1.3 inherit; font-family: inherit; color: var(--fg); background: var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%239399a3' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 6px center; border: 1px solid transparent; border-radius: 8px; appearance: none; cursor: pointer; }
@@ -10,8 +10,6 @@ header b { font-size: 14px; }
 button { font: inherit; color: inherit; background: none; border: 0; border-radius: 8px; cursor: pointer; }
 .icon { width: 28px; height: 28px; font-size: 16px; line-height: 28px; color: var(--muted); }
 .icon:hover { background: var(--soft); color: var(--fg); }
-.icon:disabled { cursor: default; }
-.icon:disabled span { display: inline-block; animation: spin 1s linear infinite; }
 .key { width: 24px; font-size: 13px; font-weight: 700; color: var(--bad); }
 .key:hover { color: var(--bad); background: var(--bad-soft); }
 .key[data-state="checking"], .key[data-state="error"] { color: var(--muted); }
@@ -19,8 +17,17 @@ button { font: inherit; color: inherit; background: none; border: 0; border-radi
 .key[data-state="checking"]:hover, .key[data-state="error"]:hover { color: var(--fg); background: var(--line); }
 .key[data-state="ok"] { color: var(--good); }
 .key[data-state="ok"]:hover { color: var(--good); background: var(--good-soft); }
+.modes { display: flex; align-items: center; gap: 8px; padding: 8px 14px 0; }
+.modes [hidden] { display: none; }
+.tabs { flex: 1; min-width: 0; display: flex; gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: 10px; background: var(--field); }
+.tab { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; padding: 5px 6px; border-radius: 8px; color: var(--muted); font-weight: 600; white-space: nowrap; }
+.tab:hover { color: var(--fg); }
+.tab[aria-selected="true"] { color: var(--fg); background: var(--soft); box-shadow: 0 1px 3px rgba(0, 0, 0, .35); cursor: default; }
+.skins { display: flex; gap: 0; margin-left: auto; }
+.skin { width: 28px; height: 28px; padding: 0; font-size: 15px; line-height: 28px; text-align: center; opacity: .5; filter: grayscale(.7); }
+.skin:hover { opacity: .9; filter: none; background: var(--soft); }
+.skin[aria-checked="true"] { opacity: 1; filter: none; background: var(--soft); box-shadow: inset 0 0 0 1px var(--line); }
 @keyframes pulse { to { opacity: .3; } }
-@keyframes spin { to { transform: rotate(360deg); } }
 .geese { position: fixed; inset: 0; z-index: 2147483001; overflow: hidden; cursor: pointer; background: #0b0c0e; --bang: 9.2s; animation: noir-in .6s ease-out both, noir-out .8s ease-in var(--end, 11.6s) forwards; }
 .geese > svg { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
 .geese > div { position: absolute; inset: 0; pointer-events: none; }
@@ -155,7 +162,12 @@ button { font: inherit; color: inherit; background: none; border: 0; border-radi
 .planning .plan:first-child { margin-top: 0; }
 .top { margin-left: 6px; padding: 0 6px; border-radius: 9px; background: #4d3d12; color: #f3cd62; font-size: 11px; font-weight: 600; }
 .bar .over-top { background: #c9a227; }
-.panel.collapsed .body { display: none; }
+.panel.collapsed > :not(header):not(.modes) { display: none; }
+.panel.collapsed { height: auto; }
+.panel:not(.daily-on):has(> .body > details.settings[open]), .panel.daily-on:has(> .daily details[data-part="edit"][open]) { max-height: calc(100vh - 88px); }
+.grip { position: fixed; z-index: 2147483001; width: 18px; height: 18px; cursor: nesw-resize; touch-action: none; color: #9399a3; opacity: .7; background: linear-gradient(45deg, rgba(0, 0, 0, 0) 4px, currentColor 4px 5.5px, rgba(0, 0, 0, 0) 5.5px 8px, currentColor 8px 9.5px, rgba(0, 0, 0, 0) 9.5px 12px, currentColor 12px 13.5px, rgba(0, 0, 0, 0) 13.5px); }
+.grip:hover, .grip.drag { opacity: 1; }
+.panel.collapsed ~ .grip { display: none; }
 details { border-top: 1px solid var(--line); }
 summary { display: flex; align-items: center; gap: 6px; padding: 10px 14px; cursor: pointer; list-style: none; font-weight: 600; }
 summary::-webkit-details-marker { display: none; }
@@ -583,6 +595,148 @@ a:hover { text-decoration: underline; }
 @keyframes nt-shrug { 0%, 100% { transform: rotate(0deg); } 30%, 70% { transform: rotate(40deg); } }
 `;
 
+const PANEL_DUNGEON = `
+.grip { position: fixed; z-index: 2147483001; width: 18px; height: 18px; cursor: nesw-resize; touch-action: none; color: #c4843f; opacity: .75; background: linear-gradient(45deg, rgba(0, 0, 0, 0) 4px, currentColor 4px 5.5px, rgba(0, 0, 0, 0) 5.5px 8px, currentColor 8px 9.5px, rgba(0, 0, 0, 0) 9.5px 12px, currentColor 12px 13.5px, rgba(0, 0, 0, 0) 13.5px); filter: drop-shadow(0 0 3px rgba(255, 110, 30, .6)); }
+.panel { --bg: #100e0c; --fg: #e2d8c6; --muted: #8f8579; --line: #2e2924; --soft: #1b1815; --field: #0a0908; --accent: #c4843f; --accent-soft: #4a2c14; --bad: #d4664f; --bad-soft: #4a1d14; --good: #9fb48a; --good-soft: #233022; color-scheme: dark; position: fixed; top: 72px; right: 16px; width: var(--panel-w, 340px); height: auto; max-width: calc(100vw - 32px); max-height: min(var(--panel-h, 100vh), 100vh - 88px); overflow: auto; z-index: 2147483000; box-sizing: border-box; background: ${DAILY_GRAIN}, radial-gradient(ellipse 110% 50% at 50% 0, rgba(255, 120, 40, .08), rgba(0, 0, 0, 0) 70%), linear-gradient(#16130f, #0b0a09); color: var(--fg); border: 1px solid #000; border-radius: 3px; box-shadow: 0 0 0 1px #3a332b, 0 0 0 4px #0b0a09, 0 0 0 5px #2c261f, 0 18px 48px rgba(0, 0, 0, .75); font: 16px/1.4 ${DAILY_FONT}; font-synthesis: none; -webkit-text-stroke-width: .4px; scrollbar-width: thin; scrollbar-color: #3a332b #0b0a09; }
+header { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 2px; padding: 10px 8px 10px 14px; background: radial-gradient(circle at 7px 7px, #8b857c 0 1.2px, #151413 2px, rgba(0, 0, 0, 0) 2.6px), radial-gradient(circle at calc(100% - 7px) 7px, #8b857c 0 1.2px, #151413 2px, rgba(0, 0, 0, 0) 2.6px), radial-gradient(circle at 7px calc(100% - 7px), #8b857c 0 1.2px, #151413 2px, rgba(0, 0, 0, 0) 2.6px), radial-gradient(circle at calc(100% - 7px) calc(100% - 7px), #8b857c 0 1.2px, #151413 2px, rgba(0, 0, 0, 0) 2.6px), ${DAILY_GRAIN}, linear-gradient(#2a2622, #171512 60%, #100e0c); border-bottom: 1px solid #000; box-shadow: 0 1px 0 #3a332b, 0 6px 14px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 236, 205, .08); }
+header b { font-size: 17px; font-weight: 400; }
+.board { max-width: 140px; padding: 3px 22px 3px 6px; margin-left: -6px; font: 400 18px/1.3 ${DAILY_FONT}; letter-spacing: .03em; color: #eadcc1; text-shadow: 0 1px 0 #000, 0 0 12px rgba(255, 140, 50, .25); background: rgba(0, 0, 0, 0) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23a2865f' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 6px center; border: 1px solid transparent; border-radius: 2px; appearance: none; cursor: pointer; }
+.board:hover, .board:focus { border-color: #4a4035; background-color: rgba(8, 7, 6, .6); outline: none; }
+.board option { background: #141210; color: var(--fg); }
+.time { flex: 1; min-width: 0; margin-left: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
+button { font: inherit; color: inherit; background: none; border: 0; border-radius: 2px; cursor: pointer; }
+.icon { width: 26px; height: 28px; font-size: 18px; line-height: 28px; color: #a39887; text-shadow: 0 1px 0 #000; }
+.icon:hover { background: rgba(196, 132, 63, .14); color: #f0e2c8; text-shadow: 0 0 8px rgba(255, 140, 50, .6); }
+.key { width: 24px; font-size: 15px; font-weight: 700; color: var(--bad); }
+.error { margin: 10px 14px 0; padding: 8px 10px; background: rgba(74, 29, 20, .65); color: #f2b8a6; border: 1px solid #6b2a1c; border-radius: 2px; font-size: 14px; }
+.tip { margin: 10px 14px 0; padding: 8px 10px; background: rgba(77, 52, 14, .5); color: #e8c27a; border: 1px solid #5a4318; border-radius: 2px; font-size: 14px; }
+.summary { position: relative; isolation: isolate; padding: 16px; text-shadow: 0 1px 2px #000, 0 0 8px rgba(0, 0, 0, .95); }
+.summary::before { content: ""; position: absolute; inset: 0; z-index: -2; pointer-events: none; animation: daily-wall 2.8s ease-in-out infinite; }
+@supports (mask-mode: luminance) { .summary::before { background: radial-gradient(closest-side, rgba(255, 178, 101, .5), rgba(201, 138, 74, .42) 55%, rgba(110, 86, 68, .36)); mask: url("${DAILY_ART}skull.jpg") center / contain no-repeat luminance, radial-gradient(closest-side, #fff 40%, #000) luminance; mask-composite: intersect; } }
+.name { color: #eadcc1; letter-spacing: .03em; }
+.value { font-size: 17px; }
+.value b { font-size: 21px; font-weight: 400; color: #f3e6cc; text-shadow: 0 0 10px rgba(255, 140, 50, .25); }
+.split { font-size: 15px; }
+.bar { position: relative; display: flex; height: 7px; margin-top: 5px; background: #070606; border: 1px solid #000; border-radius: 1px; overflow: hidden; box-shadow: inset 0 1px 2px rgba(0, 0, 0, .9), 0 1px 0 rgba(255, 236, 205, .06); }
+.bar .base { background: linear-gradient(#e6a052, #b5652a 55%, #7a3a16); box-shadow: 0 0 6px rgba(255, 120, 40, .45); }
+.bar .add { background: linear-gradient(#7a4a24, #4a2a12); }
+.over .bar .base { background: linear-gradient(#e06a4f, #9a2f1c 60%, #5e1a0f); box-shadow: 0 0 6px rgba(220, 60, 30, .5); }
+.over .bar .add { background: #5e1f14; }
+.bar .limit { position: absolute; top: 0; bottom: 0; width: 2px; background: #f0e2c8; box-shadow: 0 0 3px #000; }
+.holst-login { margin: 0 14px 14px; padding: 10px 12px; background: rgba(20, 18, 16, .85); border: 1px solid #3a332b; border-radius: 2px; font-size: 14px; }
+.holst-login .note b { color: var(--fg); font-weight: 400; }
+.legend { margin-top: 10px; color: var(--muted); font-size: 13px; }
+.done { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin-top: 14px; padding: 10px 14px; background: radial-gradient(circle at 7px 7px, #8b857c 0 1.2px, #151413 2px, rgba(0, 0, 0, 0) 2.6px), radial-gradient(circle at calc(100% - 7px) 7px, #8b857c 0 1.2px, #151413 2px, rgba(0, 0, 0, 0) 2.6px), radial-gradient(circle at 7px calc(100% - 7px), #8b857c 0 1.2px, #151413 2px, rgba(0, 0, 0, 0) 2.6px), radial-gradient(circle at calc(100% - 7px) calc(100% - 7px), #8b857c 0 1.2px, #151413 2px, rgba(0, 0, 0, 0) 2.6px), ${DAILY_GRAIN}, linear-gradient(#24211e, #121110); border: 1px solid #000; border-radius: 2px; box-shadow: inset 0 1px 0 rgba(255, 236, 205, .07), 0 0 0 1px #3a332b, 0 4px 12px rgba(0, 0, 0, .5); font-variant-numeric: tabular-nums; }
+.done b { font-size: 24px; font-weight: 400; color: #f3d9a6; text-shadow: 0 1px 0 #000, 0 0 12px rgba(255, 140, 50, .35); }
+.done .of { flex-basis: 100%; color: var(--muted); font-size: 14px; }
+.plan button { white-space: nowrap; padding: 7px 12px; border: 1px solid #000; border-radius: 2px; font-size: 14.5px; letter-spacing: .06em; text-transform: uppercase; color: #f6e6c8; text-shadow: 0 1px 0 #000; background: ${DAILY_GRAIN}, linear-gradient(#5a3a1c, #3a230f 55%, #26170a); box-shadow: inset 0 1px 0 rgba(255, 220, 170, .18), 0 0 0 1px #7a5a38, 0 3px 10px rgba(0, 0, 0, .6); }
+.plan button:hover { filter: brightness(1.12); box-shadow: inset 0 1px 0 rgba(255, 220, 170, .2), 0 0 0 1px #a2763f, 0 3px 10px rgba(0, 0, 0, .6), 0 0 14px rgba(255, 120, 40, .4); }
+.plan button.again { color: #e2d8c6; background: ${DAILY_GRAIN}, linear-gradient(#35302b, #1b1916 55%, #131110); box-shadow: inset 0 1px 0 rgba(255, 236, 205, .1), 0 0 0 1px #4a4035, 0 3px 10px rgba(0, 0, 0, .6); }
+.plan button.again:hover { filter: brightness(1.15); }
+.plan span { color: var(--muted); font-size: 14px; white-space: nowrap; }
+.top { margin-left: 6px; padding: 0 6px; border: 1px solid #6b2a1c; border-radius: 2px; background: #3d1a10; color: #f0a57a; font-size: 13px; }
+.bar .over-top { background: linear-gradient(#e0b24a, #8a6416); }
+details { border-top: 1px solid rgba(206, 192, 168, .14); }
+summary { display: flex; align-items: center; gap: 6px; padding: 10px 14px; cursor: pointer; list-style: none; font-size: 14.5px; letter-spacing: .12em; text-transform: uppercase; color: #c9bba3; text-shadow: 0 1px 0 #000; }
+summary::-webkit-details-marker { display: none; }
+summary:hover { color: #f0e2c8; }
+summary::after { content: "›"; margin-left: auto; color: #a2865f; transition: transform .15s; }
+.count { padding: 0 6px; border: 1px solid #6b2a1c; border-radius: 2px; background: #3d1a10; color: #f0a57a; font-size: 13px; letter-spacing: 0; }
+.team .th { color: var(--muted); font-size: 13px; text-align: center; }
+.days label { display: flex; flex-direction: column; gap: 3px; color: var(--muted); font-size: 13px; }
+.days-hint { margin-top: 6px; color: var(--muted); font-size: 13px; }
+.shared { margin-top: 10px; color: var(--muted); font-size: 13px; }
+input[type=text], input[type=password] { width: 100%; box-sizing: border-box; font: inherit; color: #f0e2c8; padding: 5px 8px; text-align: center; border: 1px solid #000; border-radius: 2px; background: #0a0908; box-shadow: inset 0 1px 3px rgba(0, 0, 0, .9), 0 0 0 1px #2e2924; }
+input[type=text]:focus, input[type=password]:focus { outline: none; box-shadow: inset 0 1px 3px rgba(0, 0, 0, .9), 0 0 0 1px #a2532a, 0 0 8px rgba(255, 110, 30, .3); }
+input[type=text]::placeholder { color: #5c544a; }
+.group-title { color: var(--muted); font-size: 13px; }
+a { color: #d9a066; text-decoration: none; }
+a:hover { color: #f3c48a; text-decoration: underline; }
+.modes { display: flex; align-items: center; gap: 6px; padding: 10px 10px 0; }
+.tabs { flex: 1; min-width: 0; display: flex; gap: 3px; padding: 3px; border: 1px solid #000; border-radius: 2px; background: rgba(8, 7, 6, .7); box-shadow: 0 0 0 1px #3a332b, inset 0 1px 4px rgba(0, 0, 0, .8); }
+.tab { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; padding: 5px 4px 4px; border-radius: 2px; font-size: 14.5px; letter-spacing: .05em; text-transform: uppercase; white-space: nowrap; color: #8f8579; text-shadow: 0 1px 0 #000; }
+.tab:hover { color: #f0e2c8; text-shadow: 0 0 8px rgba(255, 140, 50, .6); }
+.tab[aria-selected="true"] { color: #f6e6c8; background: ${DAILY_GRAIN}, linear-gradient(#5a3a1c, #3a230f 55%, #26170a); box-shadow: inset 0 1px 0 rgba(255, 220, 170, .18), 0 0 0 1px #7a5a38; cursor: default; }
+.skin { width: 26px; height: 28px; padding: 0; font-size: 15px; line-height: 28px; text-align: center; opacity: .45; filter: grayscale(.8) sepia(.3); }
+.skin:hover { opacity: .9; filter: none; background: rgba(196, 132, 63, .14); }
+.skin[aria-checked="true"] { opacity: 1; filter: none; background: rgba(196, 132, 63, .16); box-shadow: inset 0 0 0 1px #4a4035; }
+`;
+
+const PANEL_UNICORN = `
+.grip { color: #d27fc9; opacity: .85; }
+.panel { --bg: #fff8fc; --fg: #4b3150; --muted: #94799d; --line: #f1d6ee; --soft: #fceaf7; --field: #fff; --accent: #c561d6; --accent-soft: #f6dcf9; --bad: #e0457a; --bad-soft: #ffe1ec; --good: #23a37a; --good-soft: #d7f6ea; color-scheme: light; width: var(--panel-w, 340px); background: linear-gradient(165deg, #fff4fb, #f7f0ff 50%, #eef8ff); border: 3px solid #fff; border-radius: 24px; box-shadow: 0 0 0 2px #ecb6e6, 0 18px 44px rgba(150, 70, 170, .35); font: 15px/1.45 ${DAILY_CUTE}; }
+header { background: linear-gradient(100deg, #ffd5ea, #eadcff 50%, #d3efff); border-bottom: 2px solid #fff; box-shadow: 0 2px 0 #f2cbe9; }
+header b { font-size: 16px; }
+.board { max-width: 150px; font: 700 17px/1.3 inherit; font-family: inherit; color: var(--fg); background: rgba(255, 255, 255, 0) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23c561d6' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 6px center; border-radius: 12px; }
+.board:hover, .board:focus { border-color: #fff; background-color: rgba(255, 255, 255, .7); }
+.board option { background: #fff; color: var(--fg); }
+.time { font-size: 13px; }
+button { border-radius: 12px; }
+.icon { font-size: 17px; color: #9c6aa8; }
+.icon:hover { background: rgba(255, 255, 255, .8); color: var(--accent); }
+.key { font-size: 14px; }
+.error { background: #ffe3ec; color: #b2335f; border-radius: 14px; font-size: 13px; }
+.tip { background: #fff3c4; color: #8a5a00; border-radius: 14px; font-size: 13px; }
+.name { font-weight: 700; }
+.value b { font-size: 19px; color: #6a3d7a; }
+.bar { height: 8px; border-radius: 4px; background: #f2e2f4; }
+.bar .base { background: linear-gradient(90deg, #ff9ec7, #ffc27a 22%, #ffe37a 40%, #9fe3b4 60%, #8fd0ff 80%, #c5a3ff); }
+.bar .add { background: #e8d6ff; }
+.over .bar .base { background: linear-gradient(90deg, #ff8fb8, #ff4f86); }
+.over .bar .add { background: #ffc6d8; }
+.bar .limit { background: #4b3150; }
+.bar .over-top { background: #ffc94d; }
+.holst-login { background: #fff; border: 2px solid var(--line); border-radius: 16px; font-size: 13px; }
+.legend { font-size: 12.5px; }
+.done { background: #fff; border: 2px solid #f4d2ee; border-radius: 18px; box-shadow: 0 4px 12px rgba(200, 120, 200, .15); }
+.done b { font-size: 24px; color: var(--accent); }
+.done .of { font-size: 13px; }
+.plan button { padding: 7px 15px; border-radius: 999px; font-weight: 700; color: #fff; text-shadow: 0 1px 1px rgba(120, 40, 120, .35); background: linear-gradient(135deg, #ff8fc8, #c58cff 55%, #7cc4ff); box-shadow: 0 3px 0 #b066c2, 0 6px 14px rgba(170, 90, 200, .3); }
+.plan button:hover { filter: brightness(1.06) saturate(1.1); }
+.plan button.again { color: var(--fg); text-shadow: none; background: #fff; box-shadow: 0 0 0 2px #f0c8ea, 0 3px 0 #e6addd; }
+.plan button.again:hover { background: #fff5fc; }
+.plan span { font-size: 13px; }
+.top, .count { border-radius: 999px; background: #ffe0f0; color: #c13d80; font-size: 12.5px; }
+details { border-top: 2px dashed #f1d2ec; }
+summary { font-weight: 700; }
+summary::after { color: var(--accent); }
+.team .th, .days label, .days-hint, .shared, .group-title { font-size: 12.5px; }
+.days-hint.off { color: #c13d80; }
+input[type=text], input[type=password] { border: 2px solid var(--line); border-radius: 12px; background: #fff; }
+input[type=text]:focus, input[type=password]:focus { border-color: #e59ad8; box-shadow: 0 0 0 3px rgba(229, 154, 216, .3); }
+input[type=text]::placeholder { color: #c9b3cf; }
+a { color: #b74fc6; }
+.tabs { padding: 3px; border: 2px solid #fff; border-radius: 999px; background: #f6e9fb; box-shadow: 0 0 0 1px #efcdea; }
+.tab { border-radius: 999px; color: #9a7fa3; font-weight: 700; }
+.tab[aria-selected="true"] { color: #fff; text-shadow: 0 1px 1px rgba(120, 40, 120, .35); background: linear-gradient(135deg, #ff9ccd, #c79bff 60%, #8fcaff); box-shadow: 0 2px 6px rgba(170, 90, 200, .35); }
+.skin { border-radius: 50%; opacity: .8; filter: saturate(.55); }
+.skin:hover, .skin[aria-checked="true"] { background: #fff; }
+.skin[aria-checked="true"] { box-shadow: 0 0 0 2px #f0c8ea; }
+`;
+
+const PANEL_SKINS = {
+  dungeon: { title: 'подземелье', icon: '💀', swap: PANEL_DUNGEON },
+  classic: { title: 'классика', icon: '🌙' },
+  unicorn: { title: 'единороги', icon: '🦄', add: PANEL_UNICORN },
+};
+const PANEL_SKIN = 'dungeon';
+const PANEL_SIZE = { width: 340, height: 260, max: 1600 };
+
+function skinCss(base, swap) {
+  const head = (line) => line.slice(0, line.indexOf(' {'));
+  const lines = base.split('\n');
+  const known = new Set(lines.map(head));
+  const swaps = new Map();
+  let anchor = null;
+  for (const line of (swap || '').split('\n').filter(Boolean)) {
+    if (known.has(head(line))) swaps.set((anchor = head(line)), [line]);
+    else if (anchor) swaps.get(anchor).push(line);
+  }
+  return lines.flatMap((line) => swaps.get(head(line)) || [line]).join('\n');
+}
+
+const panelCss = (skin) => skinCss(PANEL_CSS, PANEL_SKINS[skin].swap) + (PANEL_SKINS[skin].add || '');
+
 const HOLST_KEY_TITLES = {
   none: 'Вход в Holst: нет',
   checking: 'Вход в Holst: проверяю…',
@@ -599,14 +753,21 @@ const PANEL_HTML = `
     <select class="board" data-act="board" title="Доска"></select>
     <span class="time"></span>
     <button type="button" class="icon key" data-act="holst-login" title="Вход в Holst">H</button>
-    <button type="button" class="icon" data-act="refresh" title="Обновить"><span>↻</span></button>
     <button type="button" class="icon" data-act="collapse" title="Свернуть">–</button>
     <button type="button" class="icon" data-act="close" title="Закрыть">×</button>
   </header>
+  <nav class="modes">
+    <div class="tabs" role="tablist" aria-label="Режим панели" data-mode="sprint" hidden>
+      <button type="button" class="tab" role="tab" data-act="sprint" aria-selected="true" title="Ёмкость, прогресс и отчёт спринта">📊 Спринт</button>
+      <button type="button" class="tab" role="tab" data-act="daily" aria-selected="false" title="Дейлик: очередь говорящих и рычаг">🎰 Дейлик</button>
+    </div>
+    <div class="skins" role="radiogroup" aria-label="Скин панели">${Object.entries(PANEL_SKINS).map(([name, skin]) => `<button type="button" class="skin" role="radio" data-act="skin" data-skin="${name}" aria-checked="false" title="Скин: ${skin.title}">${skin.icon}</button>`).join('')}</div>
+  </nav>
   <div class="status"></div>
   <div class="remind"></div>
   <div class="summary"></div>
   <div class="holst-login" hidden></div>
+  <div class="daily" hidden></div>
   <div class="body">
     <details class="settings">
       <summary>Команда и дни</summary>
@@ -629,7 +790,8 @@ const PANEL_HTML = `
     <details class="planning" hidden></details>
     <details class="warnings"></details>
   </div>
-</div>`;
+</div>
+<div class="grip" title="Тяните — размер панели. Двойной клик — как было"></div>`;
 
 const noirScene = (names = []) => {
   const label = escapeHtml(chaosLabel(names));
@@ -1222,11 +1384,11 @@ function sprintCapacityMount(config) {
   let sprintDatesError = null;
   let sprintDatesBusy = false;
   let sprintDatesTried = 0;
-  let remindBefore = null;
   let collapsed = readStored('collapsed', false) === true;
   let snapshot = null;
   let planEnd = null;
   let report = null;
+  let checkView = { count: 0, html: '' };
   let closed = false;
   let holstWait = null;
   let holstSend = false;
@@ -1242,9 +1404,65 @@ function sprintCapacityMount(config) {
   const host = document.createElement('div');
   host.id = 'sprint-capacity-panel';
   const shadow = host.attachShadow({ mode: 'open' });
-  shadow.innerHTML = `<style>${PANEL_CSS}</style>${PANEL_HTML}`;
+  const skinName = (name) => (Object.keys(PANEL_SKINS).includes(name) ? name : PANEL_SKIN);
+  let skin = skinName(readStored('skin', null));
+  const sheet = document.createElement('style');
+  shadow.innerHTML = PANEL_HTML;
+  shadow.appendChild(sheet);
   document.body.appendChild(host);
   const $ = (selector) => shadow.querySelector(selector);
+  const paintSkin = () => {
+    sheet.textContent = panelCss(skin);
+    dailyFont(skin);
+    sprintToastLook = skin;
+    $('.panel').dataset.skin = skin;
+    for (const button of shadow.querySelectorAll('[data-skin]')) button.setAttribute('aria-checked', button.dataset.skin === skin ? 'true' : 'false');
+  };
+  paintSkin();
+  const sized = (value) => (value && Number.isFinite(value.width) && Number.isFinite(value.height) ? { width: Math.round(Math.min(PANEL_SIZE.max, Math.max(PANEL_SIZE.width, value.width))), height: Math.round(Math.min(PANEL_SIZE.max, Math.max(PANEL_SIZE.height, value.height))) } : null);
+  let size = sized(readStored('size', null));
+  let resizing = null;
+  const grip = $('.grip');
+  const placeGrip = () => {
+    const box = $('.panel').getBoundingClientRect();
+    grip.style.left = `${Math.round(box.left + 3)}px`;
+    grip.style.top = `${Math.round(box.bottom - 21)}px`;
+  };
+  const paintSize = () => {
+    for (const [name, value] of [['--panel-w', size && size.width], ['--panel-h', size && size.height]]) {
+      if (value) host.style.setProperty(name, `${value}px`);
+      else host.style.removeProperty(name);
+    }
+    placeGrip();
+  };
+  const stopResize = () => {
+    if (!resizing) return;
+    resizing = null;
+    grip.classList.remove('drag');
+    writeStored('size', size);
+  };
+  grip.addEventListener('pointerdown', (event) => {
+    const box = $('.panel').getBoundingClientRect();
+    resizing = { x: event.clientX, y: event.clientY, width: box.width, height: box.height };
+    grip.classList.add('drag');
+    if (grip.setPointerCapture) grip.setPointerCapture(event.pointerId);
+    event.preventDefault();
+  });
+  grip.addEventListener('pointermove', (event) => {
+    if (!resizing) return;
+    size = sized({ width: Math.min(window.innerWidth - 110, resizing.width + resizing.x - event.clientX), height: Math.min(window.innerHeight - 88, resizing.height + event.clientY - resizing.y) });
+    paintSize();
+  });
+  for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) grip.addEventListener(type, stopResize);
+  grip.addEventListener('dblclick', () => {
+    size = null;
+    writeStored('size', null);
+    paintSize();
+  });
+  const sizeWatch = typeof ResizeObserver === 'function' ? new ResizeObserver(placeGrip) : null;
+  if (sizeWatch) sizeWatch.observe($('.panel'));
+  window.addEventListener('resize', placeGrip);
+  paintSize();
 
   const cardLink = (item) => `<a href="${window.location.origin}/${item.id}" target="_blank" rel="noopener">${escapeHtml(item.title || item.id)}</a>`;
 
@@ -1274,17 +1492,12 @@ function sprintCapacityMount(config) {
     if (unknown) messages.push(`Прогресс: ${unknown}`);
     if (storageBroken) messages.push('Браузер не сохраняет вписанное');
     $('.status').innerHTML = messages.map((message) => `<div class="error">${escapeHtml(message)}</div>`).join('');
-    $('[data-act="refresh"]').disabled = data.busy;
   };
 
   const renderRemind = () => {
     const kind = reminder();
-    $('.remind').innerHTML = kind ? `<div class="tip">${escapeHtml(REMIND_TEXT[kind])}</div>` : '';
-    if (kind && kind !== remindBefore) {
-      $('.planning').open = true;
-      $('.settings').open = true;
-    }
-    remindBefore = kind;
+    const finish = data.cards ? sprintFinishHint({ dates: sprintDates, cards: data.cards, now: Date.now() }) : null;
+    $('.remind').innerHTML = [kind ? REMIND_TEXT[kind] : null, finish ? finish.text : null].filter(Boolean).map((text) => `<div class="tip">${escapeHtml(text)}</div>`).join('');
   };
 
   const renderShared = () => {
@@ -1355,6 +1568,7 @@ function sprintCapacityMount(config) {
     box.hidden = !count;
     if (!count) {
       box.innerHTML = '';
+      checkView = { count: 0, html: '' };
       return;
     }
     const groups = Object.keys(ISSUE_LABELS).map((issue) => {
@@ -1363,6 +1577,7 @@ function sprintCapacityMount(config) {
       const links = items.map((item) => `<li>${cardLink(item)}</li>`).join('');
       return `<div class="group"><div class="group-title">${escapeHtml(ISSUE_LABELS[issue].replace(/\{(\w+)\}/g, (_, key) => boardConfig(boardId, config).platformTags[key]))}</div><ul>${links}</ul></div>`;
     }).join('');
+    checkView = { count, html: groups };
     box.innerHTML = `<summary>Проверить <span class="count">${count}</span></summary><div class="inner">${groups}</div>`;
   };
 
@@ -1375,6 +1590,8 @@ function sprintCapacityMount(config) {
     renderShared();
     renderDaysHint();
     renderHolstKey();
+    daily.paint();
+    placeGrip();
   };
 
   const applyCollapsed = () => {
@@ -1395,13 +1612,17 @@ function sprintCapacityMount(config) {
     }
   };
 
+  const dropStale = (comments, mark, board) => staleComments(comments, mark, board, Date.now())
+    .reduce((chain, id) => chain.then(() => kaitenDeleteComment(config.snapshotCardId, id).catch(() => null)), Promise.resolve());
+
   const pushSettings = async (board, transform) => {
     const sent = board === boardId ? edits : readEdits(board);
     if (!transform && !Object.keys(sent.values).length) return;
     savingBoard = board;
     if (board === boardId && !closed) renderShared();
     try {
-      const latest = settingsFromComments(await kaitenCardComments(config.snapshotCardId), board);
+      const comments = await kaitenCardComments(config.snapshotCardId);
+      const latest = settingsFromComments(comments, board);
       const now = Date.now();
       const merged = withSettingEdits(baseSettings(latest, board, now), sent.values, now, config);
       const next = transform ? transform(merged) : merged;
@@ -1409,6 +1630,7 @@ function sprintCapacityMount(config) {
       if (!latest || JSON.stringify(latest.settings) !== JSON.stringify(next)) {
         const savedAt = new Date().toISOString();
         const created = await kaitenAddComment(config.snapshotCardId, settingsComment({ boardId: board, savedAt, settings: next }, config));
+        dropStale(comments, SETTINGS_MARK, board);
         record = { boardId: board, savedAt, settings: next, author: (created && created.author && created.author.full_name) || 'вы' };
       }
       const current = board === boardId ? edits : readEdits(board);
@@ -1498,6 +1720,7 @@ function sprintCapacityMount(config) {
       loaded.snapshot = snapshotFromComments(comments, board);
       loaded.planEnd = planEndFromComments(comments, loaded.snapshot);
       loaded.shared = settingsFromComments(comments, board);
+      loaded.daily = dailyFromComments(comments, board);
     } catch (error) {
       loaded.snapshotError = error;
     }
@@ -1529,6 +1752,7 @@ function sprintCapacityMount(config) {
       }
       commentsLoaded = true;
     }
+    daily.adopt(loaded.daily || null, loaded.snapshotError || null);
     applySettings();
     recompute();
     fillSettings();
@@ -1740,9 +1964,16 @@ function sprintCapacityMount(config) {
       return;
     }
     hideHolstLogin();
-    if (send) {
+    if (send && send === boardId) {
       renderHolstKey();
       sendWhenFree(tab);
+      return;
+    }
+    if (send) {
+      renderHolstKey();
+      const text = `Вход сохранён. Пока ждали вход, в панели выбрали ${boardTitle(boardId, config)} — в Holst ничего не отправил, нажмите «В Holst» ещё раз`;
+      sprintToast(text, true);
+      holstNotify(tab, text, true);
       return;
     }
     const board = holstBoard();
@@ -1792,11 +2023,14 @@ function sprintCapacityMount(config) {
 
   const sendToHolst = async (openTab, fresh) => {
     const board = boardId;
+    const settingsAt = settings;
+    const snapshotAt = snapshot;
+    const planEndAt = planEnd;
     const settingsNow = boardConfig(board, config);
     if (!settingsNow.holst) return;
     const token = readHolstToken();
     if (!token) {
-      showHolstLogin('Нужен вход в Holst — один раз на этом компьютере', false, true);
+      showHolstLogin('Нужен вход в Holst — один раз на этом компьютере', false, board);
       return;
     }
     const tab = openTab || window.open(`${HOLST_ORIGIN}/board/${settingsNow.holst.board}`, '_blank');
@@ -1809,11 +2043,34 @@ function sprintCapacityMount(config) {
     try {
       const [cards, boardJson] = await Promise.all([kaitenBoardCards(board), kaitenBoard(board)]);
       const now = Date.now();
-      const current = buildReport({ cards, settings, snapshot, planEnd, now, config: settingsNow });
+      const current = buildReport({ cards, settings: settingsAt, snapshot: snapshotAt, planEnd: planEndAt, now, config: settingsNow });
       const columns = holstColumns(boardJson);
       const capacityLog = kaitenCardComments(config.snapshotCardId).then(capacityLogFromComments).catch(() => null);
-      const sprintJob = Promise.all([sprintReportLoad({ cards, boardId: board, now, columns, load: kaitenSprint, loadBugs: sprintBugCards, loadTags: kaitenTags, store: { read: (key) => readStored(key, null), write: writeStored } }), capacityLog])
-        .then(([loaded, log]) => ({ report: sprintReportBlocks({ ...loaded, capacity: capacityDays(settings), capacityLog: log, labels: settingsNow.labels, now }) }))
+      const sprints = new Map();
+      const loadSprint = (id) => kaitenSprint(id).then((raw) => {
+        sprints.set(id, (raw && raw.data) || raw);
+        return raw;
+      });
+      const loadedJob = sprintReportLoad({ cards, boardId: board, now, columns, load: loadSprint, loadBugs: sprintBugCards, loadTags: kaitenTags, store: { read: (key) => readStored(key, null), write: writeStored } });
+      const sprintJob = Promise.all([loadedJob, capacityLog])
+        .then(([loaded, log]) => ({ report: sprintReportBlocks({ ...loaded, capacity: capacityDays(settingsAt), capacityLog: log, labels: settingsNow.labels, now }) }))
+        .catch((error) => ({ problem: error.message || String(error) }));
+      const currentJob = loadedJob.then(async (loaded) => {
+        if (!sprints.has(loaded.currentId)) await loadSprint(loaded.currentId);
+        return sprints.get(loaded.currentId) || null;
+      });
+      const burnJob = currentJob
+        .then((sprint) => (sprint ? burnDays({ sprint, columns, doneAtStart: snapshotAt ? snapshotAt.doneIds : null, percent: current.progress.percent, now, config: settingsNow, calendar: SPRINT_REPORT }) : { problem: 'не нашёл текущий спринт' }))
+        .catch((error) => ({ problem: error.message || String(error) }));
+      const goalJob = currentJob
+        .then((sprint) => (sprint ? { goal: sprint.goal || '' } : { problem: 'не нашёл текущий спринт' }))
+        .catch((error) => ({ problem: error.message || String(error) }));
+      const finishJob = currentJob
+        .then((sprint) => {
+          if (!sprint) return { problem: 'не нашёл текущий спринт' };
+          const dates = { start: sprintTime(sprint.start_date), finish: sprintTime(sprint.finish_date), closedAt: sprint.actual_finish_date ? sprintTime(sprint.actual_finish_date) : null };
+          return { hint: sprintFinishHint({ dates, cards, now }) };
+        })
         .catch((error) => ({ problem: error.message || String(error) }));
       const since = holstLookback(now, SPRINT_REPORT);
       const historyIds = holstHistoryIds(cards, since);
@@ -1826,8 +2083,11 @@ function sprintCapacityMount(config) {
       const foreignIds = holstForeignBoards(cards, histories);
       const foreignList = await Promise.all(foreignIds.map((id) => kaitenBoard(id)));
       const boards = Object.fromEntries(foreignIds.map((id, index) => [id, foreignList[index].title]));
-      const payload = holstPayload({ cards, report: current, doneAtStart: snapshot ? snapshot.doneIds : [], histories, columns, boards, renames, now, config: settingsNow, holst: settingsNow.holst, kaiten: location.origin, title: boardTitle(board, config), calendar: SPRINT_REPORT });
+      const payload = holstPayload({ cards, report: current, doneAtStart: snapshotAt ? snapshotAt.doneIds : [], histories, columns, boards, renames, now, config: settingsNow, holst: settingsNow.holst, kaiten: location.origin, title: boardTitle(board, config), calendar: SPRINT_REPORT });
       payload.sprint = await sprintJob;
+      payload.burn = await burnJob;
+      payload.sprintGoal = await goalJob;
+      payload.finish = await finishJob;
       sprintToast(`${payload.title}: пишу в Holst…`);
       const result = await holstApply(payload, token);
       markHolst(token, settingsNow.holst.board, 'ok');
@@ -1837,7 +2097,7 @@ function sprintCapacityMount(config) {
       if (error.auth) markHolst(token, settingsNow.holst.board, 'rejected', error.message, error.readOnly);
       if (error.auth && !error.readOnly && !fresh) {
         tab.close();
-        showHolstLogin(`Holst не пустил (${error.message}) — войдите заново`, true, true);
+        showHolstLogin(`Holst не пустил (${error.message}) — войдите заново`, true, board);
         sprintToast('В Holst не отправилось: Holst не пустил — войдите заново в панели', true, 'fail');
       } else {
         const text = `В Holst не отправилось: ${error.auth && !error.readOnly ? `Holst не пускает и со свежим входом (${error.message}) — проверьте, открывается ли у вас эта доска` : error.message || error}`;
@@ -1902,6 +2162,9 @@ function sprintCapacityMount(config) {
     document.removeEventListener('visibilitychange', onVisible);
     window.removeEventListener('message', onHolstMessage);
     stopHolstWait();
+    daily.stop();
+    if (sizeWatch) sizeWatch.disconnect();
+    window.removeEventListener('resize', placeGrip);
     host.remove();
     delete window.__sprintCapacity;
   };
@@ -1911,11 +2174,20 @@ function sprintCapacityMount(config) {
     if (!button) return;
     const act = button.dataset.act;
     if (act === 'close') close();
-    if (act === 'refresh') refresh();
     if (act === 'start-planning' && !data.busy) startPlanning();
     if (act === 'end-planning' && !data.busy) endPlanning();
     if (act === 'to-holst' && !data.busy) sendToHolst(null, false);
     if (act === 'holst-login') toggleHolstLogin();
+    if (act === 'daily' || act === 'sprint') {
+      writeStored('tab', act);
+      daily.show(act === 'daily');
+    }
+    if (act === 'skin' && skinName(button.dataset.skin) === button.dataset.skin && button.dataset.skin !== skin) {
+      skin = button.dataset.skin;
+      writeStored('skin', skin);
+      paintSkin();
+      daily.skin(skin);
+    }
     if (act === 'holst-open') openHolstLogin();
     if (act === 'holst-save') saveHolstLogin();
     if (act === 'holst-cancel') hideHolstLogin();
@@ -1931,6 +2203,8 @@ function sprintCapacityMount(config) {
     if (saveTimer !== null) saveNow();
     boardId = id;
     writeStored('board', boardId);
+    daily.sync();
+    if (readStored('tab', null) === 'daily') daily.show(true);
     edits = readEdits(boardId);
     shared = null;
     sharedAt = 0;
@@ -1939,14 +2213,12 @@ function sprintCapacityMount(config) {
     sprintDates = null;
     sprintDatesError = null;
     sprintDatesTried = 0;
-    remindBefore = null;
     applySettings();
     snapshot = null;
     planEnd = null;
     chaosBefore = false;
     Object.assign(data, { cards: null, loadedAt: null, error: null, snapshotError: null });
     fillSettings();
-    $('.settings').open = DIRECTIONS.some((direction) => settings.team[direction].people === 0);
     recompute();
     render();
     refresh();
@@ -1976,11 +2248,18 @@ function sprintCapacityMount(config) {
     shadow.addEventListener(type, (event) => event.stopPropagation());
   }
 
+  const daily = dailyPanel({ shadow, box: $('.daily'), tabs: $('.tabs'), skin, config: () => (config.daily && config.daily[boardId]) || null, store: { read: (key) => readStored(key, null), write: writeStored }, share: async (record) => {
+    const board = boardId;
+    const savedAt = new Date().toISOString();
+    const created = await kaitenAddComment(config.snapshotCardId, dailyComment({ boardId: board, savedAt, ...record }, config));
+    kaitenCardComments(config.snapshotCardId).then((comments) => dropStale(comments, DAILY_MARK, board)).catch(() => null);
+    return { savedAt, author: (created && created.author && created.author.full_name) || 'вы' };
+  }, send: () => ({ on: Boolean(boardConfig(boardId, config).holst), busy: data.busy }), check: () => checkView });
   window.__sprintCapacity = { close, refresh };
   $('.board').innerHTML = config.boards.map((board) => `<option value="${board.id}"${board.id === boardId ? ' selected' : ''}>${escapeHtml(board.title)}</option>`).join('');
   applyCollapsed();
   fillSettings();
-  $('.settings').open = DIRECTIONS.some((direction) => settings.team[direction].people === 0);
+  if (readStored('tab', null) === 'daily') daily.show(true);
   render();
   refresh();
 }

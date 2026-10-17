@@ -1,4 +1,7 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+
+const { usagePage } = createRequire(import.meta.url)('./src/usage-page.js');
 
 const EXPORT_LINE = /^if \(typeof module !== 'undefined'\) module\.exports = .*$/m;
 
@@ -20,6 +23,16 @@ if (!EXPORT_LINE.test(sprintCore)) {
   throw new Error('В src/sprint-core.js нет строки с module.exports — сборка остановлена, проверьте её вид');
 }
 
+const dailyCore = read('./src/daily-core.js');
+if (!EXPORT_LINE.test(dailyCore)) {
+  throw new Error('В src/daily-core.js нет строки с module.exports — сборка остановлена, проверьте её вид');
+}
+
+const dailyFire = read('./src/daily-fire.js');
+if (!EXPORT_LINE.test(dailyFire)) {
+  throw new Error('В src/daily-fire.js нет строки с module.exports — сборка остановлена, проверьте её вид');
+}
+
 const wrap = (parts) => {
   const source = parts
     .join('\n')
@@ -33,7 +46,7 @@ const wrap = (parts) => {
 };
 
 const holstLogin = read('./src/holst-login.js');
-const script = wrap([core.replace(EXPORT_LINE, ''), holstCore.replace(EXPORT_LINE, ''), sprintCore.replace(EXPORT_LINE, ''), read('./src/kaiten.js'), read('./src/toast.js'), holstLogin, read('./src/holst.js'), read('./src/ui.js'), 'sprintCapacityMount(SPRINT_CAPACITY);']);
+const script = wrap([core.replace(EXPORT_LINE, ''), holstCore.replace(EXPORT_LINE, ''), sprintCore.replace(EXPORT_LINE, ''), dailyCore.replace(EXPORT_LINE, ''), dailyFire.replace(EXPORT_LINE, ''), read('./src/kaiten.js'), read('./src/toast.js'), holstLogin, read('./src/holst.js'), read('./src/daily.js'), read('./src/ui.js'), 'sprintCapacityMount(SPRINT_CAPACITY);']);
 const holstScript = wrap([read('./src/toast.js'), holstLogin, 'holstHandoff();']);
 
 const PAGES = 'https://toytronic22.github.io/kaiten-sprint-capacity/';
@@ -69,7 +82,7 @@ li { margin: 4px 0; }
 <li>Holst откроется в новой вкладке. Нажмите там закладку «Ёмкость спринта». Holst напишет «Вход работает — эту вкладку можно закрыть», а буква H в панели станет зелёной. Готово.</li>
 </ol>
 <p>Шаги 4–6 — один раз на браузер.</p>
-<p><a href="https://github.com/toytronic22/kaiten-sprint-capacity#readme">Как пользоваться и как считает</a></p>
+<p><a href="usage.html">Как пользоваться и как считает</a></p>
 <p>Не перетаскивается — создайте закладку вручную и вставьте в поле адреса этот код:</p>
 <textarea readonly onclick="this.select()">${escapeHtml(bookmarklet)}</textarea>
 </body>
@@ -81,4 +94,7 @@ write('./dist/sprint-capacity.js', script);
 write('./dist/holst-sprint.js', holstScript);
 write('./dist/bookmarklet.txt', `${bookmarklet}\n`);
 write('./dist/install.html', installPage);
+write('./dist/usage.html', usagePage(read('./docs/USAGE.md')));
+mkdirSync(new URL('./dist/daily/', import.meta.url), { recursive: true });
+for (const art of ['skull.jpg', 'frame.jpg', 'roast.gif', 'gear.mp3', 'lever.mp3']) copyFileSync(new URL(`./assets/daily/${art}`, import.meta.url), new URL(`./dist/daily/${art}`, import.meta.url));
 console.log(`Готово: панель ${Math.round(script.length / 1024)} КБ, скрипт Holst ${Math.round(holstScript.length / 1024)} КБ, закладка ${bookmarklet.length} знаков`);
