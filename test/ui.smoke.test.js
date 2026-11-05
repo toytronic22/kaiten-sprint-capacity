@@ -5,6 +5,7 @@ const vm = require('node:vm');
 const { execFileSync } = require('node:child_process');
 const { existsSync, readFileSync } = require('node:fs');
 const core = require('../src/core.js');
+const sprintCore = require('../src/sprint-core.js');
 
 const root = path.join(__dirname, '..');
 execFileSync(process.execPath, [path.join(root, 'build.mjs')], { cwd: root, stdio: 'pipe' });
@@ -638,6 +639,9 @@ const SNAPSHOT = 'Снимок начала планирования';
 const LATER = Date.parse('2026-10-14T12:00:00+03:00');
 const ago = (ms, now = Date.now()) => new Date(now - ms).toISOString();
 const mskMidnight = (days) => new Date(Math.floor((Date.now() + 10800000) / DAY) * DAY - 10800000 + days * DAY).toISOString();
+// Будни окна спринта −5…+9 дней от сегодня: обычно 10, меньше — если в окно попал праздник РФ (05.11.2026 попало 4 ноября).
+const KAITEN_DAYS = Math.round(sprintCore.sprintWorkdays(Date.parse(mskMidnight(-5)), Date.parse(mskMidnight(9))));
+const KAITEN_HINT = `по датам в Kaiten \\(\\d\\d\\.\\d\\d–\\d\\d\\.\\d\\d\\) — 10 будних дней${KAITEN_DAYS === 10 ? '' : `, из них .+ — итого ${KAITEN_DAYS} рабочих дней`}`;
 const teamComment = (savedAt, settings, author = 'Тестировщик') => ({
   text: core.settingsComment({ boardId: 303040, savedAt, settings: core.normalizeSettings(settings) }),
   created: savedAt,
@@ -882,13 +886,13 @@ test('Подсказка у «рабочих дней»: будни по дат�
   const ended = { id: 501, start_date: ago(16 * DAY), finish_date: ago(2 * DAY), actual_finish_date: null };
 
   // Act
-  const kaitens = [teamKaiten({ sprintId: 502, sprint: running }), teamKaiten({ sprintId: 501, sprint: ended }), teamKaiten()];
+  const kaitens = [teamKaiten({ sprintId: 502, sprint: running, comments: [teamComment(ago(3600000), { workDays: KAITEN_DAYS })] }), teamKaiten({ sprintId: 501, sprint: ended }), teamKaiten()];
   await flush();
 
   // Assert
   const hints = kaitens.map((kaiten) => [kaiten.$('.days-hint').hidden, kaiten.$('.days-hint').textContent, kaiten.$('.days-hint').classList.contains('off')]);
   assert.equal(hints[0][0], false);
-  assert.match(hints[0][1], /^по датам в Kaiten \(\d\d\.\d\d–\d\d\.\d\d\) — 10 будних дней$/);
+  assert.match(hints[0][1], new RegExp(`^${KAITEN_HINT}$`));
   assert.deepEqual(hints.slice(1), [[true, '', false], [true, '', false]]);
   assert.equal(hints[0][2], false);
 });
@@ -901,12 +905,12 @@ test('Подсказка у «рабочих дней» желтеет, когд
   const wrong = [kaiten.$('.days-hint').textContent, kaiten.$('.days-hint').classList.contains('off')];
 
   // Act
-  kaiten.type('workDays', '10');
+  kaiten.type('workDays', String(KAITEN_DAYS));
 
   // Assert
-  assert.match(wrong[0], /^по датам в Kaiten \(\d\d\.\d\d–\d\d\.\d\d\) — 10 будних дней, а вписано 8$/);
+  assert.match(wrong[0], new RegExp(`^${KAITEN_HINT}, а вписано 8$`));
   assert.equal(wrong[1], true);
-  assert.match(kaiten.$('.days-hint').textContent, /^по датам в Kaiten \(\d\d\.\d\d–\d\d\.\d\d\) — 10 будних дней$/);
+  assert.match(kaiten.$('.days-hint').textContent, new RegExp(`^${KAITEN_HINT}$`));
   assert.equal(kaiten.$('.days-hint').classList.contains('off'), false);
 });
 
@@ -927,11 +931,11 @@ test('Подсказка у «рабочих дней» видна сразу, �
   const dates = { id: 502, start: Date.parse(mskMidnight(-5)), finish: Date.parse(mskMidnight(9)) - 1, closedAt: null, at: Date.now() - 3600000 };
 
   // Act
-  const kaiten = teamKaiten({ sprintId: 502, stored: { 'sprintCapacity.v1.sprintDates.502': JSON.stringify(dates) } });
+  const kaiten = teamKaiten({ sprintId: 502, stored: { 'sprintCapacity.v1.sprintDates.502': JSON.stringify(dates) }, comments: [teamComment(ago(3600000), { workDays: KAITEN_DAYS })] });
   await flush();
 
   // Assert
-  assert.match(kaiten.$('.days-hint').textContent, /^по датам в Kaiten \(\d\d\.\d\d–\d\d\.\d\d\) — 10 будних дней$/);
+  assert.match(kaiten.$('.days-hint').textContent, new RegExp(`^${KAITEN_HINT}$`));
   assert.equal(kaiten.requests.filter((item) => item.url.startsWith('/api/sprints/')).length, 0);
 });
 
